@@ -38,7 +38,7 @@ del progetto.
 - [x] Build statica completata.
 - [x] Nome, logo, favicon, titolo pagina e titolo progetto identificano SARDU Edu.
 - [x] Nessun nuovo supporto hardware o refactoring non richiesto.
-- [x] Workflow pronto a pubblicare `packages/scratch-gui/build/` su GitHub Pages tramite GitHub Actions.
+- [x] GitHub Pages pubblica `packages/scratch-gui/build/` tramite GitHub Actions.
 - [x] I limiti dell'utilizzo offline sono dichiarati senza promesse non verificate.
 - [x] Licenza e attribuzioni upstream sono conservate.
 - [x] La cartella locale degli appunti privati non è tracciata da Git.

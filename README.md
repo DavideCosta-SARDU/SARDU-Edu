@@ -17,7 +17,7 @@ La Milestone 1 prepara la base SARDU Edu:
 - branding essenziale SARDU Edu;
 - esecuzione locale;
 - build web statica;
-- workflow per una futura pubblicazione su GitHub Pages;
+- pubblicazione automatica su GitHub Pages;
 - documentazione dei limiti offline attuali.
 
 Il supporto hardware, la generazione di codice Arduino e l'installazione di estensioni non fanno parte di questa
@@ -56,6 +56,8 @@ percorsi relativi, compatibili con un sito GitHub Pages pubblicato nel sottoperc
 
 Il workflow `.github/workflows/deploy-pages.yml` compila e distribuisce questa directory. Prima del primo deployment è
 necessario configurare GitHub Pages affinché usi **GitHub Actions** come sorgente di pubblicazione.
+
+La versione pubblicata è disponibile all'indirizzo <https://davidecosta-sardu.github.io/SARDU-Edu/>.
 
 ## Utilizzo offline
 
