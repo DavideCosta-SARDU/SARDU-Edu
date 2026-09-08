@@ -7,6 +7,7 @@ import Box from '../box/box.jsx';
 import CloseButton from '../close-button/close-button.jsx';
 import Spinner from '../spinner/spinner.jsx';
 import {AlertLevels} from '../../lib/alerts/index.jsx';
+import brandingMessages from '../../branding/messages';
 
 import styles from './alert.css';
 
@@ -53,9 +54,7 @@ const AlertComponent = ({
         <div className={styles.alertMessage}>
             {extensionName ? (
                 <FormattedMessage
-                    defaultMessage="Scratch lost connection to {extensionName}."
-                    description="Message indicating that an extension peripheral has been disconnected"
-                    id="gui.alerts.lostPeripheralConnection"
+                    {...brandingMessages.lostPeripheralConnection}
                     values={{
                         extensionName: (
                             `${extensionName}`

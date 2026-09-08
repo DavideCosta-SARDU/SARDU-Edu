@@ -1,0 +1,8 @@
+{
+  "productName": "SARDU Edu",
+  "description": "Ambiente educativo di programmazione a blocchi, basato sull'editor open source ufficiale di Scratch e progettato per una futura integrazione hardware modulare.",
+  "homepage": "https://davidecosta-sardu.github.io/SARDU-Edu/",
+  "repository": "https://github.com/DavideCosta-SARDU/SARDU-Edu",
+  "author": "Davide Costa",
+  "authorEmail": "davide@sardu.pro"
+}

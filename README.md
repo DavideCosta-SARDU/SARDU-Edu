@@ -1,56 +1,82 @@
-# scratch-editor: The Scratch Editor Monorepo
+# SARDU Edu
 
-If you'd like to use Scratch, please visit the [Scratch website](https://scratch.mit.edu/). You can build your own
-Scratch project by pressing "Create" on that website or by visiting <https://scratch.mit.edu/projects/editor/>.
+SARDU Edu è un ambiente educativo di programmazione a blocchi basato sul repository open source ufficiale
+[Scratch Editor](https://github.com/scratchfoundation/scratch-editor).
 
-This is a source code repository for the packages that make up the Scratch editor and a few additional support
-packages. Use this if you'd like to learn about how the Scratch editor works or to contribute to its development.
+Il progetto conserva inizialmente l'interfaccia e il comportamento dell'editor originale. La sua evoluzione è orientata
+all'integrazione hardware modulare, iniziando da Arduino Uno e Arduino Nano, senza sostituire o ricostruire l'editor a
+blocchi.
 
-## What's in this repository?
+SARDU Edu è un progetto indipendente e non è affiliato né approvato dalla Scratch Foundation.
 
-The `packages` directory in this repository contains:
+## Stato del progetto
 
-- `scratch-gui` provides the buttons, menus, and other elements that you interact with when creating and editing a
-  project. It's also the "glue" that brings most of the other modules together at runtime.
-- `scratch-media-lib-scripts` builds (or rebuilds) media libraries for the editor.
-- `scratch-paint` provides a way to draw vector (SVG) or bitmap (PNG) images for costumes and backdrops.
-- `scratch-render` draws backdrops, sprites, and clones on the stage.
-- `scratch-storage` helps load project assets like images and sounds. It also provides `ScratchFetch`, a customized
-  wrapper around `fetch`.
-- `scratch-svg-renderer` processes SVG (vector) images for use with Scratch projects.
-- `scratch-vm` is the virtual machine that runs Scratch projects.
-- `task-herder` manages queues of tasks with throttling and concurrency limits.
+La Milestone 1 prepara la base SARDU Edu:
 
-_Please add to this list as more packages are migrated to the monorepo._
+- codice derivato dall'attuale monorepo ufficiale `scratch-editor`;
+- branding essenziale SARDU Edu;
+- esecuzione locale;
+- build web statica;
+- workflow per una futura pubblicazione su GitHub Pages;
+- documentazione dei limiti offline attuali.
 
-Each package has its own `README.md` file with more information about that package.
+Il supporto hardware, la generazione di codice Arduino e l'installazione di estensioni non fanno parte di questa
+milestone. Sono obiettivi fondamentali delle milestone successive e l'architettura esistente viene preservata per non
+ostacolarli.
 
-## Monorepo migration
+## Requisiti
 
-### What's going on?
+- Node.js `24.20.0`, come indicato in `.nvmrc`;
+- npm incluso nella distribuzione Node;
+- Git.
 
-We're migrating the Scratch editor packages into this monorepo. This will allow us to manage all the packages that
-make up the Scratch editor in one place, making  it easier to manage dependencies and make changes that affect
-multiple packages.
+Con un gestore di versioni Node:
 
-### Why are there only a few packages in this repo?
+```sh
+nvm use
+```
 
-We're migrating packages in stages. The current plan, which is subject to change, has us migrating repositories in
-four batches. We plan to complete the migration within 2025.
+## Installazione ed esecuzione locale
 
-### What will happen to the existing repositories?
+```sh
+npm ci
+npm start
+```
 
-The existing repositories will be archived and made read-only. Those repositories contain valuable work and
-information, including but not limited to issues and pull requests. We plan to keep that information available for
-reference, and to selectively migrate it to this new repository.
+L'editor viene servito normalmente all'indirizzo <http://localhost:8601/>.
 
-## Thank you
+## Build statica
 
-Scratch would not be what it is today without help from the global community of Scratchers and open-source
-contributors. Thank you for your contributions and support. _[Scratch on!](https://scratch.mit.edu/projects/65347738/fullscreen/)_
+```sh
+npm run build
+```
 
-## Donate
+L'applicazione web viene generata in `packages/scratch-gui/build/`. Il file principale è `index.html` e gli asset usano
+percorsi relativi, compatibili con un sito GitHub Pages pubblicato nel sottopercorso `/SARDU-Edu/`.
 
-We provide [Scratch](https://scratch.mit.edu) free of charge, and want to keep it that way! Please consider making a
-[donation](https://www.scratchfoundation.org/donate) to support our continued engineering, design, community, and
-resource development efforts. Donations of any size are appreciated. Thank you!
+Il workflow `.github/workflows/deploy-pages.yml` compila e distribuisce questa directory. Prima del primo deployment è
+necessario configurare GitHub Pages affinché usi **GitHub Actions** come sorgente di pubblicazione.
+
+## Utilizzo offline
+
+La build è composta da file statici e può essere conservata localmente o servita da un server HTTP locale. Le funzioni
+principali dell'editor e il caricamento/salvataggio locale dei progetti `.sb3` non richiedono un account.
+
+L'upstream utilizza tuttavia servizi remoti per alcune risorse e funzioni, incluse parti delle librerie multimediali,
+tutorial e determinate estensioni. La Milestone 1 non dichiara quindi una parità offline completa. Il supporto offline
+esteso richiederà una milestone dedicata, senza eliminare le funzioni esistenti.
+
+## Provenienza upstream
+
+Il punto di partenza della Milestone 1 è il ramo `develop` di `scratchfoundation/scratch-editor`, commit
+`82c5fea6d3e60c781f25c09b375045f9b46a43f7`.
+
+La procedura prevista per mantenere separati upstream e personalizzazioni SARDU è documentata in
+[`docs/UPSTREAM.md`](docs/UPSTREAM.md).
+
+## Licenza e attribuzioni
+
+SARDU Edu è distribuito secondo la GNU Affero General Public License v3.0 (`AGPL-3.0-only`). Consultare
+[`LICENSE`](LICENSE), [`NOTICE`](NOTICE) e [`TRADEMARK`](TRADEMARK).
+
+Modifiche SARDU Edu: Davide Costa <davide@sardu.pro>.

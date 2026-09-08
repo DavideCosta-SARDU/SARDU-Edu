@@ -1,19 +1,23 @@
 {
-  "name": "scratch-editor",
+  "name": "sardu-edu",
   "version": "15.1.1",
   "private": "true",
-  "description": "Scratch editor mono-repository",
-  "keywords": [],
-  "homepage": "https://github.com/scratchfoundation/scratch-editor#readme",
+  "description": "SARDU Edu block-based educational programming environment",
+  "keywords": [
+    "education",
+    "block-programming",
+    "scratch-editor"
+  ],
+  "homepage": "https://davidecosta-sardu.github.io/SARDU-Edu/",
   "bugs": {
-    "url": "https://github.com/scratchfoundation/scratch-editor/issues"
+    "url": "https://github.com/DavideCosta-SARDU/SARDU-Edu/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/scratchfoundation/scratch-editor.git"
+    "url": "git+https://github.com/DavideCosta-SARDU/SARDU-Edu.git"
   },
   "license": "AGPL-3.0-only",
-  "author": "Scratch Foundation",
+  "author": "Davide Costa <davide@sardu.pro>",
   "workspaces": [
     "packages/task-herder",
     "packages/scratch-storage",

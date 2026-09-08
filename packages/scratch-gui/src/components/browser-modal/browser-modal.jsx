@@ -3,6 +3,7 @@ import React from 'react';
 import ReactModal from 'react-modal';
 import Box from '../box/box.jsx';
 import {defineMessages, FormattedMessage, useIntl} from 'react-intl';
+import brandingMessages from '../../branding/messages';
 
 import styles from './browser-modal.css';
 import unhappyBrowser from './unsupported-browser.svg';
@@ -41,19 +42,13 @@ const BrowserModal = props => {
                         <FormattedMessage {...label} />
                     </h2>
                     <p>
-                        { /* eslint-disable @stylistic/max-len */ }
                         {
                             props.error ? <FormattedMessage
-                                defaultMessage="We are very sorry, but it looks like you are using a browser version that Scratch does not support. We recommend updating to the latest version of a supported browser such as Google Chrome, Mozilla Firefox, Microsoft Edge, or Apple Safari. "
-                                description="Error message when the browser does not meet our minimum requirements"
-                                id="gui.unsupportedBrowser.notRecommended"
+                                {...brandingMessages.browserNotRecommended}
                             /> : <FormattedMessage
-                                defaultMessage="We are very sorry, but Scratch does not support this browser. We recommend updating to the latest version of a supported browser such as Google Chrome, Mozilla Firefox, Microsoft Edge, or Apple Safari."
-                                description="Error message when the browser does not work at all (IE)"
-                                id="gui.unsupportedBrowser.description"
+                                {...brandingMessages.browserUnsupported}
                             />
                         }
-                        { /* eslint-enable max-len */ }
                     </p>
 
                     <Box className={styles.buttonRow}>

@@ -3,6 +3,7 @@ import React from 'react';
 import ReactModal from 'react-modal';
 import Box from '../box/box.jsx';
 import {defineMessages, FormattedMessage, useIntl} from 'react-intl';
+import brandingMessages from '../../branding/messages';
 
 import styles from './webgl-modal.css';
 
@@ -32,11 +33,8 @@ const WebGlModal = props => {
                         <FormattedMessage {...messages.label} />
                     </h2>
                     <p>
-                        { /* eslint-disable @stylistic/max-len */ }
                         <FormattedMessage
-                            defaultMessage="Unfortunately it looks like your browser or computer <a>{webGlLink}</a>. This technology is needed for Scratch 3.0 to run."
-                            description="WebGL missing message"
-                            id="gui.webglModal.description"
+                            {...brandingMessages.webGlRequired}
                             values={{
                                 webGlLink: (
                                     <FormattedMessage
@@ -55,7 +53,6 @@ const WebGlModal = props => {
                                 )
                             }}
                         />
-                        { /* eslint-enable max-len */ }
                     </p>
 
                     <Box className={styles.buttonRow}>

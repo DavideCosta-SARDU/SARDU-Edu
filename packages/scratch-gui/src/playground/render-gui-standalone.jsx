@@ -3,9 +3,10 @@ import HashParserHOC from '../lib/hash-parser-hoc.jsx';
 import {PLATFORM} from '../lib/platform.js';
 
 import log from '../lib/log.js';
+import {config as sarduEduConfig} from '../branding';
 
 const onClickLogo = () => {
-    window.location = 'https://scratch.mit.edu';
+    window.location = sarduEduConfig.repository;
 };
 
 const handleTelemetryModalCancel = () => {

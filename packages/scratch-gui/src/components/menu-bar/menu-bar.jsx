@@ -64,12 +64,7 @@ import remixIcon from './icon--remix.svg';
 import dropdownCaret from './dropdown-caret.svg';
 import debugIcon from '../debug-modal/icons/icon--debug.svg';
 
-import scratchLogo from './scratch-logo.svg';
-import scratchLogoAndroid from './scratch-logo-android.svg';
-import ninetiesLogo from './nineties_logo.svg';
-import catLogo from './cat_logo.svg';
-import prehistoricLogo from './prehistoric-logo.svg';
-import oldtimeyLogo from './oldtimey-logo.svg';
+import {config as sarduEduConfig, logo as sarduEduLogo} from '../../branding';
 
 import sharedMessages from '../../lib/shared-messages';
 
@@ -98,8 +93,6 @@ const ariaMessages = defineMessages({
         description: 'accessibility text for the my stuff button'
     }
 });
-
-const getScratchLogo = platform => (platform === PLATFORM.ANDROID ? scratchLogoAndroid : scratchLogo);
 
 const MenuBarItemTooltip = ({
     children,
@@ -225,18 +218,8 @@ class MenuBar extends React.Component {
                 document.documentElement.style.height = '';
             }
 
-            // Change logo for modes
-            if (mode === '1990') {
-                document.getElementById('logo_img').src = ninetiesLogo;
-            } else if (mode === '2020') {
-                document.getElementById('logo_img').src = catLogo;
-            } else if (mode === '1920') {
-                document.getElementById('logo_img').src = oldtimeyLogo;
-            } else if (mode === '220022BC') {
-                document.getElementById('logo_img').src = prehistoricLogo;
-            } else {
-                document.getElementById('logo_img').src = getScratchLogo(this.props.platform);
-            }
+            // Time-travel modes may change the editor theme, but not the SARDU Edu product identity.
+            document.getElementById('logo_img').src = this.props.logo;
 
             this.props.onSetTimeTravelMode(mode);
         };
@@ -334,12 +317,12 @@ class MenuBar extends React.Component {
                         >
                             <img
                                 id="logo_img"
-                                alt="Scratch"
+                                alt={sarduEduConfig.productName}
                                 className={classNames(styles.scratchLogo, {
                                     [styles.clickable]: typeof this.props.onClickLogo !== 'undefined'
                                 })}
                                 draggable={false}
-                                src={getScratchLogo(this.props.platform)}
+                                src={this.props.logo}
                             />
                         </button>
                         {(this.props.canChangeColorMode || this.props.canChangeLanguage || this.props.canChangeTheme) &&
@@ -612,7 +595,7 @@ class MenuBar extends React.Component {
                                                 src={profileIcon}
                                             />
                                             <span>
-                                                {'scratch-cat'}
+                                                {'sardu-edu'}
                                             </span>
                                             <img
                                                 className={styles.dropdownCaretIcon}
@@ -718,7 +701,7 @@ MenuBar.propTypes = {
 };
 
 MenuBar.defaultProps = {
-    logo: scratchLogo,
+    logo: sarduEduLogo,
     onShare: () => {}
 };
 
