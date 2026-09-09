@@ -68,6 +68,7 @@ rejected by the pre-commit hook.
 
 ```text
 packages/
+├── sardu-edu-hardware/     Hardware definitions and compatibility contracts
 ├── scratch-gui/            React-based editor UI
 ├── scratch-vm/             Virtual machine that runs Scratch projects
 ├── scratch-render/         WebGL renderer for the stage
@@ -81,6 +82,7 @@ scripts/                    Monorepo-level utility scripts
 
 | Package | Language | Bundler | Tests |
 | - | - | - | - |
+| `sardu-edu-hardware` | TypeScript | Vite | Vitest |
 | `scratch-gui` | JavaScript / JSX (some TypeScript) | webpack | Jest |
 | `scratch-vm` | JavaScript | webpack | Tap |
 | `scratch-render` | JavaScript | webpack | Tap |

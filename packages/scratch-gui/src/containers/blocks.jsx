@@ -19,7 +19,7 @@ import {BLOCKS_DEFAULT_SCALE, STAGE_DISPLAY_SIZES} from '../lib/layout-constants
 import DropAreaHOC from '../lib/drop-area-hoc.jsx';
 import DragConstants from '../lib/drag-constants';
 import defineDynamicBlock from '../lib/define-dynamic-block';
-import {DEFAULT_MODE, getColorsForMode, colorModeMap} from '../lib/settings/color-mode';
+import {DEFAULT_MODE, getColorsForMode, shouldRecolorExtensions, colorModeMap} from '../lib/settings/color-mode';
 import {CAT_BLOCKS_THEME} from '../lib/settings/theme';
 import {
     injectExtensionBlockIcons,
@@ -565,7 +565,7 @@ class Blocks extends React.Component {
         let colourSecondary = categoryInfo.color2;
         let colourTertiary = categoryInfo.color3;
         let colourQuaternary = categoryInfo.color3;
-        if (this.props.colorMode !== DEFAULT_MODE) {
+        if (shouldRecolorExtensions(this.props.colorMode)) {
             const colors = getExtensionColors(this.props.colorMode);
             colourPrimary = colors.colourPrimary;
             colourSecondary = colors.colourSecondary;

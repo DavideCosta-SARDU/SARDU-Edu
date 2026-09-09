@@ -1,9 +1,6 @@
-name: Deploy SARDU Edu to GitHub Pages
+name: Deploy SARDU Edu stable to GitHub Pages
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
@@ -12,7 +9,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: github-pages
+  group: github-pages-stable
   cancel-in-progress: false
 
 jobs:

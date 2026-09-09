@@ -25,6 +25,7 @@
     "packages/scratch-paint",
     "packages/scratch-render",
     "packages/scratch-vm",
+    "packages/sardu-edu-hardware",
     "packages/scratch-gui",
     "packages/scratch-media-lib-scripts"
   ],

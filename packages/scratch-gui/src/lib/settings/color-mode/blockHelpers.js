@@ -1,4 +1,4 @@
-import {DEFAULT_MODE, getColorsForMode, colorModeMap} from '.';
+import {getColorsForMode, shouldRecolorExtensions, colorModeMap} from '.';
 
 const getBlockIconURI = extensionIcons => {
     if (!extensionIcons) return null;
@@ -26,7 +26,7 @@ const getExtensionColors = mode => getColorsForMode(mode).pen;
  */
 const injectExtensionCategoryMode = (dynamicBlockXML, mode) => {
     // Don't do any manipulation for the default mode
-    if (mode === DEFAULT_MODE) return dynamicBlockXML;
+    if (!shouldRecolorExtensions(mode)) return dynamicBlockXML;
 
     const extensionColors = getExtensionColors(mode);
     const extensionIcons = colorModeMap[mode].extensions;
@@ -56,7 +56,7 @@ const injectExtensionCategoryMode = (dynamicBlockXML, mode) => {
 
 const injectExtensionBlockIcons = (blockInfoJson, mode) => {
     // Don't do any manipulation for the default color mode
-    if (mode === DEFAULT_MODE) return blockInfoJson;
+    if (!shouldRecolorExtensions(mode)) return blockInfoJson;
 
     // Block icons are the first element of `args0`
     if (!blockInfoJson.args0 || blockInfoJson.args0.length < 1 ||

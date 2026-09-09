@@ -17,7 +17,7 @@ La Milestone 1 prepara la base SARDU Edu:
 - branding essenziale SARDU Edu;
 - esecuzione locale;
 - build web statica;
-- pubblicazione automatica su GitHub Pages;
+- pubblicazione stable su GitHub Pages tramite workflow controllato;
 - documentazione dei limiti offline attuali.
 
 Il supporto hardware, la generazione di codice Arduino e l'installazione di estensioni non fanno parte di questa
@@ -54,8 +54,8 @@ npm run build
 L'applicazione web viene generata in `packages/scratch-gui/build/`. Il file principale è `index.html` e gli asset usano
 percorsi relativi, compatibili con un sito GitHub Pages pubblicato nel sottopercorso `/SARDU-Edu/`.
 
-Il workflow `.github/workflows/deploy-pages.yml` compila e distribuisce questa directory. Prima del primo deployment è
-necessario configurare GitHub Pages affinché usi **GitHub Actions** come sorgente di pubblicazione.
+Il workflow `.github/workflows/deploy-pages.yml` compila e distribuisce questa directory quando viene avviato
+manualmente. GitHub Pages deve usare **GitHub Actions** come sorgente di pubblicazione.
 
 La versione pubblicata è disponibile all'indirizzo <https://davidecosta-sardu.github.io/SARDU-Edu/>.
 

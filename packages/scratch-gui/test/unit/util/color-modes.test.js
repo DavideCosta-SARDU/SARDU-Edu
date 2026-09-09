@@ -3,9 +3,13 @@ import {
     defaultColors,
     DEFAULT_MODE,
     getColorsForMode,
-    HIGH_CONTRAST_MODE
+    HIGH_CONTRAST_MODE,
+    SARDU_EDU_MODE
 } from '../../../src/lib/settings/color-mode';
-import {injectExtensionBlockIcons, injectExtensionCategoryMode} from '../../../src/lib/settings/color-mode/blockHelpers';
+import {
+    injectExtensionBlockIcons,
+    injectExtensionCategoryMode
+} from '../../../src/lib/settings/color-mode/blockHelpers';
 import {detectColorMode, persistColorMode} from '../../../src/lib/settings/color-mode/persistence';
 
 jest.mock('../../../src/lib/settings/color-mode/default');
@@ -29,6 +33,14 @@ describe('color modes', () => {
             const colors = getColorsForMode(DARK_MODE);
 
             expect(colors.motion.colourSecondary).toEqual('#222222');
+        });
+
+        test('provides SARDU Edu workspace colors without replacing category colors', () => {
+            const colors = getColorsForMode(SARDU_EDU_MODE);
+
+            expect(colors.toolboxHover).toEqual('#003366');
+            expect(colors.scrollbar).toEqual('#CCCC66');
+            expect(colors.motion.colourPrimary).toEqual(defaultColors.motion.colourPrimary);
         });
     });
 
@@ -95,6 +107,15 @@ describe('color modes', () => {
             });
         });
 
+        test('preserves extension icons in SARDU Edu color mode', () => {
+            const blockInfoJson = {
+                type: 'pen_block',
+                args0: [{type: 'field_image', src: 'original'}]
+            };
+
+            expect(injectExtensionBlockIcons(blockInfoJson, SARDU_EDU_MODE)).toBe(blockInfoJson);
+        });
+
         test('updates extension category based on color mode', () => {
             const dynamicBlockXML = [
                 {
@@ -127,21 +148,21 @@ describe('color modes', () => {
 
             const colorMode = detectColorMode();
 
-            expect(colorMode).toEqual(DEFAULT_MODE);
+            expect(colorMode).toEqual(SARDU_EDU_MODE);
         });
 
         test('persists color mode to cookie', () => {
             window.document.cookie = 'scratchtheme=';
 
-            persistColorMode(HIGH_CONTRAST_MODE);
+            persistColorMode(DEFAULT_MODE);
 
-            expect(window.document.cookie).toEqual(`scratchtheme=${HIGH_CONTRAST_MODE}`);
+            expect(window.document.cookie).toEqual(`scratchtheme=${DEFAULT_MODE}`);
         });
 
         test('clears color mode when matching system preferences', () => {
-            window.document.cookie = `scratchtheme=${HIGH_CONTRAST_MODE}`;
+            window.document.cookie = `scratchtheme=${DEFAULT_MODE}`;
 
-            persistColorMode(DEFAULT_MODE);
+            persistColorMode(SARDU_EDU_MODE);
 
             expect(window.document.cookie).toEqual('scratchtheme=');
         });
