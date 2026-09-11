@@ -295,7 +295,7 @@ class LibraryComponent extends React.Component {
     renderElement (data) {
         const key = this.constructKey(data);
         const icons = getItemIcons(data, this.props.storage);
-        return (<LibraryItem
+        const item = (<LibraryItem
             bluetoothRequired={data.bluetoothRequired}
             collaborator={data.collaborator}
             description={data.description}
@@ -316,6 +316,24 @@ class LibraryComponent extends React.Component {
             onSelect={this.handleSelect}
             isMemberOnly={data.isMemberOnly}
         />);
+        if (this.props.selectedItemId !== key || !this.props.onItemRemove) return item;
+        return (
+            <div className={styles.libraryItemActionWrapper} key={key}>
+                {item}
+                <button
+                    className={styles.removeItemButton}
+                    aria-label={this.props.removeItemLabel}
+                    title={this.props.removeItemLabel}
+                    onClick={event => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        this.props.onItemRemove(data);
+                    }}
+                >
+                    ×
+                </button>
+            </div>
+        );
     }
     renderData (data) {
         if (this.state.selectedTag !== ALL_TAG.tag || !this.props.withCategories) {
@@ -403,7 +421,9 @@ class LibraryComponent extends React.Component {
                     ref={this.setFilteredDataRef}
                     tabIndex={-1}
                 >
-                    {this.state.loaded ? this.renderData(this.getFilteredData()) : (
+                    {this.state.loaded ? (
+                        this.getFilteredData().length ? this.renderData(this.getFilteredData()) : this.props.emptyMessage
+                    ) : (
                         <div className={styles.spinnerWrapper}>
                             <Spinner
                                 large
@@ -432,6 +452,7 @@ LibraryComponent.propTypes = {
         })
          
     ),
+    emptyMessage: PropTypes.node,
     filterable: PropTypes.bool,
     withCategories: PropTypes.bool,
     id: PropTypes.string.isRequired,
@@ -439,9 +460,12 @@ LibraryComponent.propTypes = {
     onItemMouseEnter: PropTypes.func,
     onItemMouseLeave: PropTypes.func,
     onItemSelected: PropTypes.func,
+    onItemRemove: PropTypes.func,
     onRequestClose: PropTypes.func,
     setStopHandler: PropTypes.func,
     showPlayButton: PropTypes.bool,
+    selectedItemId: PropTypes.string,
+    removeItemLabel: PropTypes.string,
     storage: GUIStoragePropType,
     tags: PropTypes.arrayOf(PropTypes.shape(TagButton.propTypes)),
     title: PropTypes.string.isRequired
@@ -449,6 +473,7 @@ LibraryComponent.propTypes = {
 
 LibraryComponent.defaultProps = {
     filterable: true,
+    removeItemLabel: 'Remove',
     showPlayButton: false
 };
 

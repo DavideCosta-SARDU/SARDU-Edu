@@ -28,6 +28,10 @@ const StageWrapperComponent = function (props) {
         userOwnsProject,
         stageSize,
         showNewFeatureCallouts,
+        showStage,
+        sarduMode,
+        sarduViewMode,
+        onSarduViewModeChange,
         vm
     } = props;
     return (
@@ -53,9 +57,12 @@ const StageWrapperComponent = function (props) {
                     showNewFeatureCallouts={showNewFeatureCallouts}
                     stageSize={stageSize}
                     vm={vm}
+                    sarduMode={sarduMode}
+                    sarduViewMode={sarduViewMode}
+                    onSarduViewModeChange={onSarduViewModeChange}
                 />
             </Box>
-            <Box className={styles.stageCanvasWrapper}>
+            {showStage ? <Box className={styles.stageCanvasWrapper}>
                 {
                     isRendererSupported ?
                         <Stage
@@ -64,7 +71,7 @@ const StageWrapperComponent = function (props) {
                         /> :
                         null
                 }
-            </Box>
+            </Box> : null}
             {loading ? (
                 <Loader isFullScreen={isFullScreen} />
             ) : null}
@@ -84,11 +91,19 @@ StageWrapperComponent.propTypes = {
     onSetManualThumbnail: PropTypes.func,
     onSetManualThumbnailButtonClick: PropTypes.func,
     showNewFeatureCallouts: PropTypes.bool,
+    showStage: PropTypes.bool,
+    sarduMode: PropTypes.oneOf(['standalone', 'realtime']),
+    sarduViewMode: PropTypes.oneOf(['code', 'stage', 'combined']),
+    onSarduViewModeChange: PropTypes.func,
     username: PropTypes.string,
     userOwnsProject: PropTypes.bool,
     onUpdateProjectThumbnail: PropTypes.func,
     stageSize: PropTypes.oneOf(Object.keys(STAGE_DISPLAY_SIZES)).isRequired,
     vm: PropTypes.instanceOf(VM).isRequired
+};
+
+StageWrapperComponent.defaultProps = {
+    showStage: true
 };
 
 export default StageWrapperComponent;

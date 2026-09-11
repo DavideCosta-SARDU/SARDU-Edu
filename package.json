@@ -27,6 +27,7 @@
     "packages/scratch-vm",
     "packages/sardu-edu-hardware",
     "packages/scratch-gui",
+    "packages/sardu-edu-desktop",
     "packages/scratch-media-lib-scripts"
   ],
   "scripts": {
@@ -35,6 +36,7 @@
     "prepare": "husky install",
     "refresh-gh-workflow": "ts-node scripts/update-gha-workflows.ts",
     "start": "npm --workspace @scratch/scratch-gui start",
+    "start:desktop": "npm --workspace @sardu-edu/desktop start",
     "test": "npm test --workspaces",
     "update-legal": "scripts/update-legal.sh",
     "version": "cross-env-shell ./scripts/npm-version.sh"

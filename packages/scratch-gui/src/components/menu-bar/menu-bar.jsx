@@ -63,6 +63,8 @@ import profileIcon from './icon--profile.png';
 import remixIcon from './icon--remix.svg';
 import dropdownCaret from './dropdown-caret.svg';
 import debugIcon from '../debug-modal/icons/icon--debug.svg';
+import connectHardwareIcon from './icon--hardware-connect.svg';
+import disconnectHardwareIcon from './icon--hardware-disconnect.svg';
 
 import {config as sarduEduConfig, logo as sarduEduLogo} from '../../branding';
 
@@ -157,15 +159,37 @@ class MenuBar extends React.Component {
             'handleSetMode',
             'handleKeyPress',
             'handleRestoreOption',
+            'handleSarduConnect',
+            'handleSarduDisconnect',
+            'handleSarduHardwareChanged',
             'getSaveToComputerHandler',
             'restoreOptionMessage'
         ]);
+        this.state = {
+            sarduConnectedPort: props.vm.runtime.sarduEduHardwarePort || null,
+            sarduSelectedPort: props.vm.runtime.sarduEduSelectedPort || null
+        };
     }
     componentDidMount () {
         document.addEventListener('keydown', this.handleKeyPress);
+        this.props.vm.on('SARDU_HARDWARE_CHANGED', this.handleSarduHardwareChanged);
     }
     componentWillUnmount () {
         document.removeEventListener('keydown', this.handleKeyPress);
+        this.props.vm.removeListener('SARDU_HARDWARE_CHANGED', this.handleSarduHardwareChanged);
+    }
+    handleSarduHardwareChanged () {
+        this.setState({
+            sarduConnectedPort: this.props.vm.runtime.sarduEduHardwarePort || null,
+            sarduSelectedPort: this.props.vm.runtime.sarduEduSelectedPort || null
+        });
+    }
+    handleSarduConnect () {
+        if (this.state.sarduSelectedPort) this.props.vm.emit('SARDU_CONNECT_REQUESTED');
+    }
+    handleSarduDisconnect () {
+        this.props.vm.setSarduEduLiveTransport(null);
+        this.props.vm.setSarduEduHardwarePort(null);
     }
     handleClickNew () {
         // if the project is dirty, and user owns the project, we will autosave.
@@ -362,6 +386,31 @@ class MenuBar extends React.Component {
                             depth={1}
                         />)}
                     </div>
+                    {this.props.vm.getSarduEduProjectData()?.hardwareSelection ? (
+                        <button
+                            aria-label={this.props.intl.formatMessage({
+                                id: this.state.sarduConnectedPort ?
+                                    'gui.menuBar.sarduDisconnect' : 'gui.menuBar.sarduConnect',
+                                defaultMessage: this.state.sarduConnectedPort ?
+                                    'Disconnect board' : 'Connect board'
+                            })}
+                            className={classNames(styles.menuBarItem, styles.noOffset, styles.hoverable)}
+                            disabled={!this.state.sarduConnectedPort && !this.state.sarduSelectedPort}
+                            title={this.props.intl.formatMessage({
+                                id: this.state.sarduConnectedPort ?
+                                    'gui.menuBar.sarduDisconnect' : 'gui.menuBar.sarduConnect',
+                                defaultMessage: this.state.sarduConnectedPort ?
+                                    'Disconnect board' : 'Connect board'
+                            })}
+                            onClick={this.state.sarduConnectedPort ?
+                                this.handleSarduDisconnect : this.handleSarduConnect}
+                        >
+                            <img
+                                className={styles.hardwareConnectionIcon}
+                                src={this.state.sarduConnectedPort ? disconnectHardwareIcon : connectHardwareIcon}
+                            />
+                        </button>
+                    ) : null}
                     {this.props.canEditTitle ? (
                         <div className={classNames(styles.menuBarItem, styles.growable)}>
                             <MenuBarItemTooltip

@@ -1,0 +1,4 @@
+*
+!.gitignore
+!arduino-cli.yaml
+!manifest.json

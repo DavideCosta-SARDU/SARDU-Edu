@@ -1,14 +1,23 @@
 import {isRtl} from 'scratch-l10n';
 import editorMessages from 'scratch-l10n/locales/editor-msgs';
+import sarduEduMessages from '../lib/sardu-edu-messages';
 
 const UPDATE_LOCALES = 'scratch-gui/locales/UPDATE_LOCALES';
 const SELECT_LOCALE = 'scratch-gui/locales/SELECT_LOCALE';
 
+const addSarduEduMessages = localesMessages => Object.keys(Object.assign({}, sarduEduMessages, localesMessages))
+    .reduce((result, locale) => {
+        result[locale] = Object.assign({}, sarduEduMessages.en, sarduEduMessages[locale], localesMessages[locale]);
+        return result;
+    }, {});
+
+const messagesByLocale = addSarduEduMessages(editorMessages);
+
 const initialState = {
     isRtl: false,
     locale: 'en',
-    messagesByLocale: editorMessages,
-    messages: editorMessages.en
+    messagesByLocale,
+    messages: messagesByLocale.en
 };
 
 const reducer = function (state, action) {
@@ -43,7 +52,7 @@ const selectLocale = function (locale) {
 const setLocales = function (localesMessages) {
     return {
         type: UPDATE_LOCALES,
-        messagesByLocale: localesMessages
+        messagesByLocale: addSarduEduMessages(localesMessages)
     };
 };
 const initLocale = function (currentState, locale) {

@@ -795,7 +795,8 @@ const xmlClose = '</xml>';
  * @returns {string} - a ScratchBlocks-style XML document for the contents of the toolbox.
  */
 const makeToolboxXML = function (isInitialSetup, isStage = true, targetId, categoriesXML = [],
-    costumeName = '', backdropName = '', soundName = '', colors = defaultColors) {
+    costumeName = '', backdropName = '', soundName = '', colors = defaultColors, hardwareSelection = null,
+    hasBoardProgram = false) {
     isStage = isInitialSetup || isStage;
     const gap = [categorySeparator];
 
@@ -817,21 +818,53 @@ const makeToolboxXML = function (isInitialSetup, isStage = true, targetId, categ
     const looksXML = moveCategory('looks') ||
         looks(isInitialSetup, isStage, targetId, costumeName, backdropName, colors.looks);
     const soundXML = moveCategory('sound') || sound(isInitialSetup, isStage, targetId, soundName, colors.sounds);
-    const eventsXML = moveCategory('event') || events(isInitialSetup, isStage, targetId, colors.event);
+    const providedEventsXML = moveCategory('event');
+    const offline = hardwareSelection?.mode === 'standalone';
+    const boardCategory = categoriesXML.find(categoryInfo => categoryInfo.id === 'sarduBoard');
+    const sensorCategory = categoriesXML.find(categoryInfo => categoryInfo.id === 'sarduSensors');
+    if (sensorCategory) {
+        sensorCategory.xml = sensorCategory.xml.replace(/(<category\b[^>]*>)/,
+            '$1\n<label text="DHT11/DHT22"/>');
+    }
+    if (offline && hasBoardProgram && boardCategory) {
+        boardCategory.xml = boardCategory.xml.replace(
+            '<block type="sarduBoard_program"',
+            '<block type="sarduBoard_program" disabled="true"'
+        );
+    }
+    const eventsXML = providedEventsXML || events(isInitialSetup, isStage, targetId, colors.event);
     const controlXML = moveCategory('control') || control(isInitialSetup, isStage, targetId, colors.control);
     const sensingXML = moveCategory('sensing') || sensing(isInitialSetup, isStage, targetId, colors.sensing);
     const operatorsXML = moveCategory('operators') || operators(isInitialSetup, isStage, targetId, colors.operators);
-    const variablesXML = moveCategory('data') || variables(isInitialSetup, isStage, targetId, colors.data);
+    let variablesXML = moveCategory('data') || variables(isInitialSetup, isStage, targetId, colors.data);
+    if (offline && boardCategory) {
+        variablesXML = variablesXML.replace('</category>', `
+        <sep gap="36"/>
+        <label text="Variabili Arduino"/>
+        <block type="sarduBoard_declareArduinoVariable">
+            <value name="NAME"><shadow type="text"><field name="TEXT">value</field></shadow></value>
+            <value name="VALUE"><shadow type="text"><field name="TEXT">0</field></shadow></value>
+        </block>
+        <block type="sarduBoard_setArduinoVariable">
+            <value name="NAME"><shadow type="text"><field name="TEXT">value</field></shadow></value>
+            <value name="VALUE"><shadow type="text"><field name="TEXT">0</field></shadow></value>
+        </block>
+        <block type="sarduBoard_arduinoVariable">
+            <value name="NAME"><shadow type="text"><field name="TEXT">value</field></shadow></value>
+        </block>
+        <block type="sarduBoard_convertValue">
+            <value name="VALUE"><shadow type="text"><field name="TEXT">0</field></shadow></value>
+        </block>
+    </category>`);
+    }
     const myBlocksXML = moveCategory('procedures') || myBlocks(isInitialSetup, isStage, targetId, colors.more);
 
     const everything = [
         xmlOpen,
-        motionXML, gap,
-        looksXML, gap,
-        soundXML, gap,
+        ...(offline ? [] : [motionXML, gap, looksXML, gap, soundXML, gap]),
         eventsXML, gap,
         controlXML, gap,
-        sensingXML, gap,
+        ...(offline ? [] : [sensingXML, gap]),
         operatorsXML, gap,
         variablesXML, gap,
         myBlocksXML

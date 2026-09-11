@@ -51,8 +51,11 @@ class StageHeader extends React.Component {
 StageHeader.propTypes = {
     isFullScreen: PropTypes.bool,
     isPlayerOnly: PropTypes.bool,
+    onSarduViewModeChange: PropTypes.func,
     onSetStageUnFull: PropTypes.func.isRequired,
     showBranding: PropTypes.bool,
+    sarduMode: PropTypes.oneOf(['standalone', 'realtime']),
+    sarduViewMode: PropTypes.oneOf(['code', 'stage', 'combined']),
     stageSizeMode: PropTypes.oneOf(Object.keys(STAGE_SIZE_MODES)),
     vm: PropTypes.instanceOf(VM).isRequired
 };

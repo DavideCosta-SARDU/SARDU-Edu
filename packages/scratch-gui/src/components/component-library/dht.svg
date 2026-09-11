@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120">
+  <rect x="45" y="12" width="70" height="82" rx="8" fill="#e6eef5" stroke="#003366" stroke-width="5"/>
+  <g fill="#003366">
+    <circle cx="62" cy="30" r="4"/><circle cx="80" cy="30" r="4"/><circle cx="98" cy="30" r="4"/>
+    <circle cx="62" cy="47" r="4"/><circle cx="80" cy="47" r="4"/><circle cx="98" cy="47" r="4"/>
+    <circle cx="62" cy="64" r="4"/><circle cx="80" cy="64" r="4"/><circle cx="98" cy="64" r="4"/>
+  </g>
+  <path stroke="#003366" stroke-width="5" d="M62 94v18m18-18v18m18-18v18"/>
+  <text x="80" y="86" fill="#003366" font-family="sans-serif" font-size="12" font-weight="bold" text-anchor="middle">DHT11/22</text>
+</svg>

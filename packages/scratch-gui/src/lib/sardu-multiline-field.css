@@ -1,0 +1,67 @@
+.backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.dialog {
+    display: flex;
+    flex-direction: column;
+    width: min(52rem, 100%);
+    height: min(34rem, 100%);
+    overflow: hidden;
+    border: 2px solid #003366;
+    border-radius: 0.6rem;
+    background: #fff;
+    box-shadow: 0 0.5rem 2rem rgba(0, 0, 0, 0.3);
+}
+
+.title {
+    padding: 0.7rem 0.9rem;
+    color: #fff;
+    background: #003366;
+    font-weight: bold;
+}
+
+.code {
+    flex: 1;
+    min-height: 12rem;
+    padding: 0.9rem;
+    resize: none;
+    color: #1f2933;
+    background: #f7f8fa;
+    border: 0;
+    outline: 0;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    white-space: pre;
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 0.65rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.button {
+    padding: 0.4rem 0.8rem;
+    color: #003366;
+    background: #fff;
+    border: 1px solid #003366;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.primary {
+    color: #fff;
+    background: #003366;
+}

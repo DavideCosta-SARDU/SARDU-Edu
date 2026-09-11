@@ -223,6 +223,101 @@ class VirtualMachine extends EventEmitter {
     }
 
     /**
+     * Select the board and programming backend stored with this SARDU Edu project.
+     * @param {object} selection Hardware selection.
+     */
+    setSarduEduHardwareSelection (selection) {
+        if (!selection || typeof selection.boardId !== 'string' || typeof selection.backendId !== 'string') {
+            throw new Error('setSarduEduHardwareSelection requires boardId and backendId');
+        }
+        const current = this.runtime.sarduEdu || {};
+        const boardChanged = current.hardwareSelection?.boardId !== selection.boardId;
+        if (boardChanged) {
+            this.runtime.sarduEduSelectedPort = null;
+            this.runtime.sarduEduHardwarePort = null;
+            this.setSarduEduLiveTransport(null);
+        }
+        this.runtime.sarduEdu = Object.assign({}, current, {
+            hardwareSelection: {
+                boardId: selection.boardId,
+                boardName: selection.boardName,
+                analogInputPins: selection.analogInputPins,
+                componentIds: Array.isArray(selection.componentIds) ? selection.componentIds : [],
+                digitalOutputPins: selection.digitalOutputPins,
+                hardwareKind: selection.hardwareKind || 'board',
+                boardVersion: selection.boardVersion,
+                backendId: selection.backendId,
+                backendVersion: selection.backendVersion,
+                mode: selection.mode || 'standalone',
+                pwmPins: selection.pwmPins
+            }
+        });
+        this.emit('SARDU_HARDWARE_CHANGED', this.getSarduEduProjectData());
+        if (this.extensionManager.isExtensionLoaded('sarduBoard')) {
+            this.extensionManager.refreshBlocks();
+        }
+        this.runtime.emit(Runtime.PROJECT_CHANGED);
+    }
+
+    /**
+     * Remove the selected SARDU Edu board or robot from the project.
+     */
+    clearSarduEduHardwareSelection () {
+        this.runtime.sarduEdu = null;
+        this.runtime.sarduEduSelectedPort = null;
+        this.runtime.sarduEduHardwarePort = null;
+        this.setSarduEduLiveTransport(null);
+        this.emit('SARDU_HARDWARE_CHANGED', null);
+        this.runtime.emit(Runtime.PROJECT_CHANGED);
+    }
+
+    /**
+     * @returns {?object} A copy of the current SARDU Edu project configuration.
+     */
+    getSarduEduProjectData () {
+        return this.runtime.sarduEdu ? JSON.parse(JSON.stringify(this.runtime.sarduEdu)) : null;
+    }
+
+    /**
+     * Attach the runtime-only transport used by SARDU Edu realtime blocks.
+     * @param {?object} transport Live hardware transport, or null when disconnected.
+     */
+    setSarduEduLiveTransport (transport) {
+        if (transport !== null && (typeof transport.writeDigital !== 'function' ||
+            typeof transport.readMillis !== 'function' || typeof transport.readMicros !== 'function')) {
+            throw new Error('setSarduEduLiveTransport requires the complete SARDU live transport or null');
+        }
+        this.runtime.sarduEduLiveTransport = transport;
+    }
+
+    /**
+     * Set the serial port physically detected for the selected SARDU Edu hardware.
+     * This connection state is intentionally not stored in the project.
+     * @param {?string} port Detected serial port, or null when disconnected.
+     */
+    setSarduEduHardwarePort (port) {
+        if (port !== null && (typeof port !== 'string' || !port)) {
+            throw new Error('setSarduEduHardwarePort requires a non-empty port or null');
+        }
+        if (this.runtime.sarduEduHardwarePort === port) return;
+        this.runtime.sarduEduHardwarePort = port;
+        this.emit('SARDU_HARDWARE_CHANGED', this.getSarduEduProjectData());
+    }
+
+    /**
+     * Select a detected serial port without connecting it.
+     * @param {?string} port Detected serial port, or null when none is selected.
+     */
+    setSarduEduSelectedPort (port) {
+        if (port !== null && (typeof port !== 'string' || !port)) {
+            throw new Error('setSarduEduSelectedPort requires a non-empty port or null');
+        }
+        if (this.runtime.sarduEduSelectedPort === port) return;
+        this.runtime.sarduEduSelectedPort = port;
+        this.emit('SARDU_HARDWARE_CHANGED', this.getSarduEduProjectData());
+    }
+
+    /**
      * Clear out current running project data.
      */
     clear () {
@@ -529,8 +624,13 @@ class VirtualMachine extends EventEmitter {
      */
     installTargets (targets, extensions, wholeProject) {
         const extensionPromises = [];
+        const extensionIDs = new Set(extensions.extensionIDs);
 
-        extensions.extensionIDs.forEach(extensionID => {
+        if (wholeProject && this.runtime.sarduEdu?.hardwareSelection) {
+            extensionIDs.add('sarduBoard');
+        }
+
+        extensionIDs.forEach(extensionID => {
             if (!this.extensionManager.isExtensionLoaded(extensionID)) {
                 const extensionURL = extensions.extensionURLs.get(extensionID) || extensionID;
                 extensionPromises.push(this.extensionManager.loadExtensionURL(extensionURL));

@@ -1,7 +1,7 @@
 import classNames from 'classnames';
 import omit from 'lodash.omit';
 import PropTypes from 'prop-types';
-import React, {useEffect, useCallback} from 'react';
+import React, {useEffect, useCallback, useRef, useState} from 'react';
 import {defineMessages, FormattedMessage, useIntl} from 'react-intl';
 import {connect} from 'react-redux';
 import MediaQuery from 'react-responsive';
@@ -24,6 +24,9 @@ import Watermark from '../../containers/watermark.jsx';
 
 import Backpack from '../../containers/backpack.jsx';
 import ExtensionsButton from '../extension-button/extension-button.jsx';
+import HardwareButtons from '../hardware-buttons/hardware-buttons.jsx';
+import ArduinoCodePanel from '../arduino-code-panel/arduino-code-panel.jsx';
+import RobotLibrary from '../robot-library/robot-library.jsx';
 import WebGlModal from '../../containers/webgl-modal.jsx';
 import TipsLibrary from '../../containers/tips-library.jsx';
 import Cards from '../../containers/cards.jsx';
@@ -113,6 +116,9 @@ let isRendererSupported = null;
 
 const GUIComponent = props => {
     const intl = useIntl();
+    const editorPaneRef = useRef(null);
+    const layoutResizeRef = useRef(null);
+    const stagePaneRef = useRef(null);
     const {
         accountMenuOptions,
         activeTabIndex,
@@ -172,8 +178,11 @@ const GUIComponent = props => {
         onActivateCostumesTab,
         onActivateSoundsTab,
         onActivateTab,
+        onBoardButtonClick,
+        onComponentButtonClick,
         onClickLogo,
         onExtensionButtonClick,
+        onRobotButtonClick,
         onNewSpriteClick,
         onNewLibraryCostumeClick,
         onNewLibraryBackdropClick,
@@ -181,6 +190,7 @@ const GUIComponent = props => {
         onRequestCloseBackdropLibrary,
         onRequestCloseCostumeLibrary,
         onRequestCloseDebugModal,
+        onRequestCloseRobotLibrary,
         onRequestCloseTelemetryModal,
         onSeeCommunity,
         onShare,
@@ -192,6 +202,7 @@ const GUIComponent = props => {
         onUpdateProjectThumbnail,
         showComingSoon,
         showNewFeatureCallouts,
+        robotLibraryVisible,
         soundsTabVisible,
         stageSizeMode,
         targetIsStage,
@@ -207,9 +218,97 @@ const GUIComponent = props => {
         vm,
         ...componentProps
     } = omit(props, 'dispatch', 'setPlatform');
+    const initialHardwareSelection = vm.getSarduEduProjectData()?.hardwareSelection || null;
+    const [hardwareSelection, setHardwareSelection] = useState(initialHardwareSelection);
+    const [sarduViewMode, setSarduViewMode] = useState(
+        initialHardwareSelection?.mode === 'standalone' ? 'code' : 'combined'
+    );
+    const [sarduStatus, setSarduStatus] = useState(null);
+    const [sarduStatusHistory, setSarduStatusHistory] = useState([]);
+    const [sarduStatusDetailsVisible, setSarduStatusDetailsVisible] = useState(false);
+    const [sarduStagePaneWidth, setSarduStagePaneWidth] = useState(null);
+    const handleSarduStatusChange = useCallback(nextStatus => {
+        setSarduStatus(current => (
+            current?.kind === nextStatus?.kind && current?.message === nextStatus?.message ? current : nextStatus
+        ));
+        if (!nextStatus) return;
+        setSarduStatusHistory(current => {
+            const previous = current[current.length - 1];
+            if (previous?.kind === nextStatus.kind && previous?.message === nextStatus.message) return current;
+            return [...current, {...nextStatus, time: Date.now()}].slice(-30);
+        });
+    }, []);
     if (children) {
         return <Box {...componentProps}>{children}</Box>;
     }
+
+    useEffect(() => {
+        const handleHardwareChanged = projectData => {
+            const selection = projectData?.hardwareSelection || null;
+            setHardwareSelection(selection);
+            if (selection?.mode === 'standalone') setSarduViewMode('code');
+            if (selection?.mode === 'realtime') setSarduViewMode('combined');
+        };
+        vm.on('SARDU_HARDWARE_CHANGED', handleHardwareChanged);
+        return () => vm.removeListener('SARDU_HARDWARE_CHANGED', handleHardwareChanged);
+    }, [vm]);
+
+    useEffect(() => {
+        const stagePane = stagePaneRef.current;
+        if (!stagePane || typeof ResizeObserver === 'undefined') return undefined;
+        const updateWidth = () => setSarduStagePaneWidth(stagePane.getBoundingClientRect().width);
+        const observer = new ResizeObserver(updateWidth);
+        observer.observe(stagePane);
+        updateWidth();
+        return () => observer.disconnect();
+    }, [hardwareSelection, sarduViewMode]);
+
+    useEffect(() => {
+        if (!hardwareSelection?.componentIds?.includes('dht11-dht22') ||
+            vm.extensionManager.isExtensionLoaded('sarduSensors')) return;
+        void vm.extensionManager.loadExtensionURL('sarduSensors');
+    }, [hardwareSelection, vm]);
+
+    useEffect(() => {
+        const handlePointerMove = event => {
+            const resize = layoutResizeRef.current;
+            if (!resize) return;
+            const editorWidth = Math.max(320, Math.min(resize.totalWidth - 256,
+                resize.editorWidth + event.clientX - resize.startX));
+            resize.editor.style.flex = `0 0 ${editorWidth}px`;
+            resize.stage.style.flex = `0 0 ${resize.totalWidth - editorWidth}px`;
+            setSarduStagePaneWidth(resize.totalWidth - editorWidth);
+            window.dispatchEvent(new Event('resize'));
+        };
+        const handlePointerUp = () => {
+            layoutResizeRef.current = null;
+        };
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
+        window.addEventListener('pointercancel', handlePointerUp);
+        return () => {
+            window.removeEventListener('pointermove', handlePointerMove);
+            window.removeEventListener('pointerup', handlePointerUp);
+            window.removeEventListener('pointercancel', handlePointerUp);
+        };
+    }, []);
+
+    const handleLayoutResizePointerDown = event => {
+        const editor = editorPaneRef.current;
+        const stage = stagePaneRef.current;
+        if (!editor || !stage) return;
+        const editorWidth = editor.getBoundingClientRect().width;
+        const stageWidth = stage.getBoundingClientRect().width;
+        layoutResizeRef.current = {
+            editor,
+            editorWidth,
+            stage,
+            startX: event.clientX,
+            totalWidth: editorWidth + stageWidth
+        };
+        event.currentTarget.setPointerCapture?.(event.pointerId);
+        event.preventDefault();
+    };
 
     useEffect(() => {
         if (props.platform) {
@@ -286,6 +385,9 @@ const GUIComponent = props => {
                             onRequestClose={onRequestCloseTelemetryModal}
                             onShowPrivacyPolicy={onShowPrivacyPolicy}
                         />
+                    ) : null}
+                    {robotLibraryVisible ? (
+                        <RobotLibrary vm={vm} onRequestClose={onRequestCloseRobotLibrary} />
                     ) : null}
                     {loading ? (
                         <Loader />
@@ -377,6 +479,7 @@ const GUIComponent = props => {
                     }
                     <Box className={classNames(boxStyles, styles.flexWrapper)}>
                         <Box
+                            componentRef={editorPaneRef}
                             role="main"
                             aria-label={intl.formatMessage(ariaMessages.editor)}
                             className={styles.editorWrapper}
@@ -494,6 +597,11 @@ const GUIComponent = props => {
                                         intl={intl}
                                         onExtensionButtonClick={onExtensionButtonClick}
                                     />
+                                    <HardwareButtons
+                                        onBoardClick={onBoardButtonClick}
+                                        onComponentClick={onComponentButtonClick}
+                                        onRobotClick={onRobotButtonClick}
+                                    />
                                     <Box className={styles.watermark}>
                                         <Watermark />
                                     </Box>
@@ -523,19 +631,72 @@ const GUIComponent = props => {
                                         /> : null}
                                 </TabPanel>
                             </Tabs>
-                            {backpackVisible && backpackConfigured ? (
-                                <Backpack
-                                    host={backpackHost}
-                                    ariaRole="region"
-                                    ariaLabel={intl.formatMessage(ariaMessages.backpack)}
-                                />
+                            {(backpackVisible && backpackConfigured) || sarduStatus ? (
+                                <div className={styles.bottomBar}>
+                                    {backpackVisible && backpackConfigured ? (
+                                        <Backpack
+                                            host={backpackHost}
+                                            ariaRole="region"
+                                            ariaLabel={intl.formatMessage(ariaMessages.backpack)}
+                                        />
+                                    ) : null}
+                                    {sarduStatus ? (
+                                        <div
+                                            className={`${styles.sarduStatus} ${styles[sarduStatus.kind]}`}
+                                            role="status"
+                                            aria-live="polite"
+                                        >
+                                            <span className={styles.sarduStatusIndicator} aria-hidden="true" />
+                                            <span>{sarduStatus.message}</span>
+                                            <button
+                                                className={styles.sarduStatusDetailsButton}
+                                                type="button"
+                                                aria-expanded={sarduStatusDetailsVisible}
+                                                onClick={() => setSarduStatusDetailsVisible(current => !current)}
+                                            >
+                                                <FormattedMessage
+                                                    id="gui.sardu.status.details"
+                                                    defaultMessage="Details"
+                                                    description="Button that shows recent hardware status messages"
+                                                />
+                                            </button>
+                                            {sarduStatusDetailsVisible ? (
+                                                <div className={styles.sarduStatusDetails} role="log">
+                                                    {sarduStatusHistory.map((status, index) => (
+                                                        <div key={`${status.time}-${index}`}>
+                                                            <time>{new Date(status.time).toLocaleTimeString(intl.locale)}</time>
+                                                            {' — '}{status.message}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    ) : null}
+                                </div>
                             ) : null}
                         </Box>
 
+                        <div
+                            className={styles.mainPaneResizeHandle}
+                            role="separator"
+                            aria-orientation="vertical"
+                            title={intl.formatMessage({
+                                id: 'gui.sardu.resizeEditorStage',
+                                defaultMessage: 'Resize code area and Stage'
+                            })}
+                            onPointerDown={handleLayoutResizePointerDown}
+                        >
+                            ↔
+                        </div>
+
                         <Box
+                            componentRef={stagePaneRef}
                             role="complementary"
                             aria-label={intl.formatMessage(ariaMessages.stageAndTarget)}
-                            className={classNames(styles.stageAndTargetWrapper, styles[stageSize])}
+                            className={classNames(styles.stageAndTargetWrapper, styles[stageSize], {
+                                [styles.sarduCodeOnly]: hardwareSelection && blocksTabVisible &&
+                                    sarduViewMode === 'code'
+                            })}
                             element="aside"
                         >
                             <StageWrapper
@@ -545,6 +706,10 @@ const GUIComponent = props => {
                                 isCreating={isCreating}
                                 stageSize={stageSize}
                                 vm={vm}
+                                showStage={!hardwareSelection || !blocksTabVisible || sarduViewMode !== 'code'}
+                                sarduMode={blocksTabVisible ? hardwareSelection?.mode : null}
+                                sarduViewMode={sarduViewMode}
+                                onSarduViewModeChange={setSarduViewMode}
                                 ariaRole="region"
                                 ariaLabel={intl.formatMessage(ariaMessages.stage)}
                                 manuallySaveThumbnails={manuallySaveThumbnails}
@@ -556,7 +721,7 @@ const GUIComponent = props => {
                                 username={username}
                                 onUpdateProjectThumbnail={onUpdateProjectThumbnail}
                             />
-                            <Box
+                            {(!hardwareSelection || !blocksTabVisible || sarduViewMode !== 'code') ? <Box
                                 className={styles.targetWrapper}
                                 role="region"
                                 aria-label={intl.formatMessage(ariaMessages.targetPane)}
@@ -568,8 +733,18 @@ const GUIComponent = props => {
                                     onNewSpriteClick={onNewSpriteClick}
                                     onNewBackdropClick={onNewLibraryBackdropClick}
                                 />
-                            </Box>
+                            </Box> : null}
                         </Box>
+                        <ArduinoCodePanel
+                            isFullScreen={isFullScreen}
+                            stageSize={stageSize}
+                            stagePaneWidth={sarduStagePaneWidth}
+                            visible={blocksTabVisible}
+                            viewMode={sarduViewMode}
+                            vm={vm}
+                            onStatusChange={handleSarduStatusChange}
+                            onRequestClose={() => setSarduViewMode('stage')}
+                        />
                     </Box>
                     <DragLayer />
                 </Box>
@@ -628,8 +803,11 @@ GUIComponent.propTypes = {
     onActivateCostumesTab: PropTypes.func,
     onActivateSoundsTab: PropTypes.func,
     onActivateTab: PropTypes.func,
+    onBoardButtonClick: PropTypes.func.isRequired,
+    onComponentButtonClick: PropTypes.func.isRequired,
     onClickLogo: PropTypes.func,
     onExtensionButtonClick: PropTypes.func,
+    onRobotButtonClick: PropTypes.func.isRequired,
     onLogOut: PropTypes.func,
     onNewSpriteClick: PropTypes.func,
     onNewLibraryCostumeClick: PropTypes.func,
@@ -638,6 +816,7 @@ GUIComponent.propTypes = {
     onRequestCloseBackdropLibrary: PropTypes.func,
     onRequestCloseCostumeLibrary: PropTypes.func,
     onRequestCloseDebugModal: PropTypes.func,
+    onRequestCloseRobotLibrary: PropTypes.func.isRequired,
     onRequestCloseTelemetryModal: PropTypes.func,
     onSeeCommunity: PropTypes.func,
     onShare: PropTypes.func,
@@ -651,6 +830,7 @@ GUIComponent.propTypes = {
     onUpdateProjectThumbnail: PropTypes.func,
     platform: PropTypes.oneOf(Object.keys(PLATFORM)),
     renderLogin: PropTypes.func,
+    robotLibraryVisible: PropTypes.bool,
     setTheme: PropTypes.func.isRequired,
     showComingSoon: PropTypes.bool,
     showNewFeatureCallouts: PropTypes.bool,

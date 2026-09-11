@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "arduinoCli": {
+    "version": "1.5.1",
+    "license": "GPL-3.0-only",
+    "source": "https://github.com/arduino/arduino-cli",
+    "archive": "arduino-cli_1.5.1_Windows_64bit.zip",
+    "url": "https://github.com/arduino/arduino-cli/releases/download/v1.5.1/arduino-cli_1.5.1_Windows_64bit.zip",
+    "checksumsUrl": "https://github.com/arduino/arduino-cli/releases/download/v1.5.1/1.5.1-checksums.txt"
+  },
+  "platforms": [
+    {
+      "id": "arduino:avr",
+      "version": "1.8.6",
+      "license": "file-level open-source licenses",
+      "source": "https://github.com/arduino/ArduinoCore-avr"
+    }
+  ],
+  "builtinTools": [
+    {
+      "id": "serial-discovery",
+      "version": "1.5.2",
+      "license": "GPL-3.0-only",
+      "source": "https://downloads.arduino.cc/packages/package_index.tar.bz2",
+      "executable": "serial-discovery.exe"
+    },
+    {
+      "id": "ctags",
+      "version": "5.8-arduino11",
+      "license": "GPL-2.0-only",
+      "source": "https://downloads.arduino.cc/packages/package_index.tar.bz2",
+      "executable": "ctags.exe"
+    },
+    {
+      "id": "serial-monitor",
+      "version": "0.15.0",
+      "license": "AGPL-3.0-only",
+      "source": "https://downloads.arduino.cc/packages/package_index.tar.bz2",
+      "executable": "serial-monitor.exe"
+    },
+    {
+      "id": "mdns-discovery",
+      "version": "1.1.0",
+      "license": "GPL-3.0-only",
+      "source": "https://downloads.arduino.cc/packages/package_index.tar.bz2",
+      "executable": "mdns-discovery.exe"
+    },
+    {
+      "id": "dfu-discovery",
+      "version": "0.1.2",
+      "license": "GPL-3.0-only",
+      "source": "https://downloads.arduino.cc/packages/package_index.tar.bz2",
+      "executable": "dfu-discovery.exe"
+    }
+  ],
+  "libraries": [
+    {
+      "id": "DHT sensor library",
+      "version": "1.4.7",
+      "license": "MIT",
+      "source": "https://github.com/adafruit/DHT-sensor-library"
+    },
+    {
+      "id": "Adafruit Unified Sensor",
+      "version": "1.1.15",
+      "license": "Apache-2.0",
+      "source": "https://github.com/adafruit/Adafruit_Sensor"
+    }
+  ],
+  "drivers": [
+    {
+      "id": "wch-ch341",
+      "version": "4.0",
+      "license": "vendor redistribution terms included in package",
+      "source": "https://www.wch-ic.com/downloads/CH341SER_ZIP.html",
+      "archive": "CH341SER-4.0.zip",
+      "url": "https://www.wch-ic.com/download/file?id=5"
+    },
+    {
+      "id": "wch-ch343",
+      "version": "espressif-2022-08-02",
+      "license": "vendor redistribution terms included in package",
+      "source": "https://www.wch-ic.com/downloads/CH343SER_ZIP.html",
+      "archive": "CH343SER-espressif-2022-08-02.zip",
+      "url": "https://dl.espressif.com/dl/idf-installer/CH341SER.ZIP"
+    },
+    {
+      "id": "silabs-cp210x",
+      "version": "espressif-2021-05-03",
+      "license": "Silicon Labs VCP driver license included in package",
+      "source": "https://www.silabs.com/software-and-tools/usb-to-uart-bridge-vcp-drivers",
+      "archive": "CP210x_Universal_Windows_Driver.zip",
+      "url": "https://dl.espressif.com/dl/idf-installer/CP210x_Universal_Windows_Driver.zip"
+    },
+    {
+      "id": "ftdi-vcp",
+      "version": "2.12.28",
+      "license": "FTDI driver license included in package",
+      "source": "https://ftdichip.com/drivers/vcp-drivers/",
+      "archive": "CDM_v2.12.28_WHQL_Certified.zip",
+      "url": "https://dl.espressif.com/dl/idf-installer/CDM_v2.12.28_WHQL_Certified.zip"
+    }
+  ]
+}

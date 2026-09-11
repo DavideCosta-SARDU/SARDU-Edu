@@ -1,0 +1,8 @@
+board_manager:
+  additional_urls: []
+directories:
+  data: data
+  downloads: downloads
+  user: user
+logging:
+  level: info

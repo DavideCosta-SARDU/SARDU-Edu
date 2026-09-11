@@ -103,7 +103,10 @@ const StageHeaderComponent = function (props) {
         username,
         onShowSettingThumbnail,
         onShowThumbnailSuccess,
-        onShowThumbnailError
+        onShowThumbnailError,
+        sarduMode,
+        sarduViewMode,
+        onSarduViewModeChange
     } = props;
     const intl = useIntl();
 
@@ -288,6 +291,27 @@ const StageHeaderComponent = function (props) {
                         isFullScreen={isFullScreen}
                         vm={vm}
                     />
+                    {sarduMode ? (
+                        <select
+                            className={styles.sarduViewSelect}
+                            value={sarduViewMode}
+                            onChange={event => onSarduViewModeChange(event.target.value)}
+                            title={intl.formatMessage({
+                                id: 'gui.sardu.view.tooltip',
+                                defaultMessage: 'Choose how to display board code and the Stage.'
+                            })}
+                        >
+                            <option value="code">
+                                {intl.formatMessage({id: 'gui.sardu.view.code', defaultMessage: 'Code'})}
+                            </option>
+                            <option value="stage" disabled={sarduMode === 'standalone'}>
+                                {intl.formatMessage({id: 'gui.sardu.view.stage', defaultMessage: 'Stage'})}
+                            </option>
+                            <option value="combined" disabled={sarduMode === 'standalone'}>
+                                {intl.formatMessage({id: 'gui.sardu.view.combined', defaultMessage: 'Combined'})}
+                            </option>
+                        </select>
+                    ) : null}
                     <div className={styles.stageSizeRow}>
                         <FeatureCalloutPopover
                             isOpen={isThumbnailTooltipOpen}
@@ -380,7 +404,10 @@ StageHeaderComponent.propTypes = {
     username: PropTypes.string,
     onShowSettingThumbnail: PropTypes.func,
     onShowThumbnailError: PropTypes.func,
-    onShowThumbnailSuccess: PropTypes.func
+    onShowThumbnailSuccess: PropTypes.func,
+    onSarduViewModeChange: PropTypes.func,
+    sarduMode: PropTypes.oneOf(['standalone', 'realtime']),
+    sarduViewMode: PropTypes.oneOf(['code', 'stage', 'combined'])
 };
 
 StageHeaderComponent.defaultProps = {

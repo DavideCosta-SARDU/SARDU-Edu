@@ -309,6 +309,24 @@ class Runtime extends EventEmitter {
         this.compatibilityMode = false;
 
         /**
+         * Project-level SARDU Edu configuration serialized separately from Scratch targets.
+         * @type {?object}
+         */
+        this.sarduEdu = null;
+
+        /**
+         * Runtime-only transport used by SARDU Edu blocks in realtime mode.
+         * @type {?object}
+         */
+        this.sarduEduLiveTransport = null;
+
+        /**
+         * Runtime-only serial port currently detected for SARDU Edu hardware.
+         * @type {?string}
+         */
+        this.sarduEduHardwarePort = null;
+
+        /**
          * A reference to the current runtime stepping interval, set
          * by a `setInterval`.
          * @type {!number}
@@ -1146,7 +1164,9 @@ class Runtime extends EventEmitter {
                 blockInfo.isEdgeActivated = true;
             }
             blockJSON.outputShape = ScratchBlocksConstants.OUTPUT_SHAPE_SQUARE;
-            blockJSON.nextStatement = null; // null = available connection; undefined = terminal
+            if (!blockInfo.isTerminal) {
+                blockJSON.nextStatement = null; // null = available connection; undefined = terminal
+            }
             blockJSON.extensions.push('shape_hat');
             break;
         case BlockType.CONDITIONAL:
@@ -1166,6 +1186,9 @@ class Runtime extends EventEmitter {
         let outLineNum = 0; // used for scratch-blocks `message${outLineNum}` and `args${outLineNum}`
         const convertPlaceholders = this._convertPlaceholders.bind(this, context);
         const extensionMessageContext = this.makeMessageContextForTarget();
+        if (blockInfo.tooltip) {
+            blockJSON.tooltip = maybeFormatMessage(blockInfo.tooltip, extensionMessageContext);
+        }
 
         // alternate between a block "arm" with text on it and an open slot for a substack
         while (inTextNum < blockText.length || inBranchNum < blockInfo.branchCount) {
@@ -1946,6 +1969,9 @@ class Runtime extends EventEmitter {
         this._monitorState = OrderedMap({});
         this.emit(Runtime.RUNTIME_DISPOSED);
         this.ioDevices.clock.resetProjectTimer();
+        this.sarduEdu = null;
+        this.sarduEduLiveTransport = null;
+        this.sarduEduHardwarePort = null;
         // @todo clear out extensions? turboMode? etc.
 
         // *********** Cloud *******************

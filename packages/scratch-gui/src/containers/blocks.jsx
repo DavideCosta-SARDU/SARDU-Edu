@@ -12,6 +12,8 @@ import log from '../lib/log.js';
 import Prompt from './prompt.jsx';
 import BlocksComponent from '../components/blocks/blocks.jsx';
 import ExtensionLibrary from './extension-library.jsx';
+import BoardLibrary from '../components/board-library/board-library.jsx';
+import ComponentLibrary from '../components/component-library/component-library.jsx';
 import extensionData from '../lib/libraries/extensions/index.jsx';
 import CustomProcedures from './custom-procedures.jsx';
 import errorBoundaryHOC from '../lib/error-boundary-hoc.jsx';
@@ -19,6 +21,7 @@ import {BLOCKS_DEFAULT_SCALE, STAGE_DISPLAY_SIZES} from '../lib/layout-constants
 import DropAreaHOC from '../lib/drop-area-hoc.jsx';
 import DragConstants from '../lib/drag-constants';
 import defineDynamicBlock from '../lib/define-dynamic-block';
+import registerSarduMultilineField from '../lib/sardu-multiline-field';
 import {DEFAULT_MODE, getColorsForMode, shouldRecolorExtensions, colorModeMap} from '../lib/settings/color-mode';
 import {CAT_BLOCKS_THEME} from '../lib/settings/theme';
 import {
@@ -30,7 +33,13 @@ import {
 import {connect} from 'react-redux';
 import {updateToolbox} from '../reducers/toolbox';
 import {activateColorPicker} from '../reducers/color-picker';
-import {closeExtensionLibrary, openSoundRecorder, openConnectionModal} from '../reducers/modals';
+import {
+    closeBoardLibrary,
+    closeComponentLibrary,
+    closeExtensionLibrary,
+    openSoundRecorder,
+    openConnectionModal
+} from '../reducers/modals';
 import {activateCustomProcedures, deactivateCustomProcedures} from '../reducers/custom-procedures';
 import {setConnectionModalExtensionId} from '../reducers/connection-modal';
 import {updateMetrics} from '../reducers/workspace-metrics';
@@ -78,6 +87,8 @@ class Blocks extends React.Component {
             'handleMonitorsUpdate',
             'handleExtensionAdded',
             'handleBlocksInfoUpdate',
+            'handleSarduHardwareChanged',
+            'ensureSarduBoardProgram',
             'onTargetsUpdate',
             'onVisualReport',
             'onWorkspaceUpdate',
@@ -96,6 +107,7 @@ class Blocks extends React.Component {
             prompt: null
         };
         this.onTargetsUpdate = debounce(this.onTargetsUpdate, 100);
+        this.selectSarduBoardWhenReady = false;
         this.toolboxUpdateQueue = [];
     }
     componentDidMount () {
@@ -123,6 +135,54 @@ class Blocks extends React.Component {
             }
         );
         this.workspace = this.ScratchBlocks.inject(this.blocks, workspaceConfig);
+        const toolboxElement = this.blocks.querySelector('.blocklyToolboxDiv');
+        if (toolboxElement && typeof ResizeObserver !== 'undefined') {
+            const resizeHandle = document.createElement('button');
+            resizeHandle.type = 'button';
+            resizeHandle.className = 'sarduToolboxResizeHandle';
+            resizeHandle.textContent = '↔';
+            resizeHandle.title = this.ScratchBlocks.ScratchMsgs.translate(
+                'SARDU_RESIZE_BLOCKS',
+                'Resize blocks palette'
+            );
+            resizeHandle.setAttribute('aria-label', resizeHandle.title);
+            const updateHandlePosition = () => {
+                const width = toolboxElement.getBoundingClientRect().width;
+                resizeHandle.style.left = `${Math.max(0, width - 12)}px`;
+            };
+            this.toolboxResizePointerDown = event => {
+                this.toolboxResizeState = {
+                    startWidth: toolboxElement.getBoundingClientRect().width,
+                    startX: event.clientX
+                };
+                event.currentTarget.setPointerCapture?.(event.pointerId);
+                event.preventDefault();
+            };
+            this.toolboxResizePointerMove = event => {
+                if (!this.toolboxResizeState) return;
+                const maxWidth = Math.max(160, this.blocks.getBoundingClientRect().width * 0.6);
+                const width = Math.max(128, Math.min(maxWidth,
+                    this.toolboxResizeState.startWidth + event.clientX - this.toolboxResizeState.startX));
+                toolboxElement.style.width = `${width}px`;
+                updateHandlePosition();
+                this.workspace.resize();
+            };
+            this.toolboxResizePointerUp = () => {
+                this.toolboxResizeState = null;
+            };
+            resizeHandle.addEventListener('pointerdown', this.toolboxResizePointerDown);
+            window.addEventListener('pointermove', this.toolboxResizePointerMove);
+            window.addEventListener('pointerup', this.toolboxResizePointerUp);
+            window.addEventListener('pointercancel', this.toolboxResizePointerUp);
+            this.blocks.appendChild(resizeHandle);
+            this.toolboxResizeHandle = resizeHandle;
+            this.toolboxResizeObserver = new ResizeObserver(() => {
+                updateHandlePosition();
+                this.workspace.resize();
+            });
+            this.toolboxResizeObserver.observe(toolboxElement);
+            updateHandlePosition();
+        }
         this.workspace.registerToolboxCategoryCallback(
             'VARIABLE',
             this.ScratchBlocks.ScratchVariables.getVariablesCategory
@@ -177,6 +237,7 @@ class Blocks extends React.Component {
         this.workspace.getToolbox().selectItemByPosition(0);
 
         this.attachVM();
+        this.ensureSarduBoardProgram();
         // Only update blocks/vm locale when visible to avoid sizing issues
         // If locale changes while not visible it will get handled in didUpdate
         if (this.props.isVisible) {
@@ -239,6 +300,16 @@ class Blocks extends React.Component {
         }
     }
     componentWillUnmount () {
+        if (this.toolboxResizeObserver) this.toolboxResizeObserver.disconnect();
+        if (this.toolboxResizeHandle) {
+            this.toolboxResizeHandle.removeEventListener('pointerdown', this.toolboxResizePointerDown);
+            this.toolboxResizeHandle.remove();
+        }
+        if (this.toolboxResizePointerMove) {
+            window.removeEventListener('pointermove', this.toolboxResizePointerMove);
+            window.removeEventListener('pointerup', this.toolboxResizePointerUp);
+            window.removeEventListener('pointercancel', this.toolboxResizePointerUp);
+        }
         this.detachVM();
         // Hide any open field editor and move Blockly focus to the workspace
         // root before disposing. Without this, BlockSvg.dispose() detects the
@@ -298,6 +369,13 @@ class Blocks extends React.Component {
 
         this.workspace.updateToolbox(this.props.toolboxXML);
         this.workspace.getToolbox().runAfterRerender(() => {
+            if (this.selectSarduBoardWhenReady) {
+                const boardCategory = this.workspace.getToolbox().getToolboxItemById('sarduBoard');
+                if (boardCategory) {
+                    this.workspace.getToolbox().setSelectedItem(boardCategory);
+                    this.selectSarduBoardWhenReady = false;
+                }
+            }
             const newCategoryScrollPosition = this.workspace
                 .getFlyout()
                 .getCategoryScrollPosition(selectedCategoryName);
@@ -344,6 +422,7 @@ class Blocks extends React.Component {
         this.props.vm.addListener('MONITORS_UPDATE', this.handleMonitorsUpdate);
         this.props.vm.addListener('EXTENSION_ADDED', this.handleExtensionAdded);
         this.props.vm.addListener('BLOCKSINFO_UPDATE', this.handleBlocksInfoUpdate);
+        this.props.vm.addListener('SARDU_HARDWARE_CHANGED', this.handleSarduHardwareChanged);
         this.props.vm.addListener('PERIPHERAL_CONNECTED', this.handleStatusButtonUpdate);
         this.props.vm.addListener('PERIPHERAL_DISCONNECTED', this.handleStatusButtonUpdate);
     }
@@ -358,6 +437,7 @@ class Blocks extends React.Component {
         this.props.vm.removeListener('MONITORS_UPDATE', this.handleMonitorsUpdate);
         this.props.vm.removeListener('EXTENSION_ADDED', this.handleExtensionAdded);
         this.props.vm.removeListener('BLOCKSINFO_UPDATE', this.handleBlocksInfoUpdate);
+        this.props.vm.removeListener('SARDU_HARDWARE_CHANGED', this.handleSarduHardwareChanged);
         this.props.vm.removeListener('PERIPHERAL_CONNECTED', this.handleStatusButtonUpdate);
         this.props.vm.removeListener('PERIPHERAL_DISCONNECTED', this.handleStatusButtonUpdate);
     }
@@ -413,6 +493,31 @@ class Blocks extends React.Component {
     onVisualReport (data) {
         this.ScratchBlocks.reportValue(data.id, data.value);
     }
+    handleSarduHardwareChanged () {
+        const hardwareSelection = this.props.vm.runtime.sarduEdu?.hardwareSelection;
+        this.selectSarduBoardWhenReady = Boolean(hardwareSelection);
+        const toolboxXML = this.getToolboxXML();
+        if (toolboxXML) this.props.updateToolboxState(toolboxXML);
+        this.ensureSarduBoardProgram();
+    }
+    ensureSarduBoardProgram () {
+        const hardwareSelection = this.props.vm.runtime.sarduEdu?.hardwareSelection;
+        if (hardwareSelection?.mode !== 'standalone' || !this.workspace) return;
+        const hasBoardProgram = this.workspace.getAllBlocks(false)
+            .some(block => block.type === 'sarduBoard_program');
+        if (hasBoardProgram || !this.ScratchBlocks.Blocks.sarduBoard_program) return;
+
+        const metrics = this.workspace.getMetrics();
+        this.ScratchBlocks.Events.setGroup(true);
+        try {
+            const program = this.workspace.newBlock('sarduBoard_program');
+            program.initSvg();
+            program.render();
+            program.moveBy(metrics.viewLeft + 48, metrics.viewTop + 48);
+        } finally {
+            this.ScratchBlocks.Events.setGroup(false);
+        }
+    }
     getToolboxXML () {
         // Use try/catch because this requires digging pretty deep into the VM
         // Code inside intentionally ignores several error situations (no stage, etc.)
@@ -425,15 +530,24 @@ class Blocks extends React.Component {
             const stageCostumes = stage.getCostumes();
             const targetCostumes = target.getCostumes();
             const targetSounds = target.getSounds();
-            const dynamicBlocksXML = injectExtensionCategoryMode(
+            let dynamicBlocksXML = injectExtensionCategoryMode(
                 this.props.vm.runtime.getBlocksXML(target),
                 this.props.colorMode
             );
+            const hardwareSelection = runtime.sarduEdu?.hardwareSelection || null;
+            const hasBoardProgram = runtime.targets.some(candidate => candidate.isOriginal &&
+                Object.values(candidate.blocks._blocks).some(block =>
+                    block.topLevel && block.opcode === 'sarduBoard_program'));
+            if (!hardwareSelection) {
+                dynamicBlocksXML = dynamicBlocksXML.filter(category => category.id !== 'sarduBoard');
+            }
             return makeToolboxXML(false, target.isStage, target.id, dynamicBlocksXML,
                 targetCostumes[targetCostumes.length - 1].name,
                 stageCostumes[stageCostumes.length - 1].name,
                 targetSounds.length > 0 ? targetSounds[targetSounds.length - 1].name : '',
-                getColorsForMode(this.props.colorMode)
+                getColorsForMode(this.props.colorMode),
+                hardwareSelection,
+                hasBoardProgram
             );
         } catch {
             return null;
@@ -490,6 +604,7 @@ class Blocks extends React.Component {
         // fresh workspace and we don't want any changes made to another sprites
         // workspace to be 'undone' here.
         this.workspace.clearUndo();
+        this.ensureSarduBoardProgram();
         // Let events get flushed before readding the toolbox-updater listener
         // to avoid unneeded refreshes.
         requestAnimationFrame(() => {
@@ -550,6 +665,12 @@ class Blocks extends React.Component {
                 });
             }
         };
+
+        Object.values(categoryInfo.customFieldTypes).forEach(fieldInfo => {
+            if (fieldInfo.fieldImplementation?.sarduMultiline) {
+                registerSarduMultilineField(this.ScratchBlocks, `field_${fieldInfo.extendedName}`);
+            }
+        });
 
         // scratch-blocks implements a menu or custom field as a special kind of block ("shadow" block)
         // these actually define blocks and MUST run regardless of the UI state
@@ -671,6 +792,8 @@ class Blocks extends React.Component {
          
         const {
             anyModalVisible,
+            boardLibraryVisible,
+            componentLibraryVisible,
             canUseCloud,
             customProceduresVisible,
             extensionLibraryVisible,
@@ -684,6 +807,8 @@ class Blocks extends React.Component {
             onOpenSoundRecorder,
             updateToolboxState,
             onActivateCustomProcedures,
+            onRequestCloseBoardLibrary,
+            onRequestCloseComponentLibrary,
             onRequestCloseExtensionLibrary,
             onRequestCloseCustomProcedures,
             toolboxXML,
@@ -722,6 +847,18 @@ class Blocks extends React.Component {
                         onRequestClose={onRequestCloseExtensionLibrary}
                     />
                 ) : null}
+                {boardLibraryVisible ? (
+                    <BoardLibrary
+                        vm={vm}
+                        onRequestClose={onRequestCloseBoardLibrary}
+                    />
+                ) : null}
+                {componentLibraryVisible ? (
+                    <ComponentLibrary
+                        vm={vm}
+                        onRequestClose={onRequestCloseComponentLibrary}
+                    />
+                ) : null}
                 {customProceduresVisible ? (
                     <CustomProcedures
                         options={{
@@ -738,6 +875,8 @@ class Blocks extends React.Component {
 
 Blocks.propTypes = {
     anyModalVisible: PropTypes.bool,
+    boardLibraryVisible: PropTypes.bool,
+    componentLibraryVisible: PropTypes.bool,
     canUseCloud: PropTypes.bool,
     customProceduresVisible: PropTypes.bool,
     extensionLibraryVisible: PropTypes.bool,
@@ -749,6 +888,8 @@ Blocks.propTypes = {
     onActivateCustomProcedures: PropTypes.func,
     onOpenConnectionModal: PropTypes.func,
     onOpenSoundRecorder: PropTypes.func,
+    onRequestCloseBoardLibrary: PropTypes.func,
+    onRequestCloseComponentLibrary: PropTypes.func,
     onRequestCloseCustomProcedures: PropTypes.func,
     onRequestCloseExtensionLibrary: PropTypes.func,
     options: PropTypes.shape({
@@ -806,6 +947,8 @@ const mapStateToProps = state => ({
         Object.keys(state.scratchGui.modals).some(key => state.scratchGui.modals[key]) ||
         state.scratchGui.mode.isFullScreen
     ),
+    boardLibraryVisible: state.scratchGui.modals.boardLibrary,
+    componentLibraryVisible: state.scratchGui.modals.componentLibrary,
     extensionLibraryVisible: state.scratchGui.modals.extensionLibrary,
     isRtl: state.locales.isRtl,
     locale: state.locales.locale,
@@ -829,6 +972,12 @@ const mapDispatchToProps = dispatch => ({
     },
     onRequestCloseExtensionLibrary: () => {
         dispatch(closeExtensionLibrary());
+    },
+    onRequestCloseBoardLibrary: () => {
+        dispatch(closeBoardLibrary());
+    },
+    onRequestCloseComponentLibrary: () => {
+        dispatch(closeComponentLibrary());
     },
     onRequestCloseCustomProcedures: data => {
         dispatch(deactivateCustomProcedures(data));

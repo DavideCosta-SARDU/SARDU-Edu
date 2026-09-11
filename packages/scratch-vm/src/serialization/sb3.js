@@ -653,6 +653,10 @@ const serialize = function (runtime, targetId) {
     // Assemble extension list
     obj.extensions = Array.from(extensions);
 
+    if (runtime.sarduEdu) {
+        obj.sarduEdu = JSON.parse(JSON.stringify(runtime.sarduEdu));
+    }
+
     // Assemble metadata
     const meta = Object.create(null);
     meta.semver = '3.0.0';
@@ -1445,6 +1449,10 @@ const deserialize = function (json, runtime, zip, isSingleSprite) {
         extensionIDs: new Set(),
         extensionURLs: new Map()
     };
+
+    if (!isSingleSprite) {
+        runtime.sarduEdu = json.sarduEdu ? JSON.parse(JSON.stringify(json.sarduEdu)) : null;
+    }
 
     // Store the origin field (e.g. project originated at CSFirst) so that we can save it again.
     if (json.meta && json.meta.origin) {

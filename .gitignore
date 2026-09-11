@@ -138,3 +138,6 @@ dist
 /00-AppuntiDavide/
 /strumenti-windows/
 /workflow/
+
+# Local packaged desktop output and downloaded hardware resources.
+/packages/sardu-edu-desktop/release/

@@ -7,6 +7,7 @@
 }
 
 .body-wrapper {
+    position: relative;
     height: calc(100% - $menu-bar-height);
     background-color: $ui-primary;
 }
@@ -38,6 +39,7 @@
         https://github.com/LLK/scratch-gui/issues/318
     */
     overflow-y: hidden;
+    overflow-x: auto;
 }
 
 .editor-wrapper {
@@ -53,11 +55,95 @@
     */
     flex-basis: calc(1024px - 408px - (($space + $stage-standard-border-width) * 2));
     flex-grow: 1;
-    flex-shrink: 0;
+    flex-shrink: 1;
+    min-width: 20rem;
+    overflow: hidden;
+    resize: horizontal;
     position: relative;
 
     display: flex;
     flex-direction: column;
+}
+
+.bottom-bar {
+    display: flex;
+    flex-shrink: 0;
+    align-items: flex-start;
+    gap: $space;
+}
+
+.bottom-bar > :first-child {
+    flex: 1 1 auto;
+}
+
+.sardu-status {
+    position: relative;
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 1.9rem;
+    margin-top: 0.5rem;
+    padding: 0.25rem 0.65rem;
+    color: #003366;
+    background: $ui-white;
+    border: 1px solid $ui-black-transparent;
+    border-radius: $space 0 0 0;
+    box-sizing: border-box;
+    font-size: 0.8rem;
+}
+
+.sardu-status-details-button {
+    margin-left: auto;
+    padding: 0.15rem 0.4rem;
+    color: #003366;
+    background: transparent;
+    border: 1px solid #003366;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    font-size: 0.75rem;
+}
+
+.sardu-status-details {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 0.35rem);
+    z-index: $z-index-extension-button;
+    width: min(34rem, 80vw);
+    max-height: 12rem;
+    overflow: auto;
+    padding: 0.55rem;
+    color: $text-primary;
+    background: $ui-white;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.35rem;
+    box-shadow: 0 0.2rem 0.8rem rgba(0, 0, 0, 0.18);
+    font-size: 0.75rem;
+}
+
+.sardu-status-details time {
+    font-variant-numeric: tabular-nums;
+    font-weight: bold;
+}
+
+.sardu-status-indicator {
+    width: 0.6rem;
+    height: 0.6rem;
+    flex: none;
+    background: #003366;
+    border-radius: 50%;
+}
+
+.info .sardu-status-indicator {
+    background: #003366;
+}
+
+.success .sardu-status-indicator {
+    background: #2e7d32;
+}
+
+.error .sardu-status-indicator {
+    background: $error-primary;
 }
 
 .tab-list {
@@ -202,9 +288,11 @@
 .blocks-wrapper {
     flex-grow: 1;
     position: relative;
+    margin-bottom: 3.25rem;
 }
 
 .stage-and-target-wrapper {
+    position: relative;
     /*
         Makes rows for children:
           1) stage menu
@@ -221,6 +309,25 @@
 
     /* this will only ever be as wide as the stage */
     flex-basis: 0;
+}
+
+.main-pane-resize-handle {
+    z-index: $z-index-extension-button;
+    display: flex;
+    flex: 0 0 0.8rem;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+    color: #003366;
+    background: transparent;
+    cursor: ew-resize;
+    font-weight: bold;
+    user-select: none;
+    touch-action: none;
+}
+
+.sardu-code-only {
+    flex-grow: 1;
 }
 
 .target-wrapper {

@@ -24,7 +24,11 @@ import {
     closeCostumeLibrary,
     closeBackdropLibrary,
     closeTelemetryModal,
+    closeRobotLibrary,
+    openBoardLibrary,
+    openComponentLibrary,
     openExtensionLibrary,
+    openRobotLibrary,
     closeDebugModal
 } from '../reducers/modals';
 
@@ -218,6 +222,7 @@ const mapStateToProps = (state, ownProps) => {
         isRtl: state.locales.isRtl,
         isShowingProject: getIsShowingProject(loadingState),
         loadingStateVisible: state.scratchGui.modals.loadingProject,
+        robotLibraryVisible: state.scratchGui.modals.robotLibrary,
         platform: ownProps.platform,
         projectId: state.scratchGui.projectState.projectId,
         soundsTabVisible: state.scratchGui.editorTab.activeTabIndex === SOUNDS_TAB_INDEX,
@@ -233,6 +238,9 @@ const mapStateToProps = (state, ownProps) => {
 
 const mapDispatchToProps = dispatch => ({
     onExtensionButtonClick: () => dispatch(openExtensionLibrary()),
+    onBoardButtonClick: () => dispatch(openBoardLibrary()),
+    onComponentButtonClick: () => dispatch(openComponentLibrary()),
+    onRobotButtonClick: () => dispatch(openRobotLibrary()),
     onActivateTab: tab => dispatch(activateTab(tab)),
     onUpdateDynamicAssets: dynamicAssets => dispatch(setDynamicAssets(dynamicAssets)),
     onActivateCostumesTab: () => dispatch(activateTab(COSTUMES_TAB_INDEX)),
@@ -241,6 +249,7 @@ const mapDispatchToProps = dispatch => ({
     onRequestCloseBackdropLibrary: () => dispatch(closeBackdropLibrary()),
     onRequestCloseCostumeLibrary: () => dispatch(closeCostumeLibrary()),
     onRequestCloseDebugModal: () => dispatch(closeDebugModal()),
+    onRequestCloseRobotLibrary: () => dispatch(closeRobotLibrary()),
     onRequestCloseTelemetryModal: () => dispatch(closeTelemetryModal())
 });
 

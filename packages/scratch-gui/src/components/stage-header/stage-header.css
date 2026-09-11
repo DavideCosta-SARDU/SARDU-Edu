@@ -84,3 +84,13 @@
     gap: 0.5rem;
     background-color: transparent;
 }
+.sardu-view-select {
+    align-self: center;
+    margin-left: 0.5rem;
+    padding: 0.25rem 0.4rem;
+    color: #003366;
+    background: white;
+    border: 1px solid #003366;
+    border-radius: 0.25rem;
+    font-weight: bold;
+}

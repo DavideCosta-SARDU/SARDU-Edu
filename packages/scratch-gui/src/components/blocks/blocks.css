@@ -40,6 +40,27 @@
     stroke: none;
 }
 
+.blocks :global(.sarduToolboxResizeHandle) {
+    position: absolute;
+    top: 50%;
+    z-index: $z-index-extension-button;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 2.5rem;
+    padding: 0;
+    color: $ui-white;
+    background: #003366;
+    border: 1px solid $ui-white;
+    border-radius: 0.35rem;
+    cursor: ew-resize;
+    font-weight: bold;
+    transform: translateY(-50%);
+    user-select: none;
+    touch-action: none;
+}
+
 /*
     TODO: Check if we still need both `blocklyToolbox` and `blocklyToolboxDiv`, and remove one if possible.
     Note that there are other places in this file which use both.
@@ -57,7 +78,10 @@
         below that is for webkit browsers. It isn't possible to do the
         same for Firefox, so a different solution may be needed for them.
     */
-    -ms-overflow-style: none;
+    min-width: 8rem;
+    max-width: 50vw;
+    overflow-x: auto;
+    resize: horizontal;
 }
 
 [dir="rtl"] .blocks :global(.blocklyToolbox),
@@ -68,7 +92,8 @@
 
 .blocks :global(.blocklyToolbox::-webkit-scrollbar),
 .blocks :global(.blocklyToolboxDiv::-webkit-scrollbar) {
-    display: none;
+    width: 0.4rem;
+    height: 0.4rem;
 }
 
 .blocks :global(.blocklyFlyout) {

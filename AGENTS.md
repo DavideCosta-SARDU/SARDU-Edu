@@ -1,5 +1,51 @@
 # Agent Guide: scratch-editor
 
+## Regola operativa obbligatoria SARDU Edu
+
+Prima di qualsiasi attività leggere integralmente `00-AppuntiDavide/Regole-Operative-SARDU-Edu.md` e rispettarlo.
+L'assistente modifica soltanto codice e file autorizzati. Davide esegue personalmente batch, installazioni,
+compilazioni, test, avvii, commit e pubblicazioni. In caso di dubbio, l'assistente si ferma e chiede.
+
+## Regole per i comandi di ricerca
+
+- Con `grep` o `rg` (ripgrep): usare sempre `--exclude-dir=node_modules` (grep) oppure `--glob '!node_modules/**'` (ripgrep).
+  Esempio corretto: `grep -r "TODO" . --exclude-dir=node_modules`
+  Esempio corretto: `rg "TODO" --glob '!node_modules/**'`
+- Con `find`: usare sempre `-not -path "*/node_modules/*"`.
+  Esempio corretto: `find . -name "*.js" -not -path "*/node_modules/*"`
+- Vietato eseguire `ls -R`, `find .` senza filtri, o `grep -r` senza esclusione sulla root del progetto.
+- Prima di lanciare un comando di ricerca su tutto il progetto, controllare sempre che escluda `node_modules`.
+
+## Divieto assoluto node_modules
+
+- L’assistente non deve leggere, elencare, cercare o analizzare alcun file o percorso dentro `node_modules`.
+- Ogni ricerca deve escludere esplicitamente `**/node_modules/**`.
+- Non usare `node_modules` nemmeno per consultare sorgenti, documentazione o implementazioni delle dipendenze.
+- Se un’attività richiede informazioni disponibili soltanto in `node_modules`, fermarsi e chiedere a Davide.
+- Un’eccezione è valida soltanto quando Davide autorizza esplicitamente la lettura nella richiesta corrente.
+
+## Cartelle di build (dist, build)
+
+- Non esplorare o leggere ricorsivamente `dist/` o `build/` di default nelle ricerche generiche sul progetto (escluderle da grep/find come node_modules).
+- Eccezione: è permesso leggere file specifici dentro `dist/` o `build/` quando il compito richiede esplicitamente di verificare l'output della build (es. debug di build, controllo file generati).
+- In caso di dubbio se serve guardare dentro dist/build, chiedere prima a Davide.
+
+## Cartella .git
+
+- Non esplorare, leggere o elencare file dentro `.git/` con ricerche generiche (grep, find, ls).
+- Per informazioni su versioning, storia, modifiche: usare sempre i comandi `git` (log, diff, status, show), mai leggere i file grezzi in `.git/`.
+- Eccezione: lettura diretta di file dentro `.git/` è permessa solo se esplicitamente richiesto da Davide (es. debug di un repository corrotto).
+
+## Divieto di inventare o eccedere lo scope
+
+- L'assistente esegue SOLO quanto esplicitamente richiesto nel messaggio corrente. Non aggiunge funzionalità, file, refactor, ottimizzazioni o "miglioramenti" non richiesti.
+- Se il compito richiesto è ambiguo o incompleto, l'assistente si ferma e fa domande di chiarimento invece di assumere, indovinare o completare a piacere.
+- L'assistente non crea, modifica o elimina file al di fuori di quanto strettamente necessario per il compito richiesto.
+- Se durante il lavoro l'assistente nota un problema non richiesto (bug, codice sporco, dipendenza mancante), lo segnala a Davide senza risolverlo automaticamente, a meno che non venga esplicitamente autorizzato.
+- Vietato generare codice, spiegazioni o conclusioni basate su supposizioni quando l'informazione reale è verificabile (es. leggendo un file, eseguendo un comando). In caso di incertezza, verificare prima di rispondere.
+- Se non è chiaro come procedere, l'assistente elenca le opzioni possibili e chiede a Davide quale scegliere, invece di decidere da solo.
+
+
 ## AI-assisted development policy
 
 See [CONTRIBUTING.AI.md](https://github.com/scratchfoundation/.github/blob/main/CONTRIBUTING.AI.md) for Scratch's
@@ -68,6 +114,7 @@ rejected by the pre-commit hook.
 
 ```text
 packages/
+├── sardu-edu-desktop/      Electron shell and native hardware service
 ├── sardu-edu-hardware/     Hardware definitions and compatibility contracts
 ├── scratch-gui/            React-based editor UI
 ├── scratch-vm/             Virtual machine that runs Scratch projects
@@ -82,6 +129,7 @@ scripts/                    Monorepo-level utility scripts
 
 | Package | Language | Bundler | Tests |
 | - | - | - | - |
+| `sardu-edu-desktop` | TypeScript | Vite / electron-builder | Vitest |
 | `sardu-edu-hardware` | TypeScript | Vite | Vitest |
 | `scratch-gui` | JavaScript / JSX (some TypeScript) | webpack | Jest |
 | `scratch-vm` | JavaScript | webpack | Tap |

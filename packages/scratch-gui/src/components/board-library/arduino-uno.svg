@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180">
+  <rect x="25" y="25" width="190" height="130" rx="16" fill="#087f8c"/>
+  <rect x="8" y="60" width="45" height="60" rx="5" fill="#c8d1d5"/>
+  <rect x="80" y="62" width="78" height="34" rx="4" fill="#263238"/>
+  <circle cx="185" cy="58" r="16" fill="#dce3e6"/>
+  <g fill="#20282c"><rect x="62" y="31" width="110" height="13" rx="3"/><rect x="62" y="136" width="125" height="13" rx="3"/></g>
+  <text x="120" y="121" text-anchor="middle" fill="#fff" font-family="sans-serif" font-size="20" font-weight="bold">UNO</text>
+</svg>

@@ -1,0 +1,430 @@
+@import "../../css/colors.css";
+@import "../../css/z-index.css";
+
+.connection-prompt-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: $z-index-modal;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background: rgba(0, 32, 64, 0.5);
+}
+
+.connection-prompt {
+    display: flex;
+    align-items: center;
+    width: min(34rem, 100%);
+    padding: 1.25rem;
+    color: #003366;
+    background: $ui-white;
+    border: 0.2rem solid #cccc66;
+    border-radius: 0.75rem;
+    box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.3);
+}
+
+.connection-prompt-image {
+    width: 9rem;
+    max-height: 9rem;
+    margin-right: 1.25rem;
+    object-fit: contain;
+}
+
+.connection-prompt-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.connection-prompt-content h2 {
+    margin: 0 0 0.5rem;
+}
+
+.connection-prompt-content p {
+    margin: 0 0 1rem;
+    line-height: 1.4;
+}
+
+.connection-prompt-port {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-weight: bold;
+}
+
+.connection-prompt-port select {
+    width: 100%;
+    padding: 0.5rem;
+    color: #003366;
+    background: $ui-white;
+    border: 1px solid #003366;
+    border-radius: 0.25rem;
+}
+
+.connection-prompt-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 1.25rem;
+}
+
+.connection-prompt-actions button {
+    padding: 0.5rem 0.8rem;
+    border: 1px solid #003366;
+    border-radius: 0.3rem;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.connection-prompt-cancel {
+    color: #003366;
+    background: $ui-white;
+}
+
+.connection-prompt-confirm {
+    color: $ui-white;
+    background: #003366;
+}
+
+.connection-prompt-confirm:disabled {
+    cursor: default;
+    opacity: 0.5;
+}
+
+@media (max-width: 36rem) {
+    .connection-prompt {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .connection-prompt-image {
+        align-self: center;
+        margin: 0 0 1rem;
+    }
+}
+
+.panel {
+    position: absolute;
+    top: 2.75rem;
+    right: 0;
+    bottom: 0;
+    z-index: $z-index-extension-button;
+    display: flex;
+    flex-direction: column;
+    width: 28rem;
+    height: auto;
+    min-width: 15rem;
+    max-width: calc(100% - 1rem);
+    max-height: none;
+    min-height: 14rem;
+    overflow: hidden;
+    resize: both;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0.5rem;
+    background: $ui-white;
+    box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.18);
+}
+
+.code-only {
+    max-width: 100%;
+}
+
+.full-page {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0;
+    transform: none;
+    z-index: $z-index-modal;
+    border-radius: 0;
+    resize: none;
+}
+
+.minimized {
+    top: auto;
+    bottom: 0;
+    height: auto;
+    min-height: 0;
+    resize: horizontal;
+}
+
+.minimized > :not(.header) {
+    display: none;
+}
+
+.minimized .header {
+    cursor: pointer;
+}
+
+.stage-full-screen:not(.full-page) {
+    position: fixed;
+    top: 2.75rem;
+    right: 0;
+    bottom: 0;
+    z-index: $z-index-stage-wrapper-overlay;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.55rem 0.7rem;
+    color: $ui-white;
+    background: #003366;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+.horizontal-resize-handle {
+    position: absolute;
+    top: 50%;
+    left: -0.75rem;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 2.5rem;
+    color: #fff;
+    background: #003366;
+    border: 1px solid #fff;
+    border-radius: 0.35rem;
+    cursor: ew-resize;
+    font-weight: bold;
+    transform: translateY(-50%);
+    user-select: none;
+    touch-action: none;
+}
+
+.dragging {
+    cursor: grabbing;
+}
+
+.title {
+    overflow: hidden;
+    font-weight: bold;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.header-actions {
+    display: flex;
+    flex: none;
+    gap: 0.25rem;
+}
+
+.header-button {
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    color: $ui-white;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    border-radius: 0.25rem;
+    cursor: pointer;
+    font-size: 1.15rem;
+    line-height: 1;
+}
+
+.header-button:hover,
+.header-button:focus-visible {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0.5rem;
+    background: $ui-white;
+    border-bottom: 1px solid $ui-black-transparent;
+}
+
+.mode-select,
+.port-select,
+.control-button {
+    padding: 0.35rem 0.6rem;
+    color: #003366;
+    background: $ui-white;
+    border: 1px solid #003366;
+    border-radius: 0.25rem;
+    font-weight: bold;
+}
+
+.port-select {
+    max-width: 12rem;
+}
+
+.control-button {
+    cursor: pointer;
+}
+
+.control-button:disabled {
+    cursor: default;
+    opacity: 0.5;
+}
+
+.live-status {
+    padding: 0.4rem 0.6rem;
+    color: #003366;
+    background: #eef7ff;
+    border-bottom: 1px solid $ui-black-transparent;
+    font-size: 0.75rem;
+}
+
+.live-guide {
+    padding: 0.55rem 0.75rem;
+    color: #003366;
+    background: rgba(204, 204, 102, 0.2);
+    border-bottom: 1px solid $ui-black-transparent;
+    font-size: 0.8rem;
+}
+
+.live-guide ol {
+    margin: 0.35rem 0 0;
+    padding-left: 1.35rem;
+}
+
+.live-guide li + li {
+    margin-top: 0.2rem;
+}
+
+.step-complete {
+    font-weight: bold;
+}
+
+.step-complete::marker {
+    color: #003366;
+}
+
+.source-area {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.code {
+    flex: 1;
+    width: 100%;
+    padding: 0.75rem;
+    resize: none;
+    overflow: auto;
+    color: #1f2933;
+    background: #f7f8fa;
+    border: 0;
+    box-sizing: border-box;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+
+.serial-monitor {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    border-top: 2px solid #003366;
+    background: #fff;
+}
+
+.serial-monitor-open {
+    flex-basis: 10rem;
+    min-height: 7rem;
+}
+
+.serial-monitor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.35rem 0.5rem;
+    color: #003366;
+    overflow-x: auto;
+}
+
+.bottom-panel-tabs {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.bottom-panel-tabs button {
+    padding: 0.3rem 0.5rem;
+    color: #003366;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.bottom-panel-tabs .bottom-panel-tab-active {
+    border-bottom-color: #003366;
+}
+
+.serial-monitor-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+    white-space: nowrap;
+}
+
+.serial-monitor-baud {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+}
+
+.serial-monitor-baud select {
+    padding: 0.3rem;
+    color: #003366;
+    background: #fff;
+    border: 1px solid #003366;
+    border-radius: 0.25rem;
+}
+
+.serial-monitor-hint,
+.serial-monitor-error {
+    padding: 0 0.5rem 0.35rem;
+    font-size: 0.75rem;
+}
+
+.serial-monitor-hint {
+    color: #003366;
+}
+
+.serial-monitor-error {
+    color: $error-primary;
+}
+
+.serial-output {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    padding: 0.5rem;
+    resize: none;
+    overflow: auto;
+    color: #dbeafe;
+    background: #111827;
+    border: 0;
+    box-sizing: border-box;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.78rem;
+    line-height: 1.35;
+    direction: ltr;
+    text-align: left;
+    white-space: pre-wrap;
+}
+
+.error {
+    margin: 0;
+    padding: 0.75rem;
+    color: $error-primary;
+    background: $ui-white;
+}

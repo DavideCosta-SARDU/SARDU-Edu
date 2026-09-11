@@ -1,0 +1,273 @@
+ORGANIZZAZIONE OPERATIVA DEL PROGETTO SARDU EDU
+
+Scopo del documento
+
+Questo documento spiega in modo pratico dove si trovano le parti principali di SARDU Edu e quali aree devono essere
+modificate quando si aggiungono nuove schede, robot, blocchi o funzioni Arduino.
+
+
+1. LA CARTELLA PACKAGES
+
+La base del programma è la cartella packages. SARDU Edu è organizzato come un monorepo: contiene più pacchetti
+separati, ognuno responsabile di una parte precisa dell'applicazione.
+
+packages/sardu-edu-hardware
+
+È il catalogo centrale dell'hardware supportato e contiene la logica indipendente dall'interfaccia grafica.
+
+Serve per:
+
+- descrivere schede, pin, bus, capacità e modalità supportate;
+- associare una scheda al backend Arduino;
+- trasformare i blocchi agganciati in operazioni Arduino;
+- generare il sorgente .ino;
+- descrivere e controllare le risorse della toolchain Arduino.
+
+File attualmente importanti:
+
+- src/contracts.ts: contratti e tipi comuni per schede, robot, componenti e backend;
+- src/arduino.ts: definizioni delle schede Arduino e generazione del codice C/C++;
+- src/arduino-toolchain.ts: funzioni relative agli strumenti Arduino locali;
+- src/resource-manifest.ts: descrizione e verifica delle risorse Arduino installate;
+- src/index.ts: esportazioni pubbliche del pacchetto;
+- test/arduino.test.ts: test del comportamento della generazione Arduino.
+
+
+packages/scratch-vm
+
+È il motore che conserva ed esegue il progetto Scratch. Conosce i blocchi, i loro argomenti, le pile e i dati che
+devono essere salvati nel progetto .sb3.
+
+Serve per:
+
+- dichiarare i blocchi dedicati a una scheda o a una famiglia hardware;
+- definire nome, forma, argomenti, menu e tooltip dei blocchi;
+- stabilire quali blocchi appaiono in Offline o in Live;
+- eseguire in Live i comandi che devono essere inviati alla scheda;
+- conservare nel progetto la scheda selezionata e i contenuti dei blocchi.
+
+File attualmente importante per Arduino:
+
+- src/extensions/scratch3_sardu_board/index.js: estensione con i blocchi Arduino di SARDU Edu.
+
+I relativi test si trovano normalmente sotto:
+
+- test/unit/extension_sardu_board.js.
+
+
+packages/scratch-gui
+
+È l'interfaccia grafica React visibile all'utente.
+
+Serve per:
+
+- mostrare le librerie di schede e robot;
+- mostrare le categorie e la tavolozza dei blocchi;
+- mostrare il pannello del codice Arduino;
+- permettere compilazione, caricamento, modifica manuale e monitor seriale;
+- visualizzare messaggi nella barra di stato e nei Dettagli;
+- gestire traduzioni, pulsanti, finestre e disposizione grafica.
+
+Cartelle e file attualmente importanti:
+
+- src/components/board-library/: elenco grafico delle schede;
+- src/components/robot-library/: elenco grafico dei robot;
+- src/components/arduino-code-panel/: pannello del codice Arduino e monitor seriale;
+- src/components/hardware-buttons/: pulsanti per aprire le librerie hardware;
+- src/containers/blocks.jsx: collegamento fra Scratch VM e blocchi visualizzati;
+- src/lib/make-toolbox-xml.js: composizione delle categorie della tavolozza;
+- src/lib/sardu-edu-messages.js: testi inglesi e italiani specifici di SARDU Edu;
+- src/lib/sardu-multiline-field.js: editor multilinea del blocco di codice personalizzato;
+- src/lib/sardu-serial-transport.js: trasporto seriale della modalità Live;
+- src/lib/sardu-serial-monitor.js: ricezione seriale del monitor Offline.
+
+
+packages/sardu-edu-desktop
+
+È l'applicazione desktop Electron e rappresenta il ponte autorizzato fra l'interfaccia e il computer.
+
+Serve per:
+
+- rilevare le porte seriali e le schede collegate;
+- controllare la presenza delle risorse Arduino locali;
+- compilare il sorgente .ino;
+- caricare il programma sulla porta selezionata;
+- esporre queste operazioni in modo controllato alla GUI;
+- registrare la diagnostica hardware e Live.
+
+File attualmente importanti:
+
+- src/arduino-ports.ts: rilevamento e riconoscimento delle porte Arduino;
+- src/arduino-service.ts: compilazione e caricamento tramite toolchain;
+- src/contracts.ts: richieste e risposte ammesse fra GUI ed Electron;
+- src/preload.ts: API hardware resa disponibile alla GUI;
+- src/main.ts: registrazione dei canali e dei servizi Electron;
+- src/hardware-diagnostics.ts: scrittura della diagnostica;
+- resources/toolchains/arduino/: configurazione e risorse Arduino locali.
+
+Il codice di rilevamento Arduino Uno non deve essere modificato senza autorizzazione esplicita di Davide.
+
+
+2. COME AGGIUNGERE UNA NUOVA SCHEDA
+
+Una nuova scheda non dovrebbe essere inserita soltanto nella finestra grafica. Deve essere descritta una volta nel
+catalogo hardware e poi collegata alle altre parti del programma.
+
+Procedura normale:
+
+1. Definire la scheda in packages/sardu-edu-hardware/src/arduino.ts oppure, quando il catalogo crescerà, in un nuovo
+   file dedicato importato dal catalogo Arduino.
+2. Specificare almeno identificativo stabile, nome, FQBN usato da Arduino CLI, processore, tensione, pin, capacità,
+   bus e modalità supportate.
+3. Esportare l'eventuale nuovo modulo tramite packages/sardu-edu-hardware/src/index.ts.
+4. Aggiungere la scheda alla libreria grafica in packages/scratch-gui/src/components/board-library/ e fornire la sua
+   immagine SVG o altra risorsa grafica coerente.
+5. Aggiungere nome, descrizione e altri testi in packages/scratch-gui/src/lib/sardu-edu-messages.js.
+6. Solo se il riconoscimento automatico richiede nuovi identificativi o regole, modificare il rilevamento desktop in
+   packages/sardu-edu-desktop/src/arduino-ports.ts. Questa modifica richiede l'autorizzazione esplicita di Davide.
+7. Aggiungere test del catalogo, dei pin, della generazione e, quando necessario, del riconoscimento della porta.
+
+Per far comparire una scheda nell'elenco visibile all'utente servono quindi due parti:
+
+- la definizione reale nel catalogo sardu-edu-hardware;
+- la voce grafica nella board-library di scratch-gui, con immagine e messaggi tradotti.
+
+
+3. COME AGGIUNGERE UN NUOVO ROBOT
+
+Un robot è un profilo costruito sopra una scheda e sui suoi componenti. Non dovrebbe duplicare la descrizione della
+scheda sottostante.
+
+Procedura prevista:
+
+1. Definire nel pacchetto packages/sardu-edu-hardware i componenti necessari, usando i contratti di src/contracts.ts.
+2. Definire il profilo robot con identificativo, nome, scheda compatibile, componenti, collegamenti e capacità.
+3. Registrare il profilo nel catalogo dei robot ed esportarlo da src/index.ts.
+4. Creare o modificare la voce visiva sotto packages/scratch-gui/src/components/robot-library/.
+5. Aggiungere immagine, nome, descrizione e traduzioni in sardu-edu-messages.js.
+6. Aggiungere l'estensione VM o i blocchi specifici soltanto quando il robot richiede comandi diversi da quelli già
+   offerti dalla scheda e dai componenti.
+7. Aggiungere test del profilo, dei collegamenti e del codice generato.
+
+Al momento la struttura dei contratti e la libreria grafica dei robot esistono, ma ogni nuovo robot deve essere
+progettato indicando chiaramente scheda, pin e componenti reali.
+
+
+4. COME FAR APPARIRE BLOCCHI DEDICATI
+
+La dichiarazione funzionale dei blocchi appartiene a scratch-vm, non alla sola GUI.
+
+Per i blocchi Arduino attuali si modifica:
+
+- packages/scratch-vm/src/extensions/scratch3_sardu_board/index.js.
+
+Qui si dichiarano:
+
+- opcode, cioè il nome tecnico stabile del comando;
+- testo mostrato nel blocco;
+- tipo del blocco: comando, reporter, booleano, cappello o blocco strutturato;
+- argomenti e valori iniziali;
+- menu disponibili;
+- tooltip;
+- visibilità in Offline o Live;
+- metodo eseguito quando il blocco opera in modalità Live.
+
+Per renderlo correttamente visibile servono inoltre:
+
+- i testi inglesi e italiani in packages/scratch-gui/src/lib/sardu-edu-messages.js;
+- l'eventuale collocazione speciale nella tavolozza in packages/scratch-gui/src/lib/make-toolbox-xml.js;
+- l'eventuale componente grafico o campo speciale in scratch-gui, come l'editor multilinea;
+- test VM che controllino metadati, visibilità e comportamento Live.
+
+Un normale blocco dell'estensione entra automaticamente nella categoria della scheda. make-toolbox-xml.js deve
+essere modificato soltanto quando il blocco richiede una collocazione speciale, come il programma principale unico
+"All'avvio / Per sempre".
+
+
+5. COME TRASFORMARE UN BLOCCO IN CODICE PER ARDUINO IDE
+
+Fare apparire un blocco non basta. Per produrre un file .ino utilizzabile in Arduino IDE bisogna insegnare al
+generatore cosa significa quel blocco.
+
+Il percorso attuale è questo:
+
+blocco Scratch agganciato
+    -> struttura del progetto conservata da scratch-vm
+    -> packages/sardu-edu-hardware/src/arduino.ts
+    -> operazione Arduino interna
+    -> riga o gruppo di righe C/C++
+    -> sorgente completo con setup() e loop()
+    -> pannello Arduino della GUI
+    -> esportazione .ino, compilazione o caricamento tramite applicazione desktop
+
+Per aggiungere la generazione di un nuovo blocco normalmente occorre:
+
+1. Dichiarare il blocco nell'estensione scratch3_sardu_board di scratch-vm.
+2. Riconoscere il suo opcode nel generatore di packages/sardu-edu-hardware/src/arduino.ts.
+3. Leggere e validare campi e ingressi del blocco.
+4. Convertirlo in un'operazione interna chiara.
+5. Convertire l'operazione nelle righe C/C++ corrette.
+6. Inserire eventuali dichiarazioni globali, include, pinMode o inizializzazioni necessarie nel punto corretto.
+7. Aggiungere un test che parta dalla struttura dei blocchi e controlli il sorgente .ino prodotto.
+
+Soltanto i blocchi realmente agganciati dentro il programma principale Offline devono entrare in setup() o loop().
+I blocchi staccati non devono essere generati.
+
+Il blocco di codice personalizzato segue la stessa regola: il suo campo può contenere più righe, ma queste vengono
+inserite nel sorgente soltanto nel punto esatto in cui il blocco è agganciato.
+
+
+6. DIFFERENZA FRA OFFLINE E LIVE
+
+Offline
+
+- I blocchi dentro "All'avvio / Per sempre" vengono convertiti in uno sketch Arduino autonomo.
+- Lo sketch può essere esportato e aperto in Arduino IDE oppure compilato e caricato da SARDU Edu.
+- Dopo il caricamento la scheda funziona anche senza Scratch.
+- Il monitor seriale legge i messaggi prodotti dallo sketch Offline.
+
+Live
+
+- I blocchi vengono eseguiti dagli script Scratch.
+- I blocchi hardware supportati inviano comandi al firmware SARDU Edu Live attraverso la seriale.
+- Il firmware Live deve essere installato e l'handshake deve riuscire.
+- Il monitor seriale Offline non viene aperto, perché userebbe la stessa porta e potrebbe interferire con il protocollo.
+- Un blocco visibile in Live deve avere un comportamento Live reale oppure deve essere chiaramente trattato come
+  contenuto destinato alla generazione; la sola presenza grafica non garantisce che C/C++ arbitrario possa essere
+  eseguito immediatamente da un firmware già caricato.
+
+
+7. REGOLA PRATICA PER NON CONFONDERE LE RESPONSABILITÀ
+
+Se cambia la descrizione fisica dell'hardware:
+    packages/sardu-edu-hardware
+
+Se cambia il significato o l'esecuzione di un blocco:
+    packages/scratch-vm
+
+Se cambia ciò che l'utente vede o usa:
+    packages/scratch-gui
+
+Se bisogna accedere a porte, Arduino CLI, file locali o diagnostica desktop:
+    packages/sardu-edu-desktop
+
+Una funzione completa può richiedere modifiche in tutti e quattro i pacchetti, ma ogni responsabilità deve restare
+nel pacchetto corretto. In questo modo una nuova scheda non diventa una serie di eccezioni sparse nel programma.
+
+
+8. CONTROLLO MINIMO PER OGNI NUOVO HARDWARE O BLOCCO
+
+Prima di considerare concluso il lavoro devono essere verificati almeno questi punti:
+
+- la scheda o il robot appare nella lista corretta;
+- la selezione viene salvata nel progetto;
+- appaiono soltanto i blocchi previsti per la modalità scelta;
+- un blocco staccato non produce codice;
+- il sorgente .ino contiene istruzioni valide nel punto corretto;
+- il file esportato può essere aperto in Arduino IDE;
+- compilazione e caricamento usano la scheda e la porta selezionate;
+- in Live ogni comando previsto arriva realmente alla scheda ed è documentato dalla diagnostica;
+- testi, errori e stati sono comprensibili e non dichiarano successi non verificati.
+
+Build, test, batch, avvii, commit e pubblicazioni vengono eseguiti personalmente da Davide secondo le regole operative
+del progetto.
