@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="28 30.88 104 58.24"
+     width="160" height="120">
+
+  <g transform="rotate(90 80 60)">
+  <!-- PCB verde -->
+  <rect x="52" y="10"
+        width="56" height="100"
+        rx="2"
+        fill="#168a45"
+        stroke="#07552a"
+        stroke-width="3"/>
+
+  <!-- Zona superiore PCB -->
+  <rect x="55" y="13"
+        width="50" height="22"
+        rx="1"
+        fill="#11763a"/>
+
+  <!-- ====================== -->
+  <!-- TRE PIN IDENTICI -->
+  <!-- ====================== -->
+
+  <!-- Pin sinistro -->
+  <circle cx="64" cy="23" r="5.5"
+          fill="#d9d9d9"
+          stroke="#303030"
+          stroke-width="2"/>
+
+  <circle cx="64" cy="23" r="2.5"
+          fill="#f4f4f4"/>
+
+  <!-- Pin centrale -->
+  <circle cx="80" cy="23" r="5.5"
+          fill="#d9d9d9"
+          stroke="#303030"
+          stroke-width="2"/>
+
+  <circle cx="80" cy="23" r="2.5"
+          fill="#f4f4f4"/>
+
+  <!-- Pin destro -->
+  <circle cx="96" cy="23" r="5.5"
+          fill="#d9d9d9"
+          stroke="#303030"
+          stroke-width="2"/>
+
+  <circle cx="96" cy="23" r="2.5"
+          fill="#f4f4f4"/>
+
+  <!-- Separazione zona pin -->
+  <line x1="57" y1="36"
+        x2="103" y2="36"
+        stroke="#07552a"
+        stroke-width="2"/>
+
+  <!-- Piccoli punti circuito -->
+  <circle cx="57" cy="36" r="1.5"
+          fill="#d1b45a"/>
+
+  <circle cx="103" cy="36" r="1.5"
+          fill="#d1b45a"/>
+
+
+  <!-- ====================== -->
+  <!-- ELETTRODO TOUCH -->
+  <!-- ====================== -->
+
+  <!-- Cerchio completamente interno alla PCB -->
+  <circle cx="80" cy="72" r="24"
+          fill="#168a45"
+          stroke="#eeeeee"
+          stroke-width="2.2"/>
+
+  <!-- Leggero bordo interno -->
+  <circle cx="80" cy="72" r="21.5"
+          fill="none"
+          stroke="#3aaa68"
+          stroke-width="1"/>
+
+
+  <!-- ====================== -->
+  <!-- SCRITTA TOUCH -->
+  <!-- ====================== -->
+
+  <text x="80" y="75.5"
+        text-anchor="middle"
+        font-family="Arial, sans-serif"
+        font-size="9"
+        font-weight="normal"
+        letter-spacing="0.7"
+        fill="#ffffff">TOUCH</text>
+
+
+  <!-- Dettagli PCB inferiori -->
+  <circle cx="58" cy="103" r="1.4"
+          fill="#07552a"/>
+
+  <circle cx="102" cy="103" r="1.4"
+          fill="#07552a"/>
+  </g>
+
+</svg>

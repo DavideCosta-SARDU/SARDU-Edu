@@ -1,0 +1,38 @@
+name: build-scratch-blocks
+on:
+  push: # Runs whenever a commit is pushed to the repository
+  workflow_dispatch: # Allows you to run this workflow manually from the Actions tab
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+      - name: Setup Node
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6
+        with:
+          node-version-file: '.nvmrc'
+      - name: Install Node Dependencies
+        run: npm ci
+      - name: Run lint
+        run: npm run test:lint
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6
+      - name: Setup Node
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6
+        with:
+          node-version-file: '.nvmrc'
+      - name: Install Node Dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+      - name: Run tests
+        run: npm test
+      - name: Run semantic-release
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx --no -- semantic-release

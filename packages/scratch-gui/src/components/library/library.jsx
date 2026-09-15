@@ -302,6 +302,7 @@ class LibraryComponent extends React.Component {
             disabled={data.disabled}
             extensionId={data.extensionId}
             featured={data.featured}
+            hardwareThumbnail={this.props.hardwareThumbnails}
             hidden={data.hidden}
             icons={icons}
             id={key}
@@ -316,7 +317,8 @@ class LibraryComponent extends React.Component {
             onSelect={this.handleSelect}
             isMemberOnly={data.isMemberOnly}
         />);
-        if (this.props.selectedItemId !== key || !this.props.onItemRemove) return item;
+        const selected = this.props.selectedItemId === key || this.props.selectedItemIds.includes(key);
+        if (!selected || !this.props.onItemRemove) return item;
         return (
             <div className={styles.libraryItemActionWrapper} key={key}>
                 {item}
@@ -346,19 +348,19 @@ class LibraryComponent extends React.Component {
             acc[el.category].push(el);
             return acc;
         }, {});
-        const categoriesOrder = Object.values(CATEGORIES);
+        const categoriesOrder = this.props.categoryOrder || Object.values(CATEGORIES);
 
         return Object.entries(dataByCategory)
             .sort(([key1], [key2]) => categoriesOrder.indexOf(key1) - categoriesOrder.indexOf(key2))
             .map(([key, values]) =>
                 (<div
                     key={key}
-                    className={styles.libraryCategory}
+                    className={classNames(styles.libraryCategory, this.props.categoryClassName)}
                 >
                     {key === 'undefined' ?
                         null :
                         <span className={styles.libraryCategoryTitle}>
-                            {this.props.intl.formatMessage(messages[key])}
+                            {this.props.intl.formatMessage(this.props.categoryMessages[key] || messages[key])}
                         </span>
                     }
                     <div
@@ -452,8 +454,15 @@ LibraryComponent.propTypes = {
         })
          
     ),
+    categoryMessages: PropTypes.objectOf(PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        defaultMessage: PropTypes.string.isRequired
+    })),
+    categoryOrder: PropTypes.arrayOf(PropTypes.string),
+    categoryClassName: PropTypes.string,
     emptyMessage: PropTypes.node,
     filterable: PropTypes.bool,
+    hardwareThumbnails: PropTypes.bool,
     withCategories: PropTypes.bool,
     id: PropTypes.string.isRequired,
     intl: intlShape.isRequired,
@@ -465,6 +474,7 @@ LibraryComponent.propTypes = {
     setStopHandler: PropTypes.func,
     showPlayButton: PropTypes.bool,
     selectedItemId: PropTypes.string,
+    selectedItemIds: PropTypes.arrayOf(PropTypes.string),
     removeItemLabel: PropTypes.string,
     storage: GUIStoragePropType,
     tags: PropTypes.arrayOf(PropTypes.shape(TagButton.propTypes)),
@@ -473,7 +483,9 @@ LibraryComponent.propTypes = {
 
 LibraryComponent.defaultProps = {
     filterable: true,
+    hardwareThumbnails: false,
     removeItemLabel: 'Remove',
+    selectedItemIds: [],
     showPlayButton: false
 };
 

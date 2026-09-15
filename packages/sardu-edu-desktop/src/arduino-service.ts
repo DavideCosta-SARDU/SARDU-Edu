@@ -115,12 +115,33 @@ export class ArduinoService {
         {
           action,
           boardId: request.boardId,
+          nanoProcessor: request.nanoProcessor,
           port: action === 'upload' ? (request as ArduinoUploadRequest).port : undefined,
           sketchPath: sketchRoot,
         },
         { layout: this.layout },
       )
-      return { output: await this.runSketchCommand(invocation.args, action, onOutput) }
+      try {
+        return { output: await this.runSketchCommand(invocation.args, action, onOutput) }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        const automaticNanoUpload = action === 'upload' && request.boardId === 'arduino-nano' &&
+          (request.nanoProcessor === undefined || request.nanoProcessor === 'auto')
+        if (!automaticNanoUpload || !/avrdude|stk500|programmer is not responding|not in sync/i.test(message)) throw error
+        onOutput?.({
+          action,
+          stream: 'stderr',
+          text: '\nSARDU Edu: nuovo bootloader non rilevato; provo il vecchio bootloader Nano.\n',
+        })
+        const fallback = createArduinoCliInvocation({
+          action,
+          boardId: request.boardId,
+          nanoProcessor: 'old',
+          port: (request as ArduinoUploadRequest).port,
+          sketchPath: sketchRoot,
+        }, { layout: this.layout })
+        return { output: await this.runSketchCommand(fallback.args, action, onOutput) }
+      }
     } finally {
       await rm(path.dirname(sketchRoot), { recursive: true, force: true })
     }

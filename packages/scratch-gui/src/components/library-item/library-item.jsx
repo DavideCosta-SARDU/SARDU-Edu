@@ -84,7 +84,9 @@ class LibraryItemComponent extends React.PureComponent {
                             </div>
                         ) : null}
                         {this.props.iconSource ? (
-                            this.renderImage(styles.featuredImage, this.props.iconSource)
+                            this.renderImage(classNames(styles.featuredImage, {
+                                [styles.hardwareFeaturedImage]: this.props.hardwareThumbnail
+                            }), this.props.iconSource)
                         ) : null}
                     </div>
                     {this.props.insetIconURL ? (
@@ -209,6 +211,7 @@ LibraryItemComponent.propTypes = {
     disabled: PropTypes.bool,
     extensionId: PropTypes.string,
     featured: PropTypes.bool,
+    hardwareThumbnail: PropTypes.bool,
     hidden: PropTypes.bool,
     iconSource: ScratchImage.ImageSourcePropType,
     insetIconURL: PropTypes.string,
@@ -233,6 +236,7 @@ LibraryItemComponent.propTypes = {
 
 LibraryItemComponent.defaultProps = {
     disabled: false,
+    hardwareThumbnail: false,
     showPlayButton: false
 };
 

@@ -58,7 +58,6 @@
     flex-shrink: 1;
     min-width: 20rem;
     overflow: hidden;
-    resize: horizontal;
     position: relative;
 
     display: flex;
@@ -317,7 +316,7 @@
     flex: 0 0 0.8rem;
     align-items: center;
     justify-content: center;
-    align-self: center;
+    align-self: stretch;
     color: #003366;
     background: transparent;
     cursor: ew-resize;

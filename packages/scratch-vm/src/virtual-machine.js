@@ -242,18 +242,22 @@ class VirtualMachine extends EventEmitter {
                 boardId: selection.boardId,
                 boardName: selection.boardName,
                 analogInputPins: selection.analogInputPins,
+                busPins: selection.busPins,
                 componentIds: Array.isArray(selection.componentIds) ? selection.componentIds : [],
                 digitalOutputPins: selection.digitalOutputPins,
                 hardwareKind: selection.hardwareKind || 'board',
+                robotId: selection.robotId,
                 boardVersion: selection.boardVersion,
                 backendId: selection.backendId,
                 backendVersion: selection.backendVersion,
                 mode: selection.mode || 'standalone',
-                pwmPins: selection.pwmPins
+                pwmPins: selection.pwmPins,
+                wifiEnabled: Boolean(selection.wifiEnabled)
             }
         });
         this.emit('SARDU_HARDWARE_CHANGED', this.getSarduEduProjectData());
-        if (this.extensionManager.isExtensionLoaded('sarduBoard')) {
+        if (['sarduBoard', 'sarduSensors', 'sarduActuators', 'sarduOtto', 'sarduWifi']
+            .some(id => this.extensionManager.isExtensionLoaded(id))) {
             this.extensionManager.refreshBlocks();
         }
         this.runtime.emit(Runtime.PROJECT_CHANGED);
@@ -262,13 +266,22 @@ class VirtualMachine extends EventEmitter {
     /**
      * Remove the selected SARDU Edu board or robot from the project.
      */
-    clearSarduEduHardwareSelection () {
+    clearSarduEduHardwareSelection (force = false) {
+        const boardPrograms = this.runtime.targets.flatMap(target => Object.values(target.blocks?._blocks || {})
+            .filter(block => block.topLevel && block.opcode === 'sarduBoard_program')
+            .map(block => ({block, blocks: target.blocks})));
+        const hasProgramCode = boardPrograms.some(({block}) => Object.values(block.inputs || {})
+            .some(input => Boolean(input.block)));
+        if (hasProgramCode && !force) return false;
+        boardPrograms.forEach(({block, blocks}) => blocks.deleteBlock(block.id));
         this.runtime.sarduEdu = null;
         this.runtime.sarduEduSelectedPort = null;
         this.runtime.sarduEduHardwarePort = null;
         this.setSarduEduLiveTransport(null);
         this.emit('SARDU_HARDWARE_CHANGED', null);
         this.runtime.emit(Runtime.PROJECT_CHANGED);
+        this.refreshWorkspace();
+        return true;
     }
 
     /**
@@ -628,6 +641,7 @@ class VirtualMachine extends EventEmitter {
 
         if (wholeProject && this.runtime.sarduEdu?.hardwareSelection) {
             extensionIDs.add('sarduBoard');
+            if (this.runtime.sarduEdu.hardwareSelection.wifiEnabled) extensionIDs.add('sarduWifi');
         }
 
         extensionIDs.forEach(extensionID => {

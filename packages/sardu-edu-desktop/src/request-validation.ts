@@ -16,7 +16,14 @@ export const validateCompileRequest = (value: unknown): ArduinoCompileRequest =>
   if (typeof value.source !== 'string' || value.source.length === 0 || value.source.length > MAX_SOURCE_LENGTH) {
     throw new Error('Arduino source must contain between 1 and 2000000 characters')
   }
-  return { boardId: value.boardId, source: value.source }
+  if (value.nanoProcessor !== undefined && !['auto', 'new', 'old'].includes(String(value.nanoProcessor))) {
+    throw new Error(`Invalid Arduino Nano processor option: ${String(value.nanoProcessor)}`)
+  }
+  return {
+    boardId: value.boardId,
+    ...(value.nanoProcessor === undefined ? {} : { nanoProcessor: value.nanoProcessor as 'auto' | 'new' | 'old' }),
+    source: value.source,
+  }
 }
 
 export const validatePort = (value: unknown): string => {

@@ -78,6 +78,54 @@ test('SARDU hardware selection can be removed without keeping the live transport
     t.end();
 });
 
+test('removing SARDU hardware also removes an empty board program block', t => {
+    const vm = new VirtualMachine();
+    vm.setSarduEduHardwareSelection({boardId: 'arduino-uno', backendId: 'arduino-cpp'});
+    const deletedBlocks = [];
+    vm.runtime.targets.push({
+        blocks: {
+            _blocks: {
+                program: {id: 'program', opcode: 'sarduBoard_program', topLevel: true, inputs: {}}
+            },
+            deleteBlock: blockId => deletedBlocks.push(blockId)
+        }
+    });
+
+    t.equal(vm.clearSarduEduHardwareSelection(), true);
+    t.same(deletedBlocks, ['program']);
+    t.equal(vm.getSarduEduProjectData(), null);
+    t.end();
+});
+
+test('removing SARDU hardware requires force when the board program contains code', t => {
+    const vm = new VirtualMachine();
+    vm.setSarduEduHardwareSelection({boardId: 'arduino-uno', backendId: 'arduino-cpp'});
+    const deletedBlocks = [];
+    vm.runtime.targets.push({
+        blocks: {
+            _blocks: {
+                program: {
+                    id: 'program',
+                    opcode: 'sarduBoard_program',
+                    topLevel: true,
+                    inputs: {SUBSTACK: {block: 'instruction', shadow: null}}
+                },
+                instruction: {id: 'instruction', opcode: 'sarduBoard_setDigitalPin', inputs: {}}
+            },
+            deleteBlock: blockId => deletedBlocks.push(blockId)
+        }
+    });
+
+    t.equal(vm.clearSarduEduHardwareSelection(), false);
+    t.same(deletedBlocks, []);
+    t.equal(vm.getSarduEduProjectData().hardwareSelection.boardId, 'arduino-uno');
+
+    t.equal(vm.clearSarduEduHardwareSelection(true), true);
+    t.same(deletedBlocks, ['program']);
+    t.equal(vm.getSarduEduProjectData(), null);
+    t.end();
+});
+
 test('SARDU hardware selection rejects incomplete data', t => {
     const vm = new VirtualMachine();
     t.throws(() => vm.setSarduEduHardwareSelection({boardId: 'arduino-uno'}),

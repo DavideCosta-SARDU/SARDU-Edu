@@ -19,7 +19,7 @@ test('SARDU board extension exposes named blocks, aliases, timers and tooltips',
     t.same(info.menus.DIGITAL_PIN.items, ['2', '13']);
     t.equal(blocks.program.blockType, BlockType.HAT);
     t.equal(blocks.program.branchCount, 2);
-    t.equal(blocks.program.isTerminal, true);
+    t.equal(blocks.program.terminal, true);
     t.equal(blocks.program.hideFromPalette, false);
     t.equal(blocks.setDigitalPin.blockType, BlockType.COMMAND);
     t.equal(blocks.waitMilliseconds.blockType, BlockType.COMMAND);

@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="16.3689 34.819 127.2623 50.3619" role="img" aria-label="Bacchetta NeoPixel con otto LED WS2812B">
+  <defs>
+    <linearGradient id="board" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#30353a"/>
+      <stop offset="1" stop-color="#101316"/>
+    </linearGradient>
+    <linearGradient id="package" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#d7dadd"/>
+    </linearGradient>
+    <radialGradient id="red"><stop offset="0" stop-color="#fff"/><stop offset=".22" stop-color="#ffb0a4"/><stop offset="1" stop-color="#ef3426"/></radialGradient>
+    <radialGradient id="orange"><stop offset="0" stop-color="#fff"/><stop offset=".22" stop-color="#ffe09a"/><stop offset="1" stop-color="#ff9d00"/></radialGradient>
+    <radialGradient id="green"><stop offset="0" stop-color="#fff"/><stop offset=".22" stop-color="#baffad"/><stop offset="1" stop-color="#20c957"/></radialGradient>
+    <radialGradient id="cyan"><stop offset="0" stop-color="#fff"/><stop offset=".22" stop-color="#b7ffff"/><stop offset="1" stop-color="#00bfc8"/></radialGradient>
+    <radialGradient id="blue"><stop offset="0" stop-color="#fff"/><stop offset=".22" stop-color="#b8d7ff"/><stop offset="1" stop-color="#2775e8"/></radialGradient>
+    <radialGradient id="violet"><stop offset="0" stop-color="#fff"/><stop offset=".22" stop-color="#e2baff"/><stop offset="1" stop-color="#9147db"/></radialGradient>
+    <radialGradient id="pink"><stop offset="0" stop-color="#fff"/><stop offset=".22" stop-color="#ffc4e7"/><stop offset="1" stop-color="#e64297"/></radialGradient>
+    <radialGradient id="white"><stop offset="0" stop-color="#fff"/><stop offset=".5" stop-color="#f8f3cf"/><stop offset="1" stop-color="#b9d4dc"/></radialGradient>
+  </defs>
+
+  <!-- Proporzioni reali di riferimento: 51,1 × 10,22 mm; scala uniforme. -->
+  <g id="stick" transform="translate(80 60) rotate(-12) scale(2.348336595) translate(-25.55 -5.11)">
+    <!-- PCB rigido -->
+    <rect x="0" y="0" width="51.1" height="10.22" rx="1" fill="url(#board)" stroke="#050607" stroke-width=".45"/>
+    <path d="M1.2 1h48.7M1.2 9.22h48.7" stroke="#4c555c" stroke-width=".28" opacity=".75"/>
+
+    <!-- piazzole di collegamento alle due estremità -->
+    <g fill="#d5a646" stroke="#795918" stroke-width=".18">
+      <rect x=".3" y="1.1" width="1.2" height="1.45" rx=".18"/>
+      <rect x=".3" y="4.38" width="1.2" height="1.45" rx=".18"/>
+      <rect x=".3" y="7.67" width="1.2" height="1.45" rx=".18"/>
+      <rect x="49.6" y="1.1" width="1.2" height="1.45" rx=".18"/>
+      <rect x="49.6" y="4.38" width="1.2" height="1.45" rx=".18"/>
+      <rect x="49.6" y="7.67" width="1.2" height="1.45" rx=".18"/>
+    </g>
+
+    <!-- otto package WS2812B 5050 -->
+    <g stroke="#8e9499" stroke-width=".24">
+      <rect x="2.4" y="2.71" width="4.8" height="4.8" rx=".55" fill="url(#package)"/>
+      <rect x="8.4" y="2.71" width="4.8" height="4.8" rx=".55" fill="url(#package)"/>
+      <rect x="14.4" y="2.71" width="4.8" height="4.8" rx=".55" fill="url(#package)"/>
+      <rect x="20.4" y="2.71" width="4.8" height="4.8" rx=".55" fill="url(#package)"/>
+      <rect x="26.4" y="2.71" width="4.8" height="4.8" rx=".55" fill="url(#package)"/>
+      <rect x="32.4" y="2.71" width="4.8" height="4.8" rx=".55" fill="url(#package)"/>
+      <rect x="38.4" y="2.71" width="4.8" height="4.8" rx=".55" fill="url(#package)"/>
+      <rect x="44.4" y="2.71" width="4.8" height="4.8" rx=".55" fill="url(#package)"/>
+    </g>
+
+    <!-- zone luminose RGB -->
+    <g stroke="#4d5357" stroke-width=".2">
+      <rect x="3.15" y="3.46" width="3.3" height="3.3" rx=".6" fill="url(#red)"/>
+      <rect x="9.15" y="3.46" width="3.3" height="3.3" rx=".6" fill="url(#orange)"/>
+      <rect x="15.15" y="3.46" width="3.3" height="3.3" rx=".6" fill="url(#green)"/>
+      <rect x="21.15" y="3.46" width="3.3" height="3.3" rx=".6" fill="url(#cyan)"/>
+      <rect x="27.15" y="3.46" width="3.3" height="3.3" rx=".6" fill="url(#blue)"/>
+      <rect x="33.15" y="3.46" width="3.3" height="3.3" rx=".6" fill="url(#violet)"/>
+      <rect x="39.15" y="3.46" width="3.3" height="3.3" rx=".6" fill="url(#pink)"/>
+      <rect x="45.15" y="3.46" width="3.3" height="3.3" rx=".6" fill="url(#white)"/>
+    </g>
+
+    <!-- piccoli riferimenti di orientamento -->
+    <g fill="#5d656b">
+      <circle cx="2.85" cy="1.25" r=".32"/>
+      <circle cx="8.85" cy="1.25" r=".32"/>
+      <circle cx="14.85" cy="1.25" r=".32"/>
+      <circle cx="20.85" cy="1.25" r=".32"/>
+      <circle cx="26.85" cy="1.25" r=".32"/>
+      <circle cx="32.85" cy="1.25" r=".32"/>
+      <circle cx="38.85" cy="1.25" r=".32"/>
+      <circle cx="44.85" cy="1.25" r=".32"/>
+    </g>
+  </g>
+</svg>

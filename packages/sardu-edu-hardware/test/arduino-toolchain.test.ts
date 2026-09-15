@@ -35,9 +35,27 @@ describe('Arduino CLI resource layout', () => {
       sketchPath: 'work/Blink',
     })
 
-    expect(invocation.args).toContain('arduino:avr:nano')
+    expect(invocation.args).toContain('arduino:avr:nano:cpu=atmega328')
     expect(invocation.args).toContain('--upload')
     expect(invocation.args).toContain('COM4')
+  })
+
+  test('builds the explicit old-bootloader Nano target', () => {
+    const invocation = createArduinoCliInvocation({
+      action: 'upload', boardId: 'arduino-nano', nanoProcessor: 'old', port: 'COM4', sketchPath: 'work/Blink',
+    })
+    expect(invocation.args).toContain('arduino:avr:nano:cpu=atmega328old')
+  })
+
+  test.each([
+    ['esp32-dev-module', 'esp32:esp32:esp32'],
+    ['esp32-s2-dev-module', 'esp32:esp32:esp32s2'],
+    ['esp32-s3-dev-module', 'esp32:esp32:esp32s3'],
+    ['esp32-c3-dev-module', 'esp32:esp32:esp32c3'],
+    ['esp32-cam-ai-thinker', 'esp32:esp32:esp32cam'],
+  ])('builds the %s compile target', (boardId, fqbn) => {
+    const invocation = createArduinoCliInvocation({action: 'compile', boardId, sketchPath: 'work/Rfid'})
+    expect(invocation.args).toContain(fqbn)
   })
 
   test('rejects upload without a serial port', () => {

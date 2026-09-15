@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="34.3116 16.9641 113.7994 97.014" role="img" aria-label="Micro servomotore MG90 grigio bruno in vista laterale">
+  <defs>
+    <linearGradient id="cassa" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#aaa198"/>
+      <stop offset=".5" stop-color="#817166"/>
+      <stop offset="1" stop-color="#5c4d44"/>
+    </linearGradient>
+    <linearGradient id="testa" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#b3aaa2"/>
+      <stop offset="1" stop-color="#69594f"/>
+    </linearGradient>
+    <linearGradient id="acciaio" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7a8185"/>
+      <stop offset=".3" stop-color="#eef0f1"/>
+      <stop offset=".65" stop-color="#b8bdc0"/>
+      <stop offset="1" stop-color="#676e72"/>
+    </linearGradient>
+  </defs>
+
+  <!--
+    Unica proiezione: vista laterale ortogonale del disegno quotato.
+    Corpo: 22,4 mm. Flangia totale: 31,8 mm.
+    Corpo sotto la flangia: 19,8 mm. Altezza totale di riferimento: 32,9 mm.
+    Scala uniforme: 2,73556231 px/mm.
+  -->
+  <g id="servo" transform="translate(36.5 15) scale(2.73556231)">
+    <!-- cavi sullo stesso piano della vista laterale -->
+    <path d="M27.1 27.1c3.4.1 5.1.8 7.1 2.4 1.8 1.4 3.6 1.8 5.8 1.8" fill="none" stroke="#6c3826" stroke-width="1.05" stroke-linecap="round"/>
+    <path d="M27.1 28.35c3.2.2 4.8 1.1 6.6 2.8 1.8 1.6 3.7 2.2 6.3 2.25" fill="none" stroke="#d73b35" stroke-width="1.05" stroke-linecap="round"/>
+    <path d="M27.1 29.6c3 .3 4.4 1.35 6 3.15 1.7 1.8 3.7 2.6 6.9 2.75" fill="none" stroke="#ed9427" stroke-width="1.05" stroke-linecap="round"/>
+
+    <!-- corpo rettangolare: 22,4 × 19,8 mm sotto la flangia -->
+    <rect x="4.7" y="13.1" width="22.4" height="19.8" fill="url(#cassa)" stroke="#3d332d" stroke-width=".65"/>
+    <path d="M6.05 14.35h19.7v16.9H6.05z" fill="#9a8e84" opacity=".28"/>
+    <path d="M6.05 15.1h19.7" stroke="#c9c1ba" stroke-width=".48" opacity=".65"/>
+    <path d="M6.05 30.8h19.7" stroke="#463a33" stroke-width=".55"/>
+    <path d="M7.1 14v18.2M24.7 14v18.2" stroke="#5b4d45" stroke-width=".38" opacity=".72"/>
+
+    <!-- flangia laterale: barra sottile, nessun foro visto dall'alto -->
+    <path d="M0 10.95h4.7V9.9h22.4v1.05h4.7v2.15H0z" fill="#75645a" stroke="#3d332d" stroke-width=".65" stroke-linejoin="miter"/>
+    <path d="M1 11.45h29.8" stroke="#b3a89f" stroke-width=".42" opacity=".68"/>
+
+    <!-- scatola superiore, profilo laterale rettilineo -->
+    <path d="M4.7 9.9V7.65h3.8V5.55h8.1v2.1h10.5V9.9z" fill="url(#testa)" stroke="#3d332d" stroke-width=".65" stroke-linejoin="miter"/>
+    <path d="M5.6 8.25h20.6" stroke="#c8c0b9" stroke-width=".44" opacity=".62"/>
+
+    <!-- albero scanalato visto di profilo -->
+    <rect x="10.25" y="1.4" width="4.35" height="4.15" fill="url(#acciaio)" stroke="#565d61" stroke-width=".5"/>
+    <path d="M10.7 2h3.45M10.7 2.7h3.45M10.7 3.4h3.45M10.7 4.1h3.45M10.7 4.8h3.45" stroke="#747c80" stroke-width=".22"/>
+    <rect x="9.35" y="5.05" width="6.15" height="1.35" fill="#88796e" stroke="#3d332d" stroke-width=".5"/>
+
+    <!-- separazioni reali della cassa -->
+    <path d="M4.7 18.1h22.4M4.7 27.9h22.4" stroke="#463a33" stroke-width=".48" opacity=".8"/>
+
+    <!-- viti laterali visibili sulla faccia -->
+    <g fill="url(#acciaio)" stroke="#555c60" stroke-width=".3">
+      <circle cx="6.4" cy="15" r=".62"/>
+      <circle cx="25.4" cy="15" r=".62"/>
+      <circle cx="6.4" cy="31" r=".62"/>
+      <circle cx="25.4" cy="31" r=".62"/>
+    </g>
+  </g>
+</svg>

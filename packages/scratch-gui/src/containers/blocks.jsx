@@ -88,6 +88,7 @@ class Blocks extends React.Component {
             'handleExtensionAdded',
             'handleBlocksInfoUpdate',
             'handleSarduHardwareChanged',
+            'initializeToolboxResizeHandle',
             'ensureSarduBoardProgram',
             'onTargetsUpdate',
             'onVisualReport',
@@ -109,6 +110,71 @@ class Blocks extends React.Component {
         this.onTargetsUpdate = debounce(this.onTargetsUpdate, 100);
         this.selectSarduBoardWhenReady = false;
         this.toolboxUpdateQueue = [];
+    }
+    initializeToolboxResizeHandle () {
+        if (this.toolboxResizeHandle || !this.blocks || !this.workspace || typeof ResizeObserver === 'undefined') {
+            return;
+        }
+        const toolboxElement = this.blocks.querySelector('.blocklyToolbox');
+        const flyoutBackgroundElement = this.blocks.querySelector('.blocklyFlyoutBackground');
+        if (!toolboxElement || !flyoutBackgroundElement) return;
+
+        const flyout = this.workspace.getFlyout();
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'sarduToolboxResizeHandle';
+        resizeHandle.textContent = '↔';
+        resizeHandle.setAttribute('role', 'separator');
+        resizeHandle.setAttribute('aria-orientation', 'vertical');
+        resizeHandle.title = this.ScratchBlocks.ScratchMsgs.translate(
+            'SARDU_RESIZE_BLOCKS',
+            'Resize blocks palette'
+        );
+        resizeHandle.setAttribute('aria-label', resizeHandle.title);
+        const updateHandlePosition = () => {
+            const blocksLeft = this.blocks.getBoundingClientRect().left;
+            const flyoutRight = flyoutBackgroundElement.getBoundingClientRect().right;
+            resizeHandle.style.left = `${Math.max(0, flyoutRight - blocksLeft)}px`;
+        };
+        this.toolboxResizePointerDown = event => {
+            this.toolboxResizeState = {
+                startFlyoutWidth: flyout.getWidth(),
+                startX: event.clientX,
+                maxWidth: Math.max(0, this.blocks.getBoundingClientRect().width -
+                    toolboxElement.getBoundingClientRect().width - 24)
+            };
+            event.currentTarget.setPointerCapture?.(event.pointerId);
+            event.preventDefault();
+        };
+        this.toolboxResizePointerMove = event => {
+            if (!this.toolboxResizeState) return;
+            const delta = event.clientX - this.toolboxResizeState.startX;
+            const flyoutWidth = Math.max(0, Math.min(this.toolboxResizeState.maxWidth,
+                this.toolboxResizeState.startFlyoutWidth + delta));
+            flyout.setWidth(flyoutWidth);
+            updateHandlePosition();
+            this.workspace.resize();
+        };
+        this.toolboxResizePointerUp = () => {
+            this.toolboxResizeState = null;
+        };
+        resizeHandle.addEventListener('pointerdown', this.toolboxResizePointerDown);
+        window.addEventListener('pointermove', this.toolboxResizePointerMove);
+        window.addEventListener('pointerup', this.toolboxResizePointerUp);
+        window.addEventListener('pointercancel', this.toolboxResizePointerUp);
+        this.blocks.appendChild(resizeHandle);
+        this.toolboxResizeHandle = resizeHandle;
+        this.toolboxResizeObserver = new ResizeObserver(() => {
+            updateHandlePosition();
+            if (this.props.isVisible) this.workspace.resize();
+        });
+        this.toolboxResizeObserver.observe(this.blocks);
+        this.toolboxResizeObserver.observe(flyoutBackgroundElement);
+        if (this.toolboxDomObserver) {
+            this.toolboxDomObserver.disconnect();
+            this.toolboxDomObserver = null;
+        }
+        updateHandlePosition();
+        if (this.props.isVisible) this.workspace.resize();
     }
     componentDidMount () {
         this.ScratchBlocks = VMScratchBlocks(this.props.vm, this.props.useCatBlocks);
@@ -135,53 +201,10 @@ class Blocks extends React.Component {
             }
         );
         this.workspace = this.ScratchBlocks.inject(this.blocks, workspaceConfig);
-        const toolboxElement = this.blocks.querySelector('.blocklyToolboxDiv');
-        if (toolboxElement && typeof ResizeObserver !== 'undefined') {
-            const resizeHandle = document.createElement('button');
-            resizeHandle.type = 'button';
-            resizeHandle.className = 'sarduToolboxResizeHandle';
-            resizeHandle.textContent = '↔';
-            resizeHandle.title = this.ScratchBlocks.ScratchMsgs.translate(
-                'SARDU_RESIZE_BLOCKS',
-                'Resize blocks palette'
-            );
-            resizeHandle.setAttribute('aria-label', resizeHandle.title);
-            const updateHandlePosition = () => {
-                const width = toolboxElement.getBoundingClientRect().width;
-                resizeHandle.style.left = `${Math.max(0, width - 12)}px`;
-            };
-            this.toolboxResizePointerDown = event => {
-                this.toolboxResizeState = {
-                    startWidth: toolboxElement.getBoundingClientRect().width,
-                    startX: event.clientX
-                };
-                event.currentTarget.setPointerCapture?.(event.pointerId);
-                event.preventDefault();
-            };
-            this.toolboxResizePointerMove = event => {
-                if (!this.toolboxResizeState) return;
-                const maxWidth = Math.max(160, this.blocks.getBoundingClientRect().width * 0.6);
-                const width = Math.max(128, Math.min(maxWidth,
-                    this.toolboxResizeState.startWidth + event.clientX - this.toolboxResizeState.startX));
-                toolboxElement.style.width = `${width}px`;
-                updateHandlePosition();
-                this.workspace.resize();
-            };
-            this.toolboxResizePointerUp = () => {
-                this.toolboxResizeState = null;
-            };
-            resizeHandle.addEventListener('pointerdown', this.toolboxResizePointerDown);
-            window.addEventListener('pointermove', this.toolboxResizePointerMove);
-            window.addEventListener('pointerup', this.toolboxResizePointerUp);
-            window.addEventListener('pointercancel', this.toolboxResizePointerUp);
-            this.blocks.appendChild(resizeHandle);
-            this.toolboxResizeHandle = resizeHandle;
-            this.toolboxResizeObserver = new ResizeObserver(() => {
-                updateHandlePosition();
-                this.workspace.resize();
-            });
-            this.toolboxResizeObserver.observe(toolboxElement);
-            updateHandlePosition();
+        this.initializeToolboxResizeHandle();
+        if (!this.toolboxResizeHandle && typeof MutationObserver !== 'undefined') {
+            this.toolboxDomObserver = new MutationObserver(this.initializeToolboxResizeHandle);
+            this.toolboxDomObserver.observe(this.blocks, {childList: true, subtree: true});
         }
         this.workspace.registerToolboxCategoryCallback(
             'VARIABLE',
@@ -278,6 +301,8 @@ class Blocks extends React.Component {
         if (this.props.isVisible === prevProps.isVisible) {
             if (this.props.stageSize !== prevProps.stageSize) {
                 // force workspace to redraw for the new stage size
+                this.initializeToolboxResizeHandle();
+                this.workspace.resize();
                 window.dispatchEvent(new Event('resize'));
             }
             return;
@@ -286,6 +311,7 @@ class Blocks extends React.Component {
         // @todo hack to reload the workspace due to gui bug #413
         if (this.props.isVisible) { // Scripts tab
             this.workspace.setVisible(true);
+            this.initializeToolboxResizeHandle();
             if (prevProps.locale !== this.props.locale || this.props.locale !== this.props.vm.getLocale()) {
                 // call setLocale if the locale has changed, or changed while the blocks were hidden.
                 // vm.getLocale() will be out of sync if locale was changed while not visible
@@ -294,12 +320,14 @@ class Blocks extends React.Component {
                 this.props.vm.refreshWorkspace();
             }
 
+            this.workspace.resize();
             window.dispatchEvent(new Event('resize'));
         } else {
             this.workspace.setVisible(false);
         }
     }
     componentWillUnmount () {
+        if (this.toolboxDomObserver) this.toolboxDomObserver.disconnect();
         if (this.toolboxResizeObserver) this.toolboxResizeObserver.disconnect();
         if (this.toolboxResizeHandle) {
             this.toolboxResizeHandle.removeEventListener('pointerdown', this.toolboxResizePointerDown);

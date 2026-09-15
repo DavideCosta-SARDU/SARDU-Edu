@@ -33,13 +33,18 @@ describe('Arduino definitions', () => {
       language: 'Arduino C/C++',
       modes: ['standalone', 'realtime'],
     })
-    expect(ARDUINO_BOARDS.map((board) => board.id)).toEqual(['arduino-uno', 'arduino-nano'])
+    expect(ARDUINO_BOARDS.map((board) => board.id)).toEqual([
+      'arduino-uno', 'arduino-nano', 'esp32-dev-module', 'esp32-s2-dev-module',
+      'esp32-s3-dev-module', 'esp32-c3-dev-module', 'esp32-cam-ai-thinker',
+    ])
     expect(ARDUINO_BOARDS.every((board) => board.backendIds.includes(ARDUINO_BACKEND.id))).toBe(true)
     expect(ARDUINO_HARDWARE_DEFINITIONS.backends.get(ARDUINO_BACKEND.id)).toBe(ARDUINO_BACKEND)
     expect(ARDUINO_HARDWARE_DEFINITIONS.components.get('dht11-dht22')).toMatchObject({
       boardIds: ['arduino-uno', 'arduino-nano'],
-      modes: ['standalone'],
+      modes: ['standalone', 'realtime'],
     })
+    expect(ARDUINO_HARDWARE_DEFINITIONS.components.get('hc-sr04')?.modes).toEqual(['standalone', 'realtime'])
+    expect(ARDUINO_HARDWARE_DEFINITIONS.components.get('servo')?.modes).toEqual(['standalone', 'realtime'])
   })
 
   test('declares Uno and Nano pins and communication buses', () => {
@@ -54,6 +59,53 @@ describe('Arduino definitions', () => {
 })
 
 describe('generateArduinoSketch', () => {
+  test('generates independent servo and HC-SR04 support', () => {
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {
+        topLevel: true,
+        inputs: { SUBSTACK2: { block: 'servo' } },
+      }),
+      servo: block('servo', 'sarduActuators_setServoAngle', {
+        next: 'servoWait',
+        fields: { PIN: { value: '9' } },
+        inputs: { ANGLE: { block: 'angle' } },
+      }),
+      angle: block('angle', 'math_number', { fields: { NUM: { value: '90' } } }),
+      servoWait: block('servoWait', 'sarduActuators_setServoAngleAndWait', {
+        next: 'printAngle',
+        fields: { PIN: { value: '9' } },
+        inputs: { ANGLE: { block: 'angleWait' }, MILLIS: { block: 'servoDelay' } },
+      }),
+      angleWait: block('angleWait', 'math_number', { fields: { NUM: { value: '45' } } }),
+      servoDelay: block('servoDelay', 'math_number', { fields: { NUM: { value: '200' } } }),
+      printAngle: block('printAngle', 'sarduBoard_serialPrintln', {
+        next: 'printDistance',
+        inputs: { VALUE: { block: 'servoAngle' } },
+      }),
+      servoAngle: block('servoAngle', 'sarduActuators_servoAngle', {
+        fields: { PIN: { value: '9' } },
+      }),
+      printDistance: block('printDistance', 'sarduBoard_serialPrintln', {
+        inputs: { VALUE: { block: 'distance' } },
+      }),
+      distance: block('distance', 'sarduSensors_ultrasonicDistance', {
+        fields: { TRIGGER: { value: '7' }, ECHO: { value: '8' }, UNIT: { value: 'inch' } },
+      }),
+    }
+
+    const source = generateArduinoSketch({ boardId: 'arduino-uno', targets: [{ blocks }] })
+
+    expect(source).toContain('#include <Servo.h>')
+    expect(source).toContain('Servo servo_9;')
+    expect(source).toContain('servo_9.attach(9);')
+    expect(source).toContain('servo_9.write(90);')
+    expect(source).toContain('servo_9.write(45);\n  delay(200);')
+    expect(source).toContain('Serial.println(servo_9.read());')
+    expect(source).toContain('#include <Ultrasonic.h>')
+    expect(source).toContain('Ultrasonic ultrasonic_7_8(7, 8);')
+    expect(source).toContain('ultrasonic_7_8.read(INC)')
+  })
+
   test('generates DHT11 temperature and humidity reads for serial debugging', () => {
     const blocks = {
       program: block('program', 'sarduBoard_program', {
@@ -86,6 +138,29 @@ describe('generateArduinoSketch', () => {
     expect(source).toContain('sardu_dht_dht11_2.begin();')
     expect(source).toContain('Serial.println((String("temperatura ") + String(((int)sardu_dht_dht11_2.readTemperature()))));')
     expect(source).toContain('Serial.println(((int)sardu_dht_dht11_2.readHumidity()));')
+  })
+
+  test('generates VL53L0X and NeoPixel code only when their blocks are used', () => {
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK: {block: 'neoConfig'}, SUBSTACK2: {block: 'printLaser'}}}),
+      neoConfig: block('neoConfig', 'sarduActuators_configureNeoPixel', {next: 'neoColor', fields: {PIN: {value: '6'}}, inputs: {COUNT: {block: 'count'}}}),
+      count: block('count', 'math_number', {fields: {NUM: {value: '8'}}}),
+      neoColor: block('neoColor', 'sarduActuators_setNeoPixelRgb', {next: 'neoShow', fields: {PIN: {value: '6'}}, inputs: {PIXEL: {block: 'pixel'}, RED: {block: 'red'}, GREEN: {block: 'zero'}, BLUE: {block: 'zero'}}}),
+      pixel: block('pixel', 'math_number', {fields: {NUM: {value: '0'}}}),
+      red: block('red', 'math_number', {fields: {NUM: {value: '255'}}}),
+      zero: block('zero', 'math_number', {fields: {NUM: {value: '0'}}}),
+      neoShow: block('neoShow', 'sarduActuators_showNeoPixels', {fields: {PIN: {value: '6'}}}),
+      printLaser: block('printLaser', 'sarduBoard_serialPrintln', {inputs: {VALUE: {block: 'laser'}}}),
+      laser: block('laser', 'sarduSensors_laserDistance', {fields: {UNIT: {value: 'mm'}}})
+    }
+
+    const source = generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})
+    expect(source).toContain('#include <VL53L0X.h>')
+    expect(source).toContain('#include <Adafruit_NeoPixel.h>')
+    expect(source).toContain('Adafruit_NeoPixel neopixel_6;')
+    expect(source).toContain('neopixel_6.updateLength(8);')
+    expect(source).toContain('neopixel_6.setPixelColor(0, 255, 0, 0);')
+    expect(source).toContain('Serial.println(vl53l0x.readRangeSingleMillimeters());')
   })
 
   test('generates a Blink sketch from Arduino blocks', () => {
@@ -207,6 +282,8 @@ describe('generateArduinoSketch', () => {
     expect(firmware).toContain("if (command == 'W')")
     expect(firmware).toContain("command == 'M'")
     expect(firmware).toContain("command == 'U'")
+    expect(firmware).toContain("command == 'R'")
+    expect(firmware).toContain('Serial.println(sardu_servos[pin].read());')
     expect(firmware).toContain('digitalWrite(pin, level ? HIGH : LOW);')
   })
 
@@ -356,5 +433,87 @@ describe('generateArduinoSketch', () => {
     expect(source).toContain('Serial.begin(9600);')
     expect(source).toContain('Serial.print("value=");')
     expect(source).toContain('Serial.println("ready");')
+  })
+
+  test('generates ESP32 Wi-Fi setup, status and IP blocks', () => {
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {
+        topLevel: true,
+        inputs: { SUBSTACK: { block: 'connect' }, SUBSTACK2: { block: 'printStatus' } },
+      }),
+      connect: block('connect', 'sarduWifi_connect', {
+        inputs: {
+          SSID: { block: 'ssid' },
+          PASSWORD: { block: 'password' },
+          SECONDS: { block: 'timeout' },
+        },
+      }),
+      ssid: block('ssid', 'text', { fields: { TEXT: { value: 'SARDU Wi-Fi' } } }),
+      password: block('password', 'text', { fields: { TEXT: { value: 'secret' } } }),
+      timeout: block('timeout', 'math_number', { fields: { NUM: { value: '15' } } }),
+      printStatus: block('printStatus', 'sarduBoard_serialPrintln', {
+        next: 'printIp',
+        inputs: { VALUE: { block: 'connected' } },
+      }),
+      connected: block('connected', 'sarduWifi_isConnected'),
+      printIp: block('printIp', 'sarduBoard_serialPrintln', {
+        inputs: { VALUE: { block: 'ip' } },
+      }),
+      ip: block('ip', 'sarduWifi_localIp'),
+    }
+
+    const source = generateArduinoSketch({ boardId: 'esp32-dev-module', targets: [{ blocks }] })
+
+    expect(source).toContain('#include <WiFi.h>')
+    expect(source).toContain('WiFi.begin("SARDU Wi-Fi", "secret");')
+    expect(source).toContain('((unsigned long)(15) * 1000UL)')
+    expect(source).toContain('Serial.println((WiFi.status() == WL_CONNECTED));')
+    expect(source).toContain('Serial.println(WiFi.localIP().toString());')
+    expect(() => generateArduinoSketch({ boardId: 'arduino-uno', targets: [{ blocks }] })).toThrow(
+      'Wi-Fi blocks require an ESP32 board',
+    )
+  })
+
+  test('generates PN532 read and write support', () => {
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK2: {block: 'configure'}}}),
+      configure: block('configure', 'sarduSensors_rfidConfigurePn532I2c', {
+        next: 'print', fields: {SDA: {value: 'A4'}, SCL: {value: 'A5'}},
+      }),
+      print: block('print', 'sarduBoard_serialPrintln', {next: 'write', inputs: {VALUE: {block: 'read'}}}),
+      read: block('read', 'sarduSensors_rfidReadBlock', {inputs: {BLOCK: {block: 'readBlock'}}}),
+      readBlock: block('readBlock', 'math_number', {fields: {NUM: {value: '4'}}}),
+      write: block('write', 'sarduSensors_rfidWriteBlock', {inputs: {BLOCK: {block: 'writeBlock'}, DATA: {block: 'data'}}}),
+      writeBlock: block('writeBlock', 'math_number', {fields: {NUM: {value: '4'}}}),
+      data: block('data', 'text', {fields: {TEXT: {value: '00112233445566778899AABBCCDDEEFF'}}}),
+    }
+    const source = generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})
+
+    expect(source).toContain('#include <PN532_I2C.h>')
+    expect(source).toContain('#include <PN532.h>')
+    expect(source).toContain('#include <MFRC522.h>')
+    expect(source).toContain('sarduRfidConfigure("PN532", "I2C", A4, A5, -1, -1, -1, -1, -1, -1);')
+    expect(source).toContain('sarduRfidRead(sarduRfidReader, sarduRfidBus')
+    expect(source).toContain('sarduRfidWrite(sarduRfidReader, sarduRfidBus')
+  })
+
+  test('keeps generating RFID operations saved with the previous inline connection fields', () => {
+    const fields = {
+      READER: {value: 'RC522'}, BUS: {value: 'SPI'}, SDA: {value: 'A4'}, SCL: {value: 'A5'},
+      MOSI: {value: '11'}, MISO: {value: '12'}, SCK: {value: '13'}, SS: {value: '10'},
+      IRQ: {value: '2'}, RESET: {value: '9'},
+    }
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK2: {block: 'write'}}}),
+      write: block('write', 'sarduSensors_rfidWriteBlock', {
+        fields,
+        inputs: {BLOCK: {block: 'writeBlock'}, DATA: {block: 'data'}},
+      }),
+      writeBlock: block('writeBlock', 'math_number', {fields: {NUM: {value: '4'}}}),
+      data: block('data', 'text', {fields: {TEXT: {value: '00112233445566778899AABBCCDDEEFF'}}}),
+    }
+
+    const source = generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})
+    expect(source).toContain('sarduRfidWrite("RC522", "SPI", A4, A5, 11, 12, 13, 10, 2, 9, 4')
   })
 })

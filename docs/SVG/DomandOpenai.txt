@@ -1,0 +1,15 @@
+riesci a farmi un svg di un
+basati su disegno tecnico mantenendo le proporzioni del prodotto originale
+non mischiare la vista laterale, frontale, dall'alto etc
+
+codex chiede
+
+  - file SVG con viewBox="0 0 160 120";
+  - servomotore centrato, occupando circa 120 × 90 px;
+  - corpo blu frontale;
+  - asse circolare centrato sopra il corpo;
+  - leva bianca orizzontale, simmetrica rispetto all’asse, estesa sia a sinistra sia a destra;
+  - tre fili marrone, rosso e arancione in uscita lateralmente;
+  - nessuna scritta;
+  - margine libero uniforme di almeno 10 px;
+  - resa chiara anche quando visualizzata nella scheda a circa 80 × 60 px.

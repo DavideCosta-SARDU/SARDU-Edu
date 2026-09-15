@@ -69,7 +69,7 @@ const testExtensionInfo = {
         {
             opcode: 'loop',
             blockType: BlockType.LOOP, // implied branchCount of 1 unless otherwise stated
-            isTerminal: true,
+            terminal: true,
             text: [
                 'loopty [MANY] loops'
             ],
@@ -245,7 +245,7 @@ const testLoop = function (t, loop) {
     testCategoryInfo(t, loop);
     t.equal(loop.json.outputShape, ScratchBlocksConstants.OUTPUT_SHAPE_SQUARE);
     t.ok(Object.prototype.hasOwnProperty.call(loop.json, 'previousStatement'));
-    t.notOk(Object.prototype.hasOwnProperty.call(loop.json, 'nextStatement')); // isTerminal is set on this block
+    t.notOk(Object.prototype.hasOwnProperty.call(loop.json, 'nextStatement')); // terminal is set on this block
     t.notOk(loop.json.extensions && loop.json.extensions.length); // OK if it's absent or empty
     t.equal(loop.json.message0, 'loopty %1 loops');
     t.equal(loop.json.message1, '%1'); // placeholder for substack
@@ -294,6 +294,27 @@ test('registerExtensionPrimitives', t => {
     });
 
     runtime._registerExtensionPrimitives(testExtensionInfo);
+});
+
+test('terminal hat with branches has no bottom connection', t => {
+    const runtime = new Runtime();
+    runtime.on(Runtime.EXTENSION_ADDED, categoryInfo => {
+        const program = categoryInfo.blocks[0];
+        t.notOk(Object.prototype.hasOwnProperty.call(program.json, 'nextStatement'));
+        t.end();
+    });
+
+    runtime._registerExtensionPrimitives({
+        id: 'terminalhat',
+        name: 'Terminal hat',
+        blocks: [{
+            opcode: 'program',
+            blockType: BlockType.HAT,
+            branchCount: 2,
+            terminal: true,
+            text: ['start', 'forever']
+        }]
+    });
 });
 
 test('custom field types should be added to block and EXTENSION_FIELD_ADDED callback triggered', t => {

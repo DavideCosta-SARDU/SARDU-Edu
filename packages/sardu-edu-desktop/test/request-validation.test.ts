@@ -20,6 +20,9 @@ describe('desktop hardware request validation', () => {
       source: 'void setup() {}',
     })
     expect(validatePort('/dev/ttyACM0')).toBe('/dev/ttyACM0')
+    expect(validateUploadRequest({
+      boardId: 'arduino-nano', nanoProcessor: 'old', port: 'COM5', source: 'void setup() {}',
+    }).nanoProcessor).toBe('old')
   })
 
   test('rejects unsupported boards, empty source, and unsafe ports', () => {

@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="47.76 11.1 64.48 98.8"
+     width="160" height="120">
+
+  <!-- Piedini metallici -->
+  <line x1="67" y1="70" x2="67" y2="108"
+        stroke="#9b9b8d"
+        stroke-width="4"
+        stroke-linecap="round"/>
+
+  <line x1="93" y1="70" x2="93" y2="108"
+        stroke="#9b9b8d"
+        stroke-width="4"
+        stroke-linecap="round"/>
+
+  <!-- Corpo circolare -->
+  <circle cx="80" cy="44" r="31"
+          fill="#ded5ad"
+          stroke="#9b6037"
+          stroke-width="3"/>
+
+  <!-- Serpentina fotosensibile -->
+  <path d="
+      M67 20
+      H91
+      C97 20 97 27 91 27
+      H69
+      C63 27 63 34 69 34
+      H91
+      C97 34 97 41 91 41
+      H69
+      C63 41 63 48 69 48
+      H91
+      C97 48 97 55 91 55
+      H69
+      C63 55 63 62 69 62
+      H92"
+        fill="none"
+        stroke="#9b4f32"
+        stroke-width="3.2"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+  <!-- Contatto sinistro -->
+  <circle cx="61" cy="44" r="4"
+          fill="#b79b62"
+          stroke="#80683d"
+          stroke-width="1.5"/>
+
+  <!-- Contatto destro -->
+  <circle cx="99" cy="44" r="4"
+          fill="#b79b62"
+          stroke="#80683d"
+          stroke-width="1.5"/>
+
+</svg>

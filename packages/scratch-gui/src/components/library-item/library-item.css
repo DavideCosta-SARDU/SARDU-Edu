@@ -119,10 +119,26 @@
 
 .featured-image-container {
     position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 300px;
+    height: 210px;
 }
 
 .featured-image {
-    width: 100%;
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.hardware-featured-image {
+    box-sizing: border-box;
+    width: 220px;
+    height: 140px;
 }
 
 .featured-text {

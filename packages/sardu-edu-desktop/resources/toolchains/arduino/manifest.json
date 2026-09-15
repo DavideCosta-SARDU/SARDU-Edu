@@ -14,6 +14,12 @@
       "version": "1.8.6",
       "license": "file-level open-source licenses",
       "source": "https://github.com/arduino/ArduinoCore-avr"
+    },
+    {
+      "id": "esp32:esp32",
+      "version": "3.3.11",
+      "license": "file-level open-source licenses",
+      "source": "https://github.com/espressif/arduino-esp32"
     }
   ],
   "builtinTools": [
@@ -65,6 +71,70 @@
       "version": "1.1.15",
       "license": "Apache-2.0",
       "source": "https://github.com/adafruit/Adafruit_Sensor"
+    },
+    {
+      "id": "Adafruit BusIO",
+      "version": "1.17.4",
+      "license": "MIT",
+      "source": "https://github.com/adafruit/Adafruit_BusIO"
+    },
+    {
+      "id": "Adafruit PN532",
+      "version": "1.3.4",
+      "license": "BSD-3-Clause",
+      "source": "https://github.com/adafruit/Adafruit-PN532"
+    },
+    {
+      "id": "MFRC522",
+      "version": "1.4.12",
+      "license": "Unlicense",
+      "source": "https://github.com/miguelbalboa/rfid"
+    },
+    {
+      "id": "Servo",
+      "version": "1.3.0",
+      "license": "LGPL-2.1-or-later",
+      "source": "https://github.com/arduino-libraries/Servo"
+    },
+    {
+      "id": "Ultrasonic",
+      "version": "3.0.0",
+      "license": "MIT",
+      "source": "https://github.com/ErickSimoes/Ultrasonic"
+    },
+    {
+      "id": "OttoDIYLib",
+      "version": "13.0.0",
+      "license": "GPL-3.0-only",
+      "source": "https://github.com/OttoDIY/OttoDIYLib"
+    },
+    {
+      "id": "VL53L0X",
+      "version": "1.3.1",
+      "license": "MIT",
+      "source": "https://github.com/pololu/vl53l0x-arduino"
+    },
+    {
+      "id": "Adafruit NeoPixel",
+      "version": "1.15.5",
+      "license": "LGPL-3.0-only",
+      "source": "https://github.com/adafruit/Adafruit_NeoPixel"
+    }
+  ],
+  "bundledLibraries": [
+    {
+      "id": "PN532_Seeed",
+      "revision": "2c47f5c836af53158c4e29685551612181fd8f9b",
+      "license": "BSD-3-Clause",
+      "copyright": [
+        "Copyright (c) 2012, Adafruit Industries",
+        "Copyright (c) 2013, Seeed Technology Inc."
+      ],
+      "attribution": [
+        "PN532_I2C modified by picospuch"
+      ],
+      "source": "https://github.com/Seeed-Studio/PN532",
+      "sourceDirectory": "PN532_Seeed"
     }
   ],
   "drivers": [

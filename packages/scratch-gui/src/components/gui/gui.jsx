@@ -264,9 +264,28 @@ const GUIComponent = props => {
     }, [hardwareSelection, sarduViewMode]);
 
     useEffect(() => {
-        if (!hardwareSelection?.componentIds?.includes('dht11-dht22') ||
+        if (!hardwareSelection?.componentIds?.some(id => [
+            'dht11-dht22', 'hc-sr04', 'touch', 'sound-sensor', 'photoresistor', 'vl53l0x', 'pn532', 'rc522'
+        ].includes(id)) ||
             vm.extensionManager.isExtensionLoaded('sarduSensors')) return;
         void vm.extensionManager.loadExtensionURL('sarduSensors');
+    }, [hardwareSelection, vm]);
+
+    useEffect(() => {
+        if (!hardwareSelection?.componentIds?.some(id => ['servo', 'buzzer', 'led', 'neopixel'].includes(id)) ||
+            vm.extensionManager.isExtensionLoaded('sarduActuators')) return;
+        void vm.extensionManager.loadExtensionURL('sarduActuators');
+    }, [hardwareSelection, vm]);
+
+    useEffect(() => {
+        if (hardwareSelection?.robotId !== 'otto-diy' || vm.extensionManager.isExtensionLoaded('sarduOtto')) return;
+        void vm.extensionManager.loadExtensionURL('sarduOtto');
+    }, [hardwareSelection, vm]);
+
+    useEffect(() => {
+        if (!hardwareSelection?.wifiEnabled || !hardwareSelection.boardId?.startsWith('esp32-') ||
+            vm.extensionManager.isExtensionLoaded('sarduWifi')) return;
+        void vm.extensionManager.loadExtensionURL('sarduWifi');
     }, [hardwareSelection, vm]);
 
     useEffect(() => {
@@ -598,6 +617,7 @@ const GUIComponent = props => {
                                         onExtensionButtonClick={onExtensionButtonClick}
                                     />
                                     <HardwareButtons
+                                        hasHardwareSelection={Boolean(vm.getSarduEduProjectData()?.hardwareSelection)}
                                         onBoardClick={onBoardButtonClick}
                                         onComponentClick={onComponentButtonClick}
                                         onRobotClick={onRobotButtonClick}

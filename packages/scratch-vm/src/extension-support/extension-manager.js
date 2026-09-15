@@ -25,8 +25,11 @@ const builtinExtensions = {
     boost: () => require('../extensions/scratch3_boost'),
     gdxfor: () => require('../extensions/scratch3_gdx_for'),
     faceSensing: () => require('../extensions/scratch3_face_sensing'),
+    sarduActuators: () => require('../extensions/scratch3_sardu_actuators'),
     sarduBoard: () => require('../extensions/scratch3_sardu_board'),
-    sarduSensors: () => require('../extensions/scratch3_sardu_sensors')
+    sarduSensors: () => require('../extensions/scratch3_sardu_sensors'),
+    sarduWifi: () => require('../extensions/scratch3_sardu_wifi'),
+    sarduOtto: () => require('../extensions/scratch3_sardu_otto')
 };
 
 /**

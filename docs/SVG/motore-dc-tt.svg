@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120" role="img" aria-label="Motore DC TT giallo in proporzione reale">
+  <defs>
+    <linearGradient id="giallo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe62b"/>
+      <stop offset=".55" stop-color="#ffca05"/>
+      <stop offset="1" stop-color="#eaaa00"/>
+    </linearGradient>
+    <radialGradient id="vite" cx="35%" cy="30%" r="70%">
+      <stop offset="0" stop-color="#95801a"/>
+      <stop offset="1" stop-color="#3b3307"/>
+    </radialGradient>
+  </defs>
+
+  <!--
+    Ingombro reale della vista: 64,4 × 22,6 mm.
+    Scala uniforme: 120 / 64,4 = 1,863354037 px/mm.
+    Ingombro sul canvas: 120 × 42,112 px, centrato in 160 × 120.
+  -->
+  <g id="motore" transform="translate(20 25.52795031) scale(1.863354037)">
+    <!-- terminali -->
+    <rect x="3.2" y="7.55" width="1.15" height="2.4" rx=".35" fill="#c9865c" stroke="#6e4935" stroke-width=".3"/>
+    <rect x="3.2" y="27.05" width="1.15" height="2.4" rx=".35" fill="#c9865c" stroke="#6e4935" stroke-width=".3"/>
+
+    <!-- calotta posteriore -->
+    <path d="M5.1 9.25h2.8c1.4 0 2.4 1.1 2.4 2.5v13.5c0 1.4-1 2.5-2.4 2.5H5.1c-1.8 0-3.2-1.5-3.2-3.3v-11.9c0-1.8 1.4-3.3 3.2-3.3z" fill="#202226" stroke="#111214" stroke-width=".8"/>
+    <path d="M3.5 12c0-1.5 1.2-2.6 2.6-2.6h1.1v18.2H6.1c-1.4 0-2.6-1.1-2.6-2.6z" fill="#393d42"/>
+
+    <!-- motore metallico: larghezza reale 17,5 mm -->
+    <path d="M7.2 9.75h14.2v17.5H7.2C6 25.1 5.5 22.3 5.5 18.5S6 11.9 7.2 9.75z" fill="#c8cdd2" stroke="#41474c" stroke-width=".8"/>
+    <path d="M7.8 10.45h13v3.1h-13z" fill="#edf0f2"/>
+    <path d="M7.3 22.8h14v3.75h-14z" fill="#aeb5bb"/>
+    <path d="M8 14.15h12.8" stroke="#f9fafb" stroke-width=".65"/>
+    <path d="M8 22.45h12.8" stroke="#7f878e" stroke-width=".65"/>
+    <path d="M7.2 9.75v17.5M21.4 9.75v17.5" stroke="#353a3e" stroke-width=".7"/>
+
+    <!-- collegamento diretto: nessun elemento bianco centrale -->
+    <path d="M21.4 9.75h13.7v17.5H21.4z" fill="#f5bd00" stroke="#705700" stroke-width=".8"/>
+    <path d="M22.2 12h10.7v13H22.2" fill="#ffd61b" opacity=".78"/>
+
+    <!-- scatola: larghezza nominale reale 22,3 mm -->
+    <path d="M35.1 7.35h24.4c2.7 0 4.9 2.2 4.9 4.9v12.5c0 2.7-2.2 4.9-4.9 4.9H35.1c-2.7 0-4.9-2.2-4.9-4.9V12.25c0-2.7 2.2-4.9 4.9-4.9z" fill="url(#giallo)" stroke="#675100" stroke-width="1"/>
+    <path d="M34.4 9.5h24.7c1.7 0 2.7.9 3.2 2.3" fill="none" stroke="#fff36b" stroke-width="1.1" opacity=".82"/>
+    <path d="M33.2 13h28.5" stroke="#ffe65d" stroke-width=".75" opacity=".75"/>
+
+    <!-- fissaggi -->
+    <circle cx="34.8" cy="13.2" r=".95" fill="url(#vite)" stroke="#4d4006" stroke-width=".5"/>
+    <circle cx="34.8" cy="25.8" r=".95" fill="url(#vite)" stroke="#4d4006" stroke-width=".5"/>
+
+    <!-- asse a 11,0 mm dall'estremità inferiore: x = 64,4 - 11,0 = 53,4 mm -->
+    <circle cx="53.4" cy="18.5" r="5.1" fill="#ffd927" stroke="#987500" stroke-width=".8"/>
+    <!-- estremità piatta, diametro 5,5 mm -->
+    <circle cx="53.4" cy="18.5" r="2.75" fill="#eef1f3" stroke="#60666b" stroke-width=".8"/>
+    <path d="M51.8 16.9H55v1.3h-3.2z" fill="#fff" opacity=".9"/>
+    <path d="M51.8 20.2H55" stroke="#c2c8cc" stroke-width=".7" stroke-linecap="round"/>
+  </g>
+</svg>

@@ -41,7 +41,7 @@ class Scratch3SarduBoard {
                     blockType: BlockType.HAT,
                     branchCount: 2,
                     isEdgeActivated: false,
-                    isTerminal: true,
+                    terminal: true,
                     hideFromPalette: selection?.mode !== 'standalone'
                 },
                 {

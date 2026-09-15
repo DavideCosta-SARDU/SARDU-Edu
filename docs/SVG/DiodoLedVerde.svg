@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120" role="img" aria-label="Diodo LED verde da 5 millimetri">
+  <defs>
+    <linearGradient id="plastica-verde" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9dffbf" stop-opacity=".92"/>
+      <stop offset=".42" stop-color="#20d968" stop-opacity=".9"/>
+      <stop offset="1" stop-color="#079443" stop-opacity=".96"/>
+    </linearGradient>
+    <linearGradient id="bordo-verde" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#46eb82"/>
+      <stop offset="1" stop-color="#087c39"/>
+    </linearGradient>
+    <linearGradient id="metallo" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#777f85"/>
+      <stop offset=".28" stop-color="#eef1f3"/>
+      <stop offset=".62" stop-color="#b6bec3"/>
+      <stop offset="1" stop-color="#697177"/>
+    </linearGradient>
+  </defs>
+
+  <!-- piedini dietro il corpo: anodo più lungo, catodo più corto -->
+  <g id="piedini" fill="url(#metallo)" stroke="#596167" stroke-width="1.5">
+    <path d="M67 57h8v55c0 2-2 4-4 4s-4-2-4-4z"/>
+    <path d="M86 57h8v44c0 2-2 4-4 4s-4-2-4-4z"/>
+  </g>
+
+  <!-- elementi metallici interni visibili attraverso la plastica -->
+  <g id="elementi-interni" fill="url(#metallo)" stroke="#52705e" stroke-width="1.3">
+    <path d="M68 61V43h7v18z"/>
+    <path d="M85 61V47l10-5v19z"/>
+    <path d="M73 43l5-7 7 11" fill="none" stroke="#d6e0dc" stroke-width="2"/>
+  </g>
+
+  <!-- corpo trasparente con lato del catodo piatto -->
+  <g id="corpo-led">
+    <path d="M59 54V34c0-14 9-25 21-25s21 11 21 25v20z"
+          fill="url(#plastica-verde)" stroke="#086d35" stroke-width="3"/>
+    <path d="M64 35c0-11 6-19 15-21" fill="none" stroke="#d1ffe0" stroke-width="5" stroke-linecap="round" opacity=".76"/>
+    <path d="M92 18c4 5 6 11 6 18v16" fill="none" stroke="#0a9d48" stroke-width="3" opacity=".6"/>
+
+    <!-- collare: bordo sinistro piatto per riconoscere il catodo -->
+    <path d="M54 52h52v9c0 3-2 5-5 5H59c-3 0-5-2-5-5z"
+          fill="url(#bordo-verde)" stroke="#086d35" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M59 55h42" stroke="#a8ffc6" stroke-width="2.5" stroke-linecap="round" opacity=".65"/>
+    <path d="M54 52v14" stroke="#075d2e" stroke-width="4"/>
+  </g>
+
+  <!-- piccola giunzione luminosa -->
+  <g id="giunzione">
+    <rect x="77" y="37" width="9" height="6" rx="1.5" fill="#d9ffe4" stroke="#16864a" stroke-width="1.5"/>
+    <circle cx="81.5" cy="40" r="2" fill="#f2fff6"/>
+  </g>
+</svg>

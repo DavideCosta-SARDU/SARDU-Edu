@@ -21,6 +21,7 @@
   "workspaces": [
     "packages/task-herder",
     "packages/scratch-storage",
+    "packages/scratch-blocks",
     "packages/scratch-svg-renderer",
     "packages/scratch-paint",
     "packages/scratch-render",

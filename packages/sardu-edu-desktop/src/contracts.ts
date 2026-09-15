@@ -10,6 +10,7 @@ export const HARDWARE_IPC = {
 
 export interface ArduinoCompileRequest {
   readonly boardId: string
+  readonly nanoProcessor?: 'auto' | 'new' | 'old'
   readonly source: string
 }
 

@@ -1145,7 +1145,7 @@ class Runtime extends EventEmitter {
         case BlockType.COMMAND:
             blockJSON.outputShape = ScratchBlocksConstants.OUTPUT_SHAPE_SQUARE;
             blockJSON.previousStatement = null; // null = available connection; undefined = hat
-            if (!blockInfo.isTerminal) {
+            if (!blockInfo.terminal && !blockInfo.isTerminal) {
                 blockJSON.nextStatement = null; // null = available connection; undefined = terminal
             }
             break;
@@ -1164,7 +1164,7 @@ class Runtime extends EventEmitter {
                 blockInfo.isEdgeActivated = true;
             }
             blockJSON.outputShape = ScratchBlocksConstants.OUTPUT_SHAPE_SQUARE;
-            if (!blockInfo.isTerminal) {
+            if (!blockInfo.terminal && !blockInfo.isTerminal) {
                 blockJSON.nextStatement = null; // null = available connection; undefined = terminal
             }
             blockJSON.extensions.push('shape_hat');
@@ -1174,7 +1174,7 @@ class Runtime extends EventEmitter {
             blockInfo.branchCount = blockInfo.branchCount || 1;
             blockJSON.outputShape = ScratchBlocksConstants.OUTPUT_SHAPE_SQUARE;
             blockJSON.previousStatement = null; // null = available connection; undefined = hat
-            if (!blockInfo.isTerminal) {
+            if (!blockInfo.terminal && !blockInfo.isTerminal) {
                 blockJSON.nextStatement = null; // null = available connection; undefined = terminal
             }
             break;

@@ -1,0 +1,68 @@
+THIRD-PARTY SOFTWARE IN SARDU EDU
+
+SARDU Edu includes, incorporates, modifies and/or uses third-party software components. Such components remain subject to the copyright notices and license terms of their respective copyright holders. Nothing in the SARDU Edu license is intended to replace, restrict, or supersede the licenses applicable to third-party components. See THIRD-PARTY-LICENSES for details.
+
+This document identifies the principal components included in the source tree and desktop distribution. Original LICENSE, NOTICE and source-file notices remain authoritative and must be distributed unchanged.
+
+SCRATCH EDITOR AND SCRATCH PACKAGES
+
+Components: scratch-editor, scratch-gui, scratch-vm, scratch-render, scratch-svg-renderer, scratch-storage, scratch-paint, scratch-media-lib-scripts and task-herder.
+Copyright: Scratch Foundation, Massachusetts Institute of Technology and their contributors, as stated in the respective source histories and notices.
+License: GNU Affero General Public License v3.0 only in the current Scratch Foundation distribution.
+License text: LICENSE and the LICENSE file retained in each package.
+Source: https://github.com/scratchfoundation/scratch-editor
+Trademark terms: TRADEMARK.
+
+SCRATCH BLOCKS
+
+Copyright: Google LLC, Massachusetts Institute of Technology and contributors, as stated in its source notices.
+License: Apache License 2.0.
+Reference: https://github.com/scratchfoundation/scratch-blocks
+The copyright, patent, NOTICE and attribution requirements of Apache-2.0 remain applicable.
+
+ELECTRON, CHROMIUM, NODE.JS AND V8
+
+Electron 43.4.1 is MIT-licensed and embeds Chromium, Node.js, V8 and further third-party components.
+Copyright: Electron contributors, OpenJS Foundation, Google LLC and the copyright holders listed in the bundled notices.
+Authoritative license texts distributed by Electron: LICENSE.electron.txt and LICENSES.chromium.html beside the packaged executable.
+Reference: https://www.electronjs.org/
+
+ARDUINO TOOLCHAIN
+
+Arduino CLI 1.5.1 — GPL-3.0-only — https://github.com/arduino/arduino-cli
+Arduino AVR core 1.8.6 — file-level GPL, LGPL and permissive licenses — https://github.com/arduino/ArduinoCore-avr
+serial-discovery 1.5.2 — GPL-3.0-only
+ctags 5.8-arduino11 — GPL-2.0-only
+serial-monitor 0.15.0 — AGPL-3.0-only
+mdns-discovery 1.1.0 — GPL-3.0-only
+dfu-discovery 0.1.2 — GPL-3.0-only
+The complete installed platform and tool sources retain their original license headers and accompanying files.
+
+ARDUINO LIBRARIES
+
+DHT sensor library 1.4.7 — Adafruit Industries and contributors — MIT — https://github.com/adafruit/DHT-sensor-library
+Adafruit Unified Sensor 1.1.15 — Adafruit Industries and contributors — Apache-2.0 — https://github.com/adafruit/Adafruit_Sensor
+Adafruit BusIO 1.17.4 — Adafruit Industries and contributors — MIT — https://github.com/adafruit/Adafruit_BusIO
+Adafruit PN532 1.3.4 — Adafruit Industries and contributors — BSD-3-Clause — https://github.com/adafruit/Adafruit-PN532
+Seeed Studio PN532 and PN532_I2C components (revision 2c47f5c836af53158c4e29685551612181fd8f9b) — Adafruit Industries, Seeed Technology Inc., picospuch and contributors — BSD-3-Clause — https://github.com/Seeed-Studio/PN532
+MFRC522 1.4.12 — Miguel Balboa, Rotzbua and contributors — Unlicense — https://github.com/miguelbalboa/rfid
+Servo 1.3.0 — Arduino and contributors — LGPL-2.1-or-later — https://github.com/arduino-libraries/Servo
+Ultrasonic 3.0.0 — Erick Simões and contributors — MIT — https://github.com/ErickSimoes/Ultrasonic
+OttoDIYLib 13.0.0 — Otto DIY and contributors — GPL-3.0-only — https://github.com/OttoDIY/OttoDIYLib
+Each installed library must retain its original LICENSE, COPYING, NOTICE, examples and source-file attribution notices.
+
+HARDWARE DRIVERS
+
+WCH CH341/CH340 driver 4.0 — WCH vendor redistribution terms — https://www.wch-ic.com/downloads/CH341SER_ZIP.html
+WCH CH343 driver — WCH vendor redistribution terms — https://www.wch-ic.com/downloads/CH343SER_ZIP.html
+Silicon Labs CP210x VCP driver — Silicon Labs VCP driver license — https://www.silabs.com/software-and-tools/usb-to-uart-bridge-vcp-drivers
+FTDI VCP driver 2.12.28 — FTDI driver license — https://ftdichip.com/drivers/vcp-drivers/
+These proprietary or vendor-specific terms are not replaced by AGPL-3.0. Their original packages and license documents must remain intact.
+
+JAVASCRIPT DEPENDENCIES
+
+The exact name, resolved version, source and SPDX license declaration of npm dependencies are recorded in package-lock.json. The application bundles runtime portions of packages under licenses including MIT, ISC, BSD-2-Clause, BSD-3-Clause, Apache-2.0, BlueOak-1.0.0, Artistic-2.0, CC0-1.0 and other expressions recorded there. Any copyright and NOTICE text supplied by an included package remains applicable and must be preserved in the distributed legal notices. Development-only packages are not represented as runtime components merely because they occur in package-lock.json.
+
+NO WARRANTY
+
+SARDU Edu and the third-party components are provided subject to the warranty disclaimers and limitations of liability contained in their respective licenses.

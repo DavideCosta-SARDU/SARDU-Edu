@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 160 120"
+     width="160" height="120">
+
+  <!-- ========================= -->
+  <!-- TESTA / GUSCIO SUPERIORE -->
+  <!-- ========================= -->
+
+  <!-- Guscio verde: basso, largo, stessa larghezza del corpo -->
+  <path d="
+      M55 13
+      H105
+      Q109 13 109 17
+      V39
+      Q109 43 105 43
+      H55
+      Q51 43 51 39
+      V17
+      Q51 13 55 13 Z"
+      fill="#63c83c"
+      stroke="#303030"
+      stroke-width="2.2"/>
+
+  <!-- HC-SR04: trasduttori direttamente sul frontale -->
+
+  <!-- sinistro -->
+  <circle cx="68" cy="28" r="7"
+          fill="#e6e6e6"
+          stroke="#333333"
+          stroke-width="2"/>
+
+  <circle cx="68" cy="28" r="4"
+          fill="#292929"/>
+
+  <!-- destro -->
+  <circle cx="92" cy="28" r="7"
+          fill="#e6e6e6"
+          stroke="#333333"
+          stroke-width="2"/>
+
+  <circle cx="92" cy="28" r="4"
+          fill="#292929"/>
+
+
+  <!-- ========================= -->
+  <!-- CORPO -->
+  <!-- ========================= -->
+
+  <!-- Corpo bianco sotto la testa -->
+  <path d="
+      M53 43
+      H107
+      V69
+      Q107 73 103 73
+      H57
+      Q53 73 53 69 Z"
+      fill="#f4f4f4"
+      stroke="#303030"
+      stroke-width="2.2"/>
+
+  <!-- linea di incastro testa/corpo -->
+  <line x1="53" y1="43"
+        x2="107" y2="43"
+        stroke="#303030"
+        stroke-width="2.2"/>
+
+
+  <!-- ========================= -->
+  <!-- GAMBE -->
+  <!-- ========================= -->
+
+  <!-- gamba sinistra -->
+  <path d="
+      M59 73
+      H72
+      V94
+      H59 Z"
+      fill="#f2f2f2"
+      stroke="#303030"
+      stroke-width="2.2"/>
+
+  <!-- dettaglio snodo sinistro -->
+  <circle cx="65.5" cy="81"
+          r="3"
+          fill="#e0e0e0"
+          stroke="#555555"
+          stroke-width="1.4"/>
+
+  <!-- gamba destra -->
+  <path d="
+      M88 73
+      H101
+      V94
+      H88 Z"
+      fill="#f2f2f2"
+      stroke="#303030"
+      stroke-width="2.2"/>
+
+  <!-- dettaglio snodo destro -->
+  <circle cx="94.5" cy="81"
+          r="3"
+          fill="#e0e0e0"
+          stroke="#555555"
+          stroke-width="1.4"/>
+
+
+  <!-- ========================= -->
+  <!-- SUPPORTI SOPRA I PIEDI -->
+  <!-- ========================= -->
+
+  <path d="
+      M57 91
+      H73
+      V99
+      H57 Z"
+      fill="#eeeeee"
+      stroke="#303030"
+      stroke-width="2"/>
+
+  <path d="
+      M87 91
+      H103
+      V99
+      H87 Z"
+      fill="#eeeeee"
+      stroke="#303030"
+      stroke-width="2"/>
+
+
+  <!-- ========================= -->
+  <!-- PIEDI: LARGHI E SOTTILI -->
+  <!-- ========================= -->
+
+  <!-- piede sinistro -->
+  <path d="
+      M43 98
+      H77
+      L80 101
+      V104
+      H43
+      Q40 104 40 102
+      Q40 100 43 98 Z"
+      fill="#f3f3f3"
+      stroke="#303030"
+      stroke-width="2.2"/>
+
+  <!-- bordo superiore piede sinistro -->
+  <line x1="44" y1="98"
+        x2="76" y2="98"
+        stroke="#777777"
+        stroke-width="1"/>
+
+
+  <!-- piede destro -->
+  <path d="
+      M83 98
+      H117
+      Q120 100 120 102
+      Q120 104 117 104
+      H80
+      V101
+      Z"
+      fill="#f3f3f3"
+      stroke="#303030"
+      stroke-width="2.2"/>
+
+  <!-- bordo superiore piede destro -->
+  <line x1="84" y1="98"
+        x2="116" y2="98"
+        stroke="#777777"
+        stroke-width="1"/>
+
+</svg>

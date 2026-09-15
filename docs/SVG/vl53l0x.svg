@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="17.6 33.2928 124.8 53.4144" role="img" aria-label="Modulo sensore VL53L0X viola">
+  <defs>
+    <linearGradient id="pcb" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8a2c82"/>
+      <stop offset="1" stop-color="#57205f"/>
+    </linearGradient>
+    <radialGradient id="oro" cx="35%" cy="30%" r="75%">
+      <stop offset="0" stop-color="#fff0a0"/>
+      <stop offset=".55" stop-color="#d7a943"/>
+      <stop offset="1" stop-color="#8c681d"/>
+    </radialGradient>
+  </defs>
+
+  <!--
+    Quote reali: 25 × 10,7 mm; corpo centrale 16 mm; fori Ø3 mm.
+    Scala uniforme: 120 / 25 = 4,8 px/mm.
+    Ingombro sul canvas: 120 × 51,36 px.
+  -->
+  <g id="modulo" transform="translate(20 34.32) scale(4.8)">
+    <!-- PCB: ingombro esterno esatto 25 × 10,7 mm -->
+    <path d="M4.5 0h16v2.5h1.65a2.85 2.85 0 0 1 0 5.7H20.5v2.5h-16V8.2H2.85a2.85 2.85 0 0 1 0-5.7H4.5z"
+          fill="url(#pcb)" stroke="#35133c" stroke-width=".35" stroke-linejoin="round"/>
+    <path d="M4.75 .35h15.5" stroke="#b85aad" stroke-width=".25" opacity=".75"/>
+
+    <!-- fori di montaggio Ø3 mm -->
+    <circle cx="2.85" cy="5.35" r="2.15" fill="url(#oro)" stroke="#4d3711" stroke-width=".28"/>
+    <circle cx="2.85" cy="5.35" r="1.5" fill="#f7f7f4" stroke="#9e7c31" stroke-width=".25"/>
+    <circle cx="22.15" cy="5.35" r="2.15" fill="url(#oro)" stroke="#4d3711" stroke-width=".28"/>
+    <circle cx="22.15" cy="5.35" r="1.5" fill="#f7f7f4" stroke="#9e7c31" stroke-width=".25"/>
+
+    <!-- sensore ToF -->
+    <rect x="9.15" y="1.15" width="6.7" height="4.65" rx=".38" fill="#17191b" stroke="#08090a" stroke-width=".28"/>
+    <rect x="9.65" y=".78" width=".55" height=".7" rx=".1" fill="#d4a53c"/>
+    <rect x="10.75" y=".78" width=".55" height=".7" rx=".1" fill="#d4a53c"/>
+    <rect x="11.85" y=".78" width=".55" height=".7" rx=".1" fill="#d4a53c"/>
+    <rect x="12.95" y=".78" width=".55" height=".7" rx=".1" fill="#d4a53c"/>
+    <rect x="14.05" y=".78" width=".55" height=".7" rx=".1" fill="#d4a53c"/>
+    <rect x="15.15" y=".78" width=".55" height=".7" rx=".1" fill="#d4a53c"/>
+    <circle cx="11.08" cy="3.27" r=".68" fill="#261f15" stroke="#b27b24" stroke-width=".22"/>
+
+    <!-- piedini del sensore -->
+    <g fill="#d9dde0">
+      <rect x="9.55" y="5.62" width=".48" height=".55"/>
+      <rect x="10.65" y="5.62" width=".48" height=".55"/>
+      <rect x="11.75" y="5.62" width=".48" height=".55"/>
+      <rect x="12.85" y="5.62" width=".48" height=".55"/>
+      <rect x="13.95" y="5.62" width=".48" height=".55"/>
+      <rect x="15.05" y="5.62" width=".48" height=".55"/>
+    </g>
+
+    <!-- sei connessioni inferiori -->
+    <g stroke="#765718" stroke-width=".22">
+      <circle cx="6.2" cy="8.85" r=".82" fill="url(#oro)"/>
+      <circle cx="8.8" cy="8.85" r=".82" fill="url(#oro)"/>
+      <circle cx="11.4" cy="8.85" r=".82" fill="url(#oro)"/>
+      <circle cx="14" cy="8.85" r=".82" fill="url(#oro)"/>
+      <circle cx="16.6" cy="8.85" r=".82" fill="url(#oro)"/>
+      <circle cx="19.2" cy="8.85" r=".82" fill="url(#oro)"/>
+    </g>
+    <g fill="#f8f8f5">
+      <circle cx="6.2" cy="8.85" r=".42"/>
+      <circle cx="8.8" cy="8.85" r=".42"/>
+      <circle cx="11.4" cy="8.85" r=".42"/>
+      <circle cx="14" cy="8.85" r=".42"/>
+      <circle cx="16.6" cy="8.85" r=".42"/>
+      <circle cx="19.2" cy="8.85" r=".42"/>
+    </g>
+
+    <!-- via dorata -->
+    <circle cx="18.9" cy="1.1" r=".58" fill="url(#oro)" stroke="#6d5118" stroke-width=".18"/>
+  </g>
+</svg>

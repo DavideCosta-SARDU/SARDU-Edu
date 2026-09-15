@@ -3,6 +3,7 @@
 @import "../../css/z-index.css";
 
 .blocks {
+    position: relative;
     height: 100%;
 }
 
@@ -42,21 +43,18 @@
 
 .blocks :global(.sarduToolboxResizeHandle) {
     position: absolute;
-    top: 50%;
+    top: 0;
+    bottom: 0;
     z-index: $z-index-extension-button;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 1.5rem;
-    height: 2.5rem;
-    padding: 0;
-    color: $ui-white;
-    background: #003366;
-    border: 1px solid $ui-white;
-    border-radius: 0.35rem;
+    width: 1rem;
+    color: #003366;
+    background: transparent;
     cursor: ew-resize;
     font-weight: bold;
-    transform: translateY(-50%);
+    transform: translateX(-50%);
     user-select: none;
     touch-action: none;
 }
@@ -81,7 +79,6 @@
     min-width: 8rem;
     max-width: 50vw;
     overflow-x: auto;
-    resize: horizontal;
 }
 
 [dir="rtl"] .blocks :global(.blocklyToolbox),

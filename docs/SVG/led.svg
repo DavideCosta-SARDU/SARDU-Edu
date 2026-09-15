@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="120" viewBox="59.0238 7.9086 42.0441 103.4209"
+     role="img" aria-labelledby="title desc">
+  <title id="title">Lampada LED verde spenta</title>
+  <desc id="desc">Lampada LED verde con due terminali, centrata con margine libero.</desc>
+  <defs>
+    <radialGradient id="lampHighlight" cx="346.6953" cy="481.9639" r="91.1443"
+      gradientTransform="matrix(-0.1457 1.2263 -2.1905 -0.2603 1545.5074 -235.5972)"
+      gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <!-- Disegno originale ridimensionato proporzionalmente nell'area sicura 140 x 100. -->
+  <g transform="translate(-1.73 -0.52) scale(.1992)" stroke-linecap="round" stroke-linejoin="round">
+    <path fill="#4d4d4d" stroke="#111" stroke-width="6"
+      d="M387.037 327.387l12.802-20.578 4.822-31.805 17.528-3.783-43.57-40.405 3.564-28.553-18.266-3.985-5.03 40.31 17.219 19.207-5.141 13.856-25.505 13.022-9.127 25.3 28.239 12.904 1.313 3.148-24.785 211.713 16.206 1.881 29.781-222.232z"/>
+    <path fill="#4d4d4d" stroke="#111" stroke-width="6"
+      d="M417.027 550.15l27.328-224.142.523-11.023-15.014-2.725 5.554-51.333-44.514-32.847 1.781-21.099 97.624 10.477-7.97 43.354-13.538 12.809 22.473 45.447-1.781 14.275-22.253.635-32.473 217.531-17.74-1.359z"/>
+    <path fill="#00ae38" fill-opacity=".88" stroke="#0b6f2e" stroke-width="7"
+      d="M499.896 352.773s-55.796 16.064-190.795-22.958c-.632-8.607 4.579-37.014 4.579-37.014l13.104-2.489s24.939-171.614 29.426-185.724c.812-18.831 43.806-57.212 84.072-51.768 53.662 7.259 72.667 61.629 71.286 64.332 3.662 16.978-17.456 196.138-17.456 196.138l10.275 4.594-4.49 34.884z"/>
+    <path fill="url(#lampHighlight)"
+      d="M498.809 351.931s-54.791 16.007-187.262-22.523c-.608-8.538 4.543-36.722 4.543-36.722l12.866-2.486s24.705-170.259 29.127-184.258c.821-18.68 43.077-56.811 82.594-51.459 52.668 7.13 71.252 61.037 69.893 63.718 3.573 16.836-17.392 194.58-17.392 194.58l10.08 4.543-4.453 34.608z"/>
+    <path fill="#ddd" fill-opacity=".62"
+      d="M325.227 293.083s-3.496-.058-5.143.251l-5.248.985s91.101 28.101 189.558 25.037l-1.426-.739c-1.633-.847-5.382-2.401-6.516-2.995l-171.228-22.54z"/>
+  </g>
+</svg>

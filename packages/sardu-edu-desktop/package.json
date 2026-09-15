@@ -56,8 +56,8 @@
         "to": "legal/NOTICE"
       },
       {
-        "from": "../../THIRD_PARTY_NOTICES.md",
-        "to": "legal/THIRD_PARTY_NOTICES.md"
+        "from": "../../THIRD-PARTY-LICENSES",
+        "to": "legal/THIRD-PARTY-LICENSES"
       }
     ]
   }
