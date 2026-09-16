@@ -70,12 +70,13 @@ const SHAPE_STATEMENT = function (this: Blockly.Block) {
  * Replaces the block's setStyle function to ensure that the hat shape is preserved
  * even if the style is changed or rebuilt.
  * @param hatType the type of hat: 'cap' for regular Scratch hat blocks, or 'bowler' for procedure definitions.
+ * @param terminal whether the hat must omit its bottom connection.
  * @returns A Blockly extension implementing the requested hat type.
  */
-const makeHatExtension = function (hatType: string) {
+const makeHatExtension = function (hatType: string, terminal = false) {
   return function (this: Blockly.Block) {
     this.setInputsInline(true)
-    this.setNextStatement(true, null)
+    if (!terminal) this.setNextStatement(true, null)
     this.hat = hatType
     // When the workspace theme is refreshed (e.g. when an extension is loaded),
     // Blockly calls setStyle() on all workspace blocks. This resets block.hat to
@@ -99,6 +100,8 @@ const makeHatExtension = function (hatType: string) {
  * inputs, but have no previous connection.
  */
 const SHAPE_HAT = makeHatExtension('cap')
+
+const SHAPE_TERMINAL_HAT = makeHatExtension('cap', true)
 
 /**
  * Extension to make a block be shaped as a bowler hat block, with rounded
@@ -262,6 +265,7 @@ function registerAll() {
   // Register extensions for common block shapes.
   Blockly.Extensions.register('shape_statement', SHAPE_STATEMENT)
   Blockly.Extensions.register('shape_hat', SHAPE_HAT)
+  Blockly.Extensions.register('shape_terminal_hat', SHAPE_TERMINAL_HAT)
   Blockly.Extensions.register('shape_bowler_hat', SHAPE_BOWLER_HAT)
   Blockly.Extensions.register('shape_end', SHAPE_END)
 

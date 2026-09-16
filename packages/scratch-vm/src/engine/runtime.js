@@ -1167,7 +1167,9 @@ class Runtime extends EventEmitter {
             if (!blockInfo.terminal && !blockInfo.isTerminal) {
                 blockJSON.nextStatement = null; // null = available connection; undefined = terminal
             }
-            blockJSON.extensions.push('shape_hat');
+            blockJSON.extensions.push(
+                extendedOpcode === 'sarduBoard_program' ? 'shape_terminal_hat' : 'shape_hat'
+            );
             break;
         case BlockType.CONDITIONAL:
         case BlockType.LOOP:

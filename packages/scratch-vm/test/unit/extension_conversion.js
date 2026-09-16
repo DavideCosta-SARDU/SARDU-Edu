@@ -296,17 +296,18 @@ test('registerExtensionPrimitives', t => {
     runtime._registerExtensionPrimitives(testExtensionInfo);
 });
 
-test('terminal hat with branches has no bottom connection', t => {
+test('SARDU board program uses a terminal hat with no bottom connection', t => {
     const runtime = new Runtime();
     runtime.on(Runtime.EXTENSION_ADDED, categoryInfo => {
         const program = categoryInfo.blocks[0];
         t.notOk(Object.prototype.hasOwnProperty.call(program.json, 'nextStatement'));
+        t.ok(program.json.extensions.includes('shape_terminal_hat'));
         t.end();
     });
 
     runtime._registerExtensionPrimitives({
-        id: 'terminalhat',
-        name: 'Terminal hat',
+        id: 'sarduBoard',
+        name: 'SARDU board',
         blocks: [{
             opcode: 'program',
             blockType: BlockType.HAT,
