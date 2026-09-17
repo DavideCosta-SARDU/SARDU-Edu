@@ -13,9 +13,7 @@ import {
 } from './request-validation'
 
 const APP_ORIGIN = 'sardu://app'
-const HARDWARE_SCAN_INTERVAL_MS = 2000
 let preferredLivePort: string | null = null
-let hardwareScanTimer: NodeJS.Timeout | null = null
 let quitting = false
 const configuredSessions = new WeakSet<Session>()
 
@@ -79,13 +77,6 @@ const configureSerialAccess = (session: Session): void => {
 const registerHardwareIpc = (): void => {
   const service = new ArduinoService(hardwareRoot(), app.getPath('userData'))
   const diagnostics = new HardwareDiagnostics(app.getPath('userData'))
-  const scanPorts = (): void => {
-    void service.listPorts().catch(() => {
-      // ArduinoService records the actionable error in hardware-porte.txt.
-    })
-  }
-  scanPorts()
-  hardwareScanTimer = setInterval(scanPorts, HARDWARE_SCAN_INTERVAL_MS)
   ipcMain.handle(HARDWARE_IPC.getStatus, (event) => {
     validateSender(event)
     return service.getStatus()
@@ -187,5 +178,4 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   quitting = true
-  if (hardwareScanTimer) clearInterval(hardwareScanTimer)
 })

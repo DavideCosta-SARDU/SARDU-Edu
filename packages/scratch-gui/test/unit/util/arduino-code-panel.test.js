@@ -11,18 +11,36 @@ import {
 
 test('accepts an unidentified serial adapter for the board selected by the user', () => {
     const ch340Port = {address: 'COM5', matchingBoardFqbns: []};
-    expect(getCompatiblePorts([ch340Port], {fqbn: 'arduino:avr:uno'})).toEqual([ch340Port]);
+    expect(getCompatiblePorts([ch340Port], {fqbn: 'arduino:avr:uno'})).toEqual([
+        {...ch340Port, identification: 'ambiguous'}
+    ]);
 });
 
-test('accepts a serial port even when USB identification suggests another classic Arduino board', () => {
+test('rejects a serial port identified as another classic Arduino board', () => {
     const port = {address: 'COM5', matchingBoardFqbns: ['arduino:avr:uno']};
-    expect(getCompatiblePorts([port], {fqbn: 'arduino:avr:nano'})).toEqual([port]);
+    expect(getCompatiblePorts([port], {fqbn: 'arduino:avr:nano'})).toEqual([]);
 });
 
-test('preselects the first detected port without connecting it', () => {
+test('rejects a recognized micro:bit while searching for Arduino', () => {
+    const microbitPort = {address: 'COM6', matchingBoardFqbns: [], vid: '0x0d28', pid: '0x0204'};
+    expect(getCompatiblePorts([microbitPort], {fqbn: 'arduino:avr:uno'})).toEqual([]);
+});
+
+test('marks an exact Arduino CLI board match as verified', () => {
+    const port = {address: 'COM4', matchingBoardFqbns: ['arduino:avr:uno']};
+    expect(getCompatiblePorts([port], {fqbn: 'arduino:avr:uno'})).toEqual([
+        {...port, identification: 'verified'}
+    ]);
+});
+
+test('does not preselect a port when multiple candidates are detected', () => {
     const ports = [{address: 'COM4'}, {address: 'COM5'}];
-    expect(getPreselectedPort(ports, '')).toBe('COM4');
+    expect(getPreselectedPort(ports, '')).toBe('');
     expect(getPreselectedPort(ports, 'COM5')).toBe('COM5');
+});
+
+test('preselects the only candidate so the user can confirm it', () => {
+    expect(getPreselectedPort([{address: 'COM4'}], '')).toBe('COM4');
 });
 
 test('matches the Arduino panel width to the selected Stage size', () => {
@@ -41,7 +59,7 @@ test('does not report hardware failures before the first desktop check completes
     expect(getInitialDesktopState()).toMatchObject({
         checked: false,
         error: null,
-        status: 'loading'
+        status: 'idle'
     });
 });
 

@@ -307,6 +307,10 @@ export default function (vm) {
     };
 
     ScratchBlocks.StatusIndicatorLabel.prototype.getExtensionState = function (extensionId) {
+        if (extensionId === 'sarduBoard') {
+            return vm.runtime.sarduEduHardwarePort ?
+                ScratchBlocks.StatusButtonState.READY : ScratchBlocks.StatusButtonState.NOT_READY;
+        }
         if (vm.getPeripheralIsConnected(extensionId)) {
             return ScratchBlocks.StatusButtonState.READY;
         }

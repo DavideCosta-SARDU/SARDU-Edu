@@ -76,6 +76,34 @@ describe('Arduino CLI output', () => {
     ])
   })
 
+  test('exposes USB identifiers used to reject known incompatible devices', () => {
+    expect(
+      parseArduinoPorts(
+        JSON.stringify({
+          detected_ports: [
+            {
+              port: {
+                address: 'COM7',
+                label: 'BBC micro:bit CMSIS-DAP',
+                protocol: 'serial',
+                properties: { vid: '0D28', pid: '0204', serialNumber: 'private-value' },
+              },
+            },
+          ],
+        }),
+      ),
+    ).toEqual([
+      {
+        address: 'COM7',
+        label: 'BBC micro:bit CMSIS-DAP',
+        matchingBoardFqbns: [],
+        pid: '0204',
+        protocol: 'serial',
+        vid: '0D28',
+      },
+    ])
+  })
+
   test('ignores malformed entries at the external tool boundary', () => {
     expect(parseArduinoPorts(JSON.stringify({ detected_ports: [{ port: { label: 'missing address' } }] }))).toEqual(
       [],

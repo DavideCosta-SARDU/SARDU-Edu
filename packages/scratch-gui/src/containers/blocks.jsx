@@ -526,6 +526,7 @@ class Blocks extends React.Component {
         this.selectSarduBoardWhenReady = Boolean(hardwareSelection);
         const toolboxXML = this.getToolboxXML();
         if (toolboxXML) this.props.updateToolboxState(toolboxXML);
+        if (this.workspace?.getFlyout()) this.handleStatusButtonUpdate();
         this.ensureSarduBoardProgram();
     }
     ensureSarduBoardProgram () {
@@ -778,6 +779,10 @@ class Blocks extends React.Component {
         this.setState(p);
     }
     handleConnectionModalStart (extensionId) {
+        if (extensionId === 'sarduBoard') {
+            this.props.vm.emit('SARDU_CONNECT_REQUESTED');
+            return;
+        }
         this.props.onOpenConnectionModal(extensionId);
     }
     handleStatusButtonUpdate () {

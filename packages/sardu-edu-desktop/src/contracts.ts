@@ -22,7 +22,9 @@ export interface ArduinoPort {
   readonly address: string
   readonly label: string
   readonly matchingBoardFqbns: readonly string[]
+  readonly pid?: string
   readonly protocol: string
+  readonly vid?: string
 }
 
 export interface HardwareOperationResult {

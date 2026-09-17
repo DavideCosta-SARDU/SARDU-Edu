@@ -19,6 +19,30 @@ const boardImages = {
     'arduino-uno': arduinoUnoImage
 };
 
+const KNOWN_INCOMPATIBLE_USB_DEVICES = new Set(['0D28:0204']);
+
+const normalizeUsbId = value => typeof value === 'string' ?
+    value.replace(/^0x/i, '').toUpperCase().padStart(4, '0') : '';
+
+const getPortIdentification = (port, selectedBoard) => {
+    const usbId = `${normalizeUsbId(port.vid)}:${normalizeUsbId(port.pid)}`;
+    if (KNOWN_INCOMPATIBLE_USB_DEVICES.has(usbId)) return 'incompatible';
+    if (port.matchingBoardFqbns?.includes(selectedBoard?.fqbn)) return 'verified';
+    if (port.matchingBoardFqbns?.length) return 'incompatible';
+    return 'ambiguous';
+};
+
+const getPortIdentificationLabel = (intl, identification) => identification === 'verified' ?
+    intl.formatMessage({
+        id: 'gui.sardu.identityVerified',
+        defaultMessage: 'identity verified',
+        description: 'Identification confidence shown beside a recognized serial port'
+    }) : intl.formatMessage({
+        id: 'gui.sardu.identityUnverified',
+        defaultMessage: 'identity to confirm',
+        description: 'Identification confidence shown beside an ambiguous serial port'
+    });
+
 const getFilename = projectTitle => {
     const safeTitle = projectTitle.trim().replace(/[\\/:*?"<>|]+/g, '-');
     return `${safeTitle || 'sardu-edu'}.ino`;
@@ -31,7 +55,7 @@ const getInitialDesktopState = () => ({
     ports: [],
     resourcesReady: false,
     selectedPort: '',
-    status: 'loading'
+    status: 'idle'
 });
 
 const getDisplayedSource = (generatedSource, manualSource) =>
@@ -51,10 +75,13 @@ const getArduinoPanelWidth = stageSize => ({
     small: 256
 }[stageSize] || 496);
 
-const getCompatiblePorts = (ports, selectedBoard) => selectedBoard ? ports : [];
+const getCompatiblePorts = (ports, selectedBoard) => selectedBoard ? ports
+    .map(port => ({...port, identification: getPortIdentification(port, selectedBoard)}))
+    .filter(port => port.identification !== 'incompatible') : [];
 
 const getPreselectedPort = (ports, previousPort) =>
-    ports.some(port => port.address === previousPort) ? previousPort : (ports[0]?.address || '');
+    ports.some(port => port.address === previousPort) ? previousPort :
+        (ports.length === 1 ? ports[0].address : '');
 
 const ArduinoCodePanel = ({
     isFullScreen,
@@ -226,11 +253,12 @@ const ArduinoCodePanel = ({
                 selectedPort,
                 status: showLoading ? 'idle' : current.status
             }));
-            if (selectedPort && connectionPromptRequestedRef.current && !vm.runtime.sarduEduHardwarePort) {
+            if (connectionPromptRequestedRef.current && !vm.runtime.sarduEduHardwarePort) {
                 connectionPromptRequestedRef.current = false;
                 setConnectionPromptOpen(true);
             }
         } catch (error) {
+            connectionPromptRequestedRef.current = false;
             selectedPortRef.current = '';
             vm.setSarduEduSelectedPort(null);
             vm.setSarduEduHardwarePort(null);
@@ -347,9 +375,6 @@ const ArduinoCodePanel = ({
 
     const selectedBoardId = snapshot.selection?.boardId || null;
     useEffect(() => {
-        if (visible && selectedBoardId) refreshDesktop();
-    }, [refreshDesktop, selectedBoardId, visible]);
-    useEffect(() => {
         const handleConnectRequest = request => {
             connectionPromptRequestedRef.current = true;
             if (request?.afterSelection) {
@@ -373,6 +398,14 @@ const ArduinoCodePanel = ({
         selectedPortRef.current = '';
         setConnectionPromptOpen(false);
         vm.setSarduEduSelectedPort(null);
+        setDesktopState(current => ({
+            ...current,
+            checked: false,
+            error: null,
+            ports: [],
+            selectedPort: '',
+            status: 'idle'
+        }));
         if (previousBoardId && previousBoardId !== selectedBoardId) {
             setManualSource(null);
             setSourceEditing(false);
@@ -394,12 +427,6 @@ const ArduinoCodePanel = ({
     }, [selectedBoardId, vm]);
 
     useEffect(() => {
-        if (!selectedBoardId) return undefined;
-        const interval = window.setInterval(() => refreshDesktop(false), 2000);
-        return () => window.clearInterval(interval);
-    }, [refreshDesktop, selectedBoardId]);
-
-    useEffect(() => {
         if (!snapshot.selection) {
             onStatusChange(null);
             return;
@@ -408,11 +435,19 @@ const ArduinoCodePanel = ({
         const port = desktopState.selectedPort;
         let kind = 'info';
         let message;
+        const selectedPort = desktopState.ports.find(candidate => candidate.address === port);
         if (sourceError) {
             kind = 'error';
             message = intl.formatMessage({id: 'gui.sardu.status.codeError'}, {message: sourceError});
-        } else if (!desktopState.checked || desktopState.status === 'loading') {
+        } else if (desktopState.status === 'loading') {
             message = intl.formatMessage({id: 'gui.sardu.status.searchingUsb'}, {board: boardName});
+        } else if (!desktopState.checked) {
+            kind = 'neutral';
+            message = intl.formatMessage({
+                id: 'gui.sardu.status.notSearched',
+                defaultMessage: '{board} is not connected. Select the status indicator to search.',
+                description: 'Hardware status shown before the user searches for the selected board'
+            }, {board: boardName});
         } else if (desktopState.error) {
             kind = 'error';
             message = intl.formatMessage({id: 'gui.sardu.status.hardwareError'}, {message: desktopState.error});
@@ -435,13 +470,37 @@ const ArduinoCodePanel = ({
             kind = 'success';
             message = intl.formatMessage({id: 'gui.sardu.status.connected'}, {board: boardName, port});
         } else if (port) {
-            kind = desktopState.status === 'compiled' || desktopState.status === 'uploaded' ? 'success' : 'info';
+            if (desktopState.status === 'compiled' || desktopState.status === 'uploaded') {
+                kind = 'success';
+                message = intl.formatMessage({
+                    id: desktopState.status === 'compiled' ? 'gui.sardu.status.compiled' :
+                        'gui.sardu.status.uploaded'
+                }, {board: boardName, port});
+            } else if (selectedPort?.identification === 'verified') {
+                kind = 'success';
+                message = intl.formatMessage({id: 'gui.sardu.status.boardFound'}, {board: boardName, port});
+            } else {
+                kind = 'warning';
+                message = intl.formatMessage({
+                    id: 'gui.sardu.status.boardUnverified',
+                    defaultMessage: '{port} may be {board}, but its identity cannot be verified.',
+                    description: 'Hardware status for a manually selected ambiguous serial port'
+                }, {board: boardName, port});
+            }
+        } else if (desktopState.ports.length > 1) {
+            kind = 'warning';
             message = intl.formatMessage({
-                id: desktopState.status === 'compiled' ? 'gui.sardu.status.compiled' :
-                    desktopState.status === 'uploaded' ? 'gui.sardu.status.uploaded' : 'gui.sardu.status.boardFound'
-            }, {board: boardName, port});
+                id: 'gui.sardu.status.multipleBoards',
+                defaultMessage: 'Multiple possible boards were found. Select the one to use.',
+                description: 'Hardware status shown when multiple compatible serial ports were found'
+            });
         } else {
-            message = intl.formatMessage({id: 'gui.sardu.status.searchingUsb'}, {board: boardName});
+            kind = 'offline';
+            message = intl.formatMessage({
+                id: 'gui.sardu.status.boardNotFound',
+                defaultMessage: '{board} was not found. Select the status indicator to try again.',
+                description: 'Hardware status shown when no compatible board was found'
+            }, {board: boardName});
         }
         onStatusChange({kind, message});
     }, [desktopState, intl, liveState, onStatusChange, snapshot.selection, sourceError]);
@@ -449,6 +508,8 @@ const ArduinoCodePanel = ({
     if (!visible || viewMode === 'stage' || !snapshot.selection) return null;
 
     const board = ARDUINO_BOARDS.find(candidate => candidate.id === snapshot.selection.boardId);
+    const selectedPortDetails = desktopState.ports.find(port => port.address === desktopState.selectedPort);
+    const multiplePorts = desktopState.ports.length > 1;
     const operationRunning = desktopState.status === 'compiling' || desktopState.status === 'uploading';
     const monitorActive = monitorState.status !== 'disconnected';
     const canUseToolchain = desktopState.available && desktopState.resourcesReady && !operationRunning;
@@ -615,19 +676,42 @@ const ArduinoCodePanel = ({
                             <h2 id="sardu-board-detected-title">
                                 <FormattedMessage
                                     id="gui.sardu.boardDetectedTitle"
-                                    defaultMessage="Board detected"
+                                    defaultMessage="Connect board"
                                     description="Title of the board connection confirmation dialog"
                                 />
                             </h2>
                             <p>
-                                <FormattedMessage
-                                    id="gui.sardu.boardDetectedMessage"
-                                    defaultMessage="{board} was detected on {port}. Please verify the information before connecting."
-                                    description="Message in the board connection confirmation dialog"
-                                    values={{board: board?.name || snapshot.selection.boardName, port: desktopState.selectedPort}}
-                                />
+                                {desktopState.ports.length === 0 ? (
+                                    <FormattedMessage
+                                        id="gui.sardu.noCompatibleBoard"
+                                        defaultMessage="No compatible {board} was found. Other recognized device families are excluded automatically."
+                                        description="Message shown when the board search finds no compatible candidates"
+                                        values={{board: board?.name || snapshot.selection.boardName}}
+                                    />
+                                ) : multiplePorts ? (
+                                    <FormattedMessage
+                                        id="gui.sardu.multipleBoardsFound"
+                                        defaultMessage="Multiple possible boards were found. Select the port you want to use; SARDU Edu will not choose automatically."
+                                        description="Message shown when multiple compatible board candidates are found"
+                                    />
+                                ) : selectedPortDetails?.identification === 'verified' ? (
+                                    <FormattedMessage
+                                        id="gui.sardu.verifiedBoardFound"
+                                        defaultMessage="{board} was recognized on {port}. Verify the information before connecting."
+                                        description="Message shown for a uniquely identified board"
+                                        values={{board: board?.name || snapshot.selection.boardName, port: desktopState.selectedPort}}
+                                    />
+                                ) : (
+                                    <FormattedMessage
+                                        id="gui.sardu.ambiguousBoardFound"
+                                        defaultMessage="A possible {board} was found on {port}, but its identity cannot be verified. Confirm only if this is the board you connected."
+                                        description="Warning shown for an ambiguous serial board candidate"
+                                        values={{board: board?.name || snapshot.selection.boardName, port: desktopState.selectedPort}}
+                                    />
+                                )}
                             </p>
-                            <label className={styles.connectionPromptPort}>
+                            {desktopState.ports.length ? (
+                                <label className={styles.connectionPromptPort}>
                                 <FormattedMessage
                                     id="gui.sardu.connectionPort"
                                     defaultMessage="Serial port"
@@ -641,12 +725,26 @@ const ArduinoCodePanel = ({
                                         setDesktopState(current => ({...current, selectedPort: event.target.value}));
                                     }}
                                 >
+                                    {multiplePorts ? (
+                                        <option value="">
+                                            {intl.formatMessage({
+                                                id: 'gui.sardu.chooseDetectedPort',
+                                                defaultMessage: 'Choose a detected port',
+                                                description: 'Placeholder used when multiple board candidates were found'
+                                            })}
+                                        </option>
+                                    ) : null}
                                     {desktopState.ports.map(port => (
-                                        <option key={port.address} value={port.address}>{port.label} ({port.address})</option>
+                                        <option key={port.address} value={port.address}>
+                                            {port.label} ({port.address}) — {
+                                                getPortIdentificationLabel(intl, port.identification)
+                                            }
+                                        </option>
                                     ))}
                                 </select>
-                            </label>
-                            {snapshot.selection.boardId === 'arduino-nano' ? (
+                                </label>
+                            ) : null}
+                            {desktopState.ports.length && snapshot.selection.boardId === 'arduino-nano' ? (
                                 <label className={styles.connectionPromptPort}>
                                     <FormattedMessage
                                         id="gui.sardu.nanoBootloader"
@@ -684,18 +782,32 @@ const ArduinoCodePanel = ({
                                 <button
                                     className={styles.connectionPromptConfirm}
                                     type="button"
-                                    disabled={!desktopState.selectedPort}
+                                    disabled={desktopState.ports.length > 0 && !desktopState.selectedPort}
                                     onClick={() => {
+                                        if (desktopState.ports.length === 0) {
+                                            setConnectionPromptOpen(false);
+                                            connectionPromptRequestedRef.current = true;
+                                            void refreshDesktop();
+                                            return;
+                                        }
                                         connectionPromptRequestedRef.current = false;
                                         vm.setSarduEduHardwarePort(desktopState.selectedPort);
                                         setConnectionPromptOpen(false);
                                     }}
                                 >
-                                    <FormattedMessage
-                                        id="gui.sardu.confirmConnection"
-                                        defaultMessage="Confirm and connect"
-                                        description="Confirm button in the board connection dialog"
-                                    />
+                                    {desktopState.ports.length ? (
+                                        <FormattedMessage
+                                            id="gui.sardu.confirmConnection"
+                                            defaultMessage="Confirm and connect"
+                                            description="Confirm button in the board connection dialog"
+                                        />
+                                    ) : (
+                                        <FormattedMessage
+                                            id="gui.sardu.retryConnection"
+                                            defaultMessage="Try again"
+                                            description="Retry button shown when no compatible board was found"
+                                        />
+                                    )}
                                 </button>
                             </div>
                         </div>

@@ -26,6 +26,7 @@ class Scratch3SarduBoard {
             color1: '#003366',
             color2: '#00284F',
             color3: '#001A33',
+            showStatusButton: true,
             blocks: [
                 {
                     opcode: 'program',

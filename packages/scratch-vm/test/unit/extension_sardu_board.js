@@ -16,6 +16,7 @@ test('SARDU board extension exposes named blocks, aliases, timers and tooltips',
 
     t.equal(info.id, 'sarduBoard');
     t.equal(info.name, 'Arduino Uno');
+    t.equal(info.showStatusButton, true);
     t.same(info.menus.DIGITAL_PIN.items, ['2', '13']);
     t.equal(blocks.program.blockType, BlockType.HAT);
     t.equal(blocks.program.branchCount, 2);

@@ -32,6 +32,7 @@ export const parseArduinoPorts = (output: string): readonly ArduinoPort[] => {
   return parsed.detected_ports.flatMap((detectedPort) => {
     const port = detectedPort.port || detectedPort
     if (typeof port.address !== 'string') return []
+    const properties = isRecord(port.properties) ? port.properties : {}
     return [
       {
         address: port.address,
@@ -39,7 +40,9 @@ export const parseArduinoPorts = (output: string): readonly ArduinoPort[] => {
         matchingBoardFqbns: getMatchingBoards(detectedPort)
           .map((board) => board.fqbn)
           .filter((fqbn): fqbn is string => typeof fqbn === 'string'),
+        ...(typeof properties.pid === 'string' ? { pid: properties.pid } : {}),
         protocol: typeof port.protocol === 'string' ? port.protocol : 'serial',
+        ...(typeof properties.vid === 'string' ? { vid: properties.vid } : {}),
       },
     ]
   })
