@@ -14,6 +14,7 @@ import soundIcon from '../../../../../docs/SVG/SensoreSuono.svg';
 import photoresistorIcon from '../../../../../docs/SVG/photoresistore.svg';
 import buzzerIcon from '../../../../../docs/SVG/buzzer.svg';
 import ledIcon from '../../../../../docs/SVG/led.svg';
+import lcdI2cIcon from '../../../../../docs/SVG/display-1602-1604-i2c.svg';
 import pn532Icon from '../../../../../docs/SVG/Schede/nfc_04.svg';
 import rc522Icon from '../../../../../docs/SVG/rfid_rc522.svg';
 import styles from './component-library.css';
@@ -104,6 +105,13 @@ const COMPONENT_ITEMS = [{
 }, {
     category: 'actuators', componentId: 'neopixel', featured: true, name: 'NeoPixel', rawURL: neoPixelIcon,
     tags: ['led', 'rgb', 'neopixel', 'digital', 'digitale'], description: summary(<FormattedMessage id="gui.sardu.neoPixelDescription" defaultMessage="Individually addressable RGB LED pixels and strips." description="NeoPixel description" />, 'Light; RGB LED', 'Digital, single wire', 'Adafruit', 'Adafruit NeoPixel 1.15.5', 'https://www.adafruit.com/category/168')
+}, {
+    category: 'actuators', componentId: 'lcd-i2c', featured: true, name: 'Display 1602/1604 I2C', rawURL: lcdI2cIcon,
+    tags: ['display', 'lcd', '1602', '1604', 'i2c', 'schermo'], description: summary(<FormattedMessage
+        id="gui.sardu.lcdI2cDescription"
+        defaultMessage="16-column LCD display with 2 or 4 rows and a PCF8574 I2C adapter."
+        description="1602 and 1604 I2C LCD description"
+    />, 'Display; LCD', 'I2C (SDA/SCL)', 'Matthias Hertel', 'LiquidCrystal_PCF8574 2.3.0', 'https://github.com/mathertel/LiquidCrystal_PCF8574')
 }];
 
 const CATEGORY_MESSAGES = {

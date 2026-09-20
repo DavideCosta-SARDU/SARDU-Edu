@@ -272,7 +272,7 @@ const GUIComponent = props => {
     }, [hardwareSelection, vm]);
 
     useEffect(() => {
-        if (!hardwareSelection?.componentIds?.some(id => ['servo', 'buzzer', 'led', 'neopixel'].includes(id)) ||
+        if (!hardwareSelection?.componentIds?.some(id => ['servo', 'buzzer', 'led', 'neopixel', 'lcd-i2c'].includes(id)) ||
             vm.extensionManager.isExtensionLoaded('sarduActuators')) return;
         void vm.extensionManager.loadExtensionURL('sarduActuators');
     }, [hardwareSelection, vm]);

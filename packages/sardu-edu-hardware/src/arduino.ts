@@ -160,6 +160,7 @@ export const ARDUINO_COMPONENTS: readonly ComponentDefinition[] = [
   {id: 'buzzer', name: 'Buzzer', version: '1', boardIds: ['arduino-uno', 'arduino-nano'], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['digital-io'], modes: ['standalone', 'realtime']},
   {id: 'vl53l0x', name: 'VL53L0X', version: '1', boardIds: ['arduino-uno', 'arduino-nano'], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['i2c'], modes: ['standalone', 'realtime']},
   {id: 'neopixel', name: 'NeoPixel', version: '1', boardIds: ['arduino-uno', 'arduino-nano'], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['digital-io'], modes: ['standalone', 'realtime']},
+  {id: 'lcd-i2c', name: 'Display 1602/1604 I2C', version: '1', boardIds: ['arduino-uno', 'arduino-nano', ...esp32BoardIds], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['i2c'], modes: ['standalone', 'realtime']},
   {id: 'led', name: 'LED', version: '1', boardIds: ['arduino-uno', 'arduino-nano', ...esp32BoardIds], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['digital-io'], modes: ['standalone', 'realtime']},
   {id: 'pn532', name: 'PN532', version: '1', boardIds: ['arduino-uno', 'arduino-nano', ...esp32BoardIds], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['i2c', 'spi'], modes: ['standalone', 'realtime']},
   {id: 'rc522', name: 'RC522', version: '1', boardIds: ['arduino-uno', 'arduino-nano', ...esp32BoardIds], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['spi'], modes: ['standalone', 'realtime']},
@@ -232,6 +233,7 @@ export interface ArduinoProgram {
   readonly ultrasonicSensors: readonly { readonly trigger: string; readonly echo: string }[]
   readonly usesVl53l0x: boolean
   readonly neoPixelPins: readonly string[]
+  readonly usesDisplay: boolean
   readonly outputPins: readonly string[]
   readonly variables: readonly string[]
   readonly typedVariables: readonly { readonly type: string; readonly name: string; readonly value: string }[]
@@ -632,6 +634,41 @@ const generateStack = (
         operations.push({type: 'pwm-write', pin, value: `map(constrain(${percentage}, 0, 100), 0, 100, 0, 255)`})
         break
       }
+      case 'sarduActuators_initializeDisplay':
+      case 'sarduActuators_initializeDisplayWithPins': {
+        const model = getField(block, 'MODEL')
+        const address = getField(block, 'ADDRESS')
+        if (!['1602', '1604'].includes(model)) throw new Error(`Unsupported display model: ${model}`)
+        if (!['0x20', '0x21', '0x22', '0x23', '0x24', '0x25', '0x26', '0x27'].includes(address)) {
+          throw new Error(`Unsupported display address: ${address}`)
+        }
+        const customPins = block.opcode.endsWith('WithPins')
+        if (customPins && !board.id.startsWith('esp32-')) {
+          throw new Error(`Custom display I2C pins require an ESP32 board, not ${board.name}`)
+        }
+        const rows = model === '1604' ? 4 : 2
+        const pinSetup = customPins ? `Wire.end();\nWire.setPins(${getField(block, 'SDA')}, ${getField(block, 'SCL')});\n` : ''
+        operations.push({type: 'custom-code', source: `${pinSetup}if (sarduEduDisplay) delete sarduEduDisplay;\nsarduEduDisplay = new LiquidCrystal_PCF8574(${address});\nsarduEduDisplayRows = ${rows};\nsarduEduDisplay->begin(16, ${rows}, Wire);`})
+        break
+      }
+      case 'sarduActuators_setDisplayCursor': {
+        const x = getExpression(blocks, block, 'X', variables)
+        const y = getExpression(blocks, block, 'Y', variables)
+        operations.push({type: 'custom-code', source: `sarduEduDisplay->setCursor(constrain(${x}, 0, 15), constrain(${y}, 0, sarduEduDisplayRows - 1));`})
+        break
+      }
+      case 'sarduActuators_printDisplay':
+        operations.push({type: 'custom-code', source: `sarduEduDisplay->print(${getStringExpression(blocks, block, 'TEXT', variables)});`})
+        break
+      case 'sarduActuators_clearDisplay':
+        operations.push({type: 'custom-code', source: 'sarduEduDisplay->clear();'})
+        break
+      case 'sarduActuators_setDisplayBacklight':
+        operations.push({type: 'custom-code', source: `sarduEduDisplay->setBacklight(${getField(block, 'STATE') === 'ON' ? 255 : 0});`})
+        break
+      case 'sarduActuators_setDisplayCursorStyle':
+        operations.push({type: 'custom-code', source: `${getField(block, 'VISIBILITY') === 'SHOW' ? 'sarduEduDisplay->cursor();' : 'sarduEduDisplay->noCursor();'}\n${getField(block, 'BLINK') === 'BLINK' ? 'sarduEduDisplay->blink();' : 'sarduEduDisplay->noBlink();'}`})
+        break
       case 'sarduActuators_setServoAngle':
         operations.push({
           type: 'servo-write',
@@ -876,6 +913,13 @@ export const compileArduinoProgram = ({ boardId, targets }: ArduinoSketchRequest
   }))
 
   const reachableBlocks = getReachableArduinoBlocks(targets)
+  const displayBlocks = reachableBlocks.filter(block => block.opcode.startsWith('sarduActuators_') &&
+    block.opcode.toLowerCase().includes('display'))
+  const displayInitializers = displayBlocks.filter(block =>
+    block.opcode === 'sarduActuators_initializeDisplay' || block.opcode === 'sarduActuators_initializeDisplayWithPins')
+  if (displayBlocks.length > 0 && displayInitializers.length === 0) {
+    throw new Error('Initialize the I2C display before using its operations')
+  }
   const pn532Blocks = reachableBlocks.filter(block =>
     block.opcode.startsWith('sarduSensors_pn532') || block.opcode.startsWith('sarduSensors_rfidConfigurePn532') ||
     (getRfidOperation(block.opcode) && block.fields.READER?.value !== 'RC522'))
@@ -924,6 +968,7 @@ export const compileArduinoProgram = ({ boardId, targets }: ArduinoSketchRequest
       `${left.trigger}:${left.echo}`.localeCompare(`${right.trigger}:${right.echo}`, undefined, { numeric: true })),
     usesVl53l0x: targets.some(({blocks}) => Object.values(blocks).some(block => block?.opcode === 'sarduSensors_laserDistance')),
     neoPixelPins: Array.from(neoPixelPins).sort((left, right) => left.localeCompare(right, undefined, {numeric: true})),
+    usesDisplay: displayBlocks.length > 0,
     outputPins: Array.from(outputPins).sort((left, right) => left.localeCompare(right, undefined, { numeric: true })),
     variables: Array.from(variables).sort(),
     typedVariables: Array.from(typedVariables.values()).sort((left, right) => left.name.localeCompare(right.name)),
@@ -1322,6 +1367,7 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
     ...(program.ultrasonicSensors.length ? ['#include <Ultrasonic.h>', ''] : []),
     ...(program.usesVl53l0x ? ['#include <Wire.h>', '#include <VL53L0X.h>', '', 'VL53L0X vl53l0x;', ''] : []),
     ...(program.neoPixelPins.length ? ['#include <Adafruit_NeoPixel.h>', ''] : []),
+    ...(program.usesDisplay ? ['#include <Wire.h>', '#include <LiquidCrystal_PCF8574.h>', ''] : []),
     ...(program.usesOtto ? ['#include <Otto.h>', '', 'Otto Otto;', ''] : []),
     ...(program.usesWifi ? ['#include <WiFi.h>', ''] : []),
     ...(program.usesPn532I2c ? ['#include <Wire.h>'] : []),
@@ -1353,6 +1399,7 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
     ...(ultrasonicDeclarations.length ? [''] : []),
     ...neoPixelDeclarations,
     ...(neoPixelDeclarations.length ? [''] : []),
+    ...(program.usesDisplay ? ['LiquidCrystal_PCF8574 *sarduEduDisplay = nullptr;', 'uint8_t sarduEduDisplayRows = 2;', ''] : []),
     ...declarations,
     ...(declarations.length ? [''] : []),
     ...typedDeclarations,
@@ -1388,6 +1435,7 @@ export const generateSarduLiveFirmware = (): string => `// SARDU Edu Live firmwa
 #include <Wire.h>
 #include <VL53L0X.h>
 #include <Adafruit_NeoPixel.h>
+#include <LiquidCrystal_PCF8574.h>
 #include <SPI.h>
 #include <Adafruit_PN532.h>
 #include <MFRC522.h>
@@ -1439,6 +1487,27 @@ Otto Otto;
 VL53L0X sardu_vl53l0x;
 bool sardu_vl53l0x_ready = false;
 Adafruit_NeoPixel *sardu_neopixels[14] = {nullptr};
+LiquidCrystal_PCF8574 *sarduEduDisplay = nullptr;
+uint8_t sarduEduDisplayRows = 2;
+
+int sarduEduHexNibble(char value) {
+  if (value >= '0' && value <= '9') return value - '0';
+  if (value >= 'A' && value <= 'F') return value - 'A' + 10;
+  if (value >= 'a' && value <= 'f') return value - 'a' + 10;
+  return -1;
+}
+
+String sarduEduDisplayText(const String &hexText) {
+  String text;
+  text.reserve(hexText.length() / 2);
+  for (unsigned int index = 0; index + 1 < hexText.length(); index += 2) {
+    const int high = sarduEduHexNibble(hexText[index]);
+    const int low = sarduEduHexNibble(hexText[index + 1]);
+    if (high < 0 || low < 0) return String("");
+    text += char((high << 4) | low);
+  }
+  return text;
+}
 
 void setup() {
   Serial.begin(SARDU_BAUD_RATE);
@@ -1554,6 +1623,41 @@ void loop() {
       else if (action == 'O' || action == 'T') { int steps=Serial.parseInt(); while(steps>0){uint32_t edge=strip.getPixelColor(strip.numPixels()-1);for(int i=strip.numPixels()-1;i>0;i--)strip.setPixelColor(i,strip.getPixelColor(i-1));strip.setPixelColor(0,action=='O'?edge:0);steps--;} while(steps<0){uint32_t edge=strip.getPixelColor(0);for(uint16_t i=0;i+1<strip.numPixels();i++)strip.setPixelColor(i,strip.getPixelColor(i+1));strip.setPixelColor(strip.numPixels()-1,action=='O'?edge:0);steps++;} }
     }
     Serial.println(1);
+  } else if (command == 'Q') {
+    while (Serial.peek() == ' ') Serial.read(); const char action = Serial.read();
+    if (action == 'I') {
+      const int address = Serial.parseInt(); const int columns = Serial.parseInt(); const int rows = Serial.parseInt();
+      const int sda = Serial.parseInt(); const int scl = Serial.parseInt();
+#if defined(ARDUINO_ARCH_ESP32)
+      if (sda >= 0 && scl >= 0) { Wire.end(); Wire.setPins(sda, scl); }
+#else
+      if (sda >= 0 || scl >= 0) { Serial.println(0); return; }
+#endif
+      delete sarduEduDisplay;
+      sarduEduDisplay = new LiquidCrystal_PCF8574(address);
+      sarduEduDisplayRows = constrain(rows, 1, 4);
+      sarduEduDisplay->begin(constrain(columns, 1, 80), sarduEduDisplayRows, Wire);
+      Serial.println(1);
+    } else if (!sarduEduDisplay) {
+      Serial.println(0);
+    } else if (action == 'C') {
+      const int x = constrain(Serial.parseInt(), 0, 15);
+      const int y = constrain(Serial.parseInt(), 0, sarduEduDisplayRows - 1);
+      sarduEduDisplay->setCursor(x, y); Serial.println(1);
+    } else if (action == 'T') {
+      while (Serial.peek() == ' ') Serial.read();
+      sarduEduDisplay->print(sarduEduDisplayText(Serial.readStringUntil('\n'))); Serial.println(1);
+    } else if (action == 'X') {
+      sarduEduDisplay->clear(); Serial.println(1);
+    } else if (action == 'B') {
+      sarduEduDisplay->setBacklight(Serial.parseInt() ? 255 : 0); Serial.println(1);
+    } else if (action == 'U') {
+      if (Serial.parseInt()) sarduEduDisplay->cursor(); else sarduEduDisplay->noCursor();
+      if (Serial.parseInt()) sarduEduDisplay->blink(); else sarduEduDisplay->noBlink();
+      Serial.println(1);
+    } else {
+      Serial.println(0);
+    }
   } else if (command == 'F') {
     while (Serial.peek() == ' ') Serial.read(); const String reader = Serial.readStringUntil(' ');
     const String bus = Serial.readStringUntil(' ');
@@ -1582,7 +1686,7 @@ void loop() {
     }
     else Serial.println(0);
   } else if (command == 'P') {
-    Serial.println("SARDU-LIVE 5");
+    Serial.println("SARDU-LIVE 6");
   } else if (command == 'M') {
     Serial.println(millis());
   } else if (command == 'U') {

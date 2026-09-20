@@ -119,6 +119,12 @@
       "version": "1.15.5",
       "license": "LGPL-3.0-only",
       "source": "https://github.com/adafruit/Adafruit_NeoPixel"
+    },
+    {
+      "id": "LiquidCrystal_PCF8574",
+      "version": "2.3.0",
+      "license": "BSD-3-Clause",
+      "source": "https://github.com/mathertel/LiquidCrystal_PCF8574"
     }
   ],
   "bundledLibraries": [],

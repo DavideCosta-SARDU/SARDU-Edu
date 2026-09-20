@@ -45,6 +45,12 @@ describe('Arduino definitions', () => {
     })
     expect(ARDUINO_HARDWARE_DEFINITIONS.components.get('hc-sr04')?.modes).toEqual(['standalone', 'realtime'])
     expect(ARDUINO_HARDWARE_DEFINITIONS.components.get('servo')?.modes).toEqual(['standalone', 'realtime'])
+    expect(ARDUINO_HARDWARE_DEFINITIONS.components.get('lcd-i2c')).toMatchObject({
+      boardIds: ['arduino-uno', 'arduino-nano', 'esp32-dev-module', 'esp32-s2-dev-module',
+        'esp32-s3-dev-module', 'esp32-c3-dev-module', 'esp32-cam-ai-thinker'],
+      requiredCapabilities: ['i2c'],
+      modes: ['standalone', 'realtime'],
+    })
   })
 
   test('declares Uno and Nano pins and communication buses', () => {
@@ -285,6 +291,59 @@ describe('generateArduinoSketch', () => {
     expect(firmware).toContain("command == 'R'")
     expect(firmware).toContain('Serial.println(sardu_servos[pin].read());')
     expect(firmware).toContain('digitalWrite(pin, level ? HIGH : LOW);')
+    expect(firmware).toContain('#include <LiquidCrystal_PCF8574.h>')
+    expect(firmware).toContain("command == 'Q'")
+    expect(firmware).toContain('SARDU-LIVE 6')
+  })
+
+  test('generates 1602 I2C display operations with constrained zero-based coordinates', () => {
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK: {block: 'initialize'}}}),
+      initialize: block('initialize', 'sarduActuators_initializeDisplay', {
+        next: 'cursor', fields: {MODEL: {value: '1602'}, ADDRESS: {value: '0x27'}},
+      }),
+      cursor: block('cursor', 'sarduActuators_setDisplayCursor', {
+        next: 'print', inputs: {X: {block: 'x'}, Y: {block: 'y'}},
+      }),
+      x: block('x', 'math_number', {fields: {NUM: {value: '20'}}}),
+      y: block('y', 'math_number', {fields: {NUM: {value: '4'}}}),
+      print: block('print', 'sarduActuators_printDisplay', {next: 'backlight', inputs: {TEXT: {block: 'text'}}}),
+      text: block('text', 'text', {fields: {TEXT: {value: 'Valore'}}}),
+      backlight: block('backlight', 'sarduActuators_setDisplayBacklight', {
+        next: 'style', fields: {STATE: {value: 'OFF'}},
+      }),
+      style: block('style', 'sarduActuators_setDisplayCursorStyle', {
+        next: 'clear', fields: {VISIBILITY: {value: 'SHOW'}, BLINK: {value: 'NO_BLINK'}},
+      }),
+      clear: block('clear', 'sarduActuators_clearDisplay'),
+    }
+    const source = generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})
+
+    expect(source).toContain('#include <LiquidCrystal_PCF8574.h>')
+    expect(source).toContain('new LiquidCrystal_PCF8574(0x27);')
+    expect(source).toContain('sarduEduDisplay->begin(16, 2, Wire);')
+    expect(source).toContain('sarduEduDisplay->setCursor(constrain(20, 0, 15), constrain(4, 0, sarduEduDisplayRows - 1));')
+    expect(source).toContain('sarduEduDisplay->print("Valore");')
+    expect(source).toContain('sarduEduDisplay->setBacklight(0);')
+    expect(source).toContain('sarduEduDisplay->cursor();')
+    expect(source).toContain('sarduEduDisplay->noBlink();')
+    expect(source).toContain('sarduEduDisplay->clear();')
+  })
+
+  test('generates custom display pins only for ESP32 boards', () => {
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK: {block: 'initialize'}}}),
+      initialize: block('initialize', 'sarduActuators_initializeDisplayWithPins', {
+        fields: {MODEL: {value: '1604'}, ADDRESS: {value: '0x27'}, SDA: {value: '21'}, SCL: {value: '22'}},
+      }),
+    }
+    const source = generateArduinoSketch({boardId: 'esp32-dev-module', targets: [{blocks}]})
+    expect(source).toContain('Wire.end();\n  Wire.setPins(21, 22);')
+    expect(source).toContain('new LiquidCrystal_PCF8574(0x27);')
+    expect(source).toContain('sarduEduDisplay->begin(16, 4, Wire);')
+    expect(() => generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})).toThrow(
+      'Custom display I2C pins require an ESP32 board',
+    )
   })
 
   test('generates child-friendly Scratch control flow with board timers', () => {

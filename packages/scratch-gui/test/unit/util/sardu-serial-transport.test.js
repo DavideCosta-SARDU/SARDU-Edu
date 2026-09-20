@@ -17,11 +17,11 @@ test('reports each Live handshake stage', () => {
     const transport = new SarduSerialTransport({}, diagnostic => diagnostics.push(diagnostic));
 
     transport._diagnose('handshake-sent');
-    transport._diagnose('handshake-response', 'SARDU-LIVE 5');
+    transport._diagnose('handshake-response', 'SARDU-LIVE 6');
 
     expect(diagnostics).toEqual([
         {stage: 'handshake-sent'},
-        {stage: 'handshake-response', detail: 'SARDU-LIVE 5'}
+        {stage: 'handshake-response', detail: 'SARDU-LIVE 6'}
     ]);
 });
 
@@ -106,6 +106,26 @@ test('encodes RFID Live commands and preserves hexadecimal responses', async () 
     expect(write.mock.calls.map(call => decoder.decode(call[0]))).toEqual([
         'F PN532 I2C 18 19 11 12 13 10 2 3 U\n',
         'F RC522 SPI 18 19 11 12 13 10 2 3 A 4 A FFFFFFFFFFFF\n'
+    ]);
+});
+
+test('encodes display Live commands and text without protocol separators', async () => {
+    const write = jest.fn(() => Promise.resolve());
+    const transport = new SarduSerialTransport({});
+    transport.port = {};
+    transport.portOpen = true;
+    transport.writer = {write};
+    transport._readLine = jest.fn().mockResolvedValue('1');
+
+    await transport.runDisplay('I', 39, 16, 4, '21', '22');
+    await transport.runDisplay('C', 15, 3);
+    await transport.runDisplay('T', 'Valore 42');
+
+    const decoder = new TextDecoder();
+    expect(write.mock.calls.map(call => decoder.decode(call[0]))).toEqual([
+        'Q I 39 16 4 21 22\n',
+        'Q C 15 3\n',
+        'Q T 56616C6F7265203432\n'
     ]);
 });
 

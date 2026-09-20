@@ -855,7 +855,7 @@ const makeToolboxXML = function (isInitialSetup, isStage = true, targetId, categ
     }
     if (actuatorCategory) {
         actuatorCategory.xml = actuatorCategory.xml.replace(/(<category\b[^>]*>)/,
-            '$1\n<label text="LED"/>').replace(
+            hardwareSelection?.componentIds?.includes('led') ? '$1\n<label text="LED"/>' : '$1').replace(
             '<block type="sarduActuators_setServoAngle"',
             '<label text="Servomotore"/>\n<block type="sarduActuators_setServoAngle"').replace(
             '<block type="sarduActuators_configureNeoPixel"',
@@ -863,6 +863,9 @@ const makeToolboxXML = function (isInitialSetup, isStage = true, targetId, categ
         ).replace(
             '<block type="sarduActuators_playTone"',
             '<label text="Buzzer"/>\n<block type="sarduActuators_playTone"'
+        ).replace(
+            '<block type="sarduActuators_initializeDisplay"',
+            '<label text="Display 1602/1604 I2C"/>\n<block type="sarduActuators_initializeDisplay"'
         );
     }
     if (offline && hasBoardProgram && boardCategory) {

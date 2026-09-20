@@ -51,7 +51,7 @@ class SarduSerialTransport {
             this._diagnose('handshake-sent');
             const response = await this._readLine(HANDSHAKE_TIMEOUT);
             this._diagnose('handshake-response', response || '(empty)');
-            if (response !== 'SARDU-LIVE 5') {
+            if (response !== 'SARDU-LIVE 6') {
                 throw new Error('The connected board is not running SARDU Edu Live firmware');
             }
             this._diagnose('connected');
@@ -108,6 +108,14 @@ class SarduSerialTransport {
 
     runNeoPixel (action, pin, ...values) {
         return this._readNumber(`N ${action} ${protocolPin(pin)} ${values.join(' ')}`.trim());
+    }
+
+    runDisplay (action, ...values) {
+        const encodedValues = action === 'T' ?
+            [Array.from(new TextEncoder().encode(String(values[0])))
+                .map(value => value.toString(16).padStart(2, '0')).join('').toUpperCase()] :
+            values.map(value => protocolPin(String(value)));
+        return this._readNumber(`Q ${action} ${encodedValues.join(' ')}`.trim());
     }
 
     readDigital (pin) { return this._readNumber(`V ${protocolPin(pin)}`); }

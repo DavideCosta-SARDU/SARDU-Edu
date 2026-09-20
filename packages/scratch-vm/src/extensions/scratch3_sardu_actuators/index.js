@@ -12,6 +12,8 @@ class Scratch3SarduActuators {
         const pins = selection?.digitalOutputPins?.length ? selection.digitalOutputPins :
             ['2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13'];
         const neoPixelUnavailable = !selection?.componentIds?.includes('neopixel');
+        const displayUnavailable = !selection?.componentIds?.includes('lcd-i2c');
+        const customI2cUnavailable = displayUnavailable || !selection?.boardId?.startsWith('esp32-');
         const ledUnavailable = !selection?.componentIds?.includes('led');
         const pwmPins = selection?.pwmPins?.length ? selection.pwmPins : ['3', '5', '6', '9', '10', '11'];
         const neoBlock = (opcode, text, args) => ({
@@ -115,11 +117,96 @@ class Scratch3SarduActuators {
             neoBlock('showNeoPixels', 'show NeoPixel pin [PIN]', {PIN: pinArg}),
             neoBlock('rotateNeoPixels', 'rotate NeoPixel pin [PIN] by [POSITIONS]', {PIN: pinArg, POSITIONS: numberArg(1)}),
             neoBlock('shiftNeoPixels', 'shift NeoPixel pin [PIN] by [POSITIONS]', {PIN: pinArg, POSITIONS: numberArg(1)}),
-            neoBlock('rainbowNeoPixels', 'NeoPixel pin [PIN] rainbow from hue [HUE] repetitions [REPETITIONS]', {PIN: pinArg, HUE: numberArg(0), REPETITIONS: numberArg(1)})],
+            neoBlock('rainbowNeoPixels', 'NeoPixel pin [PIN] rainbow from hue [HUE] repetitions [REPETITIONS]', {PIN: pinArg, HUE: numberArg(0), REPETITIONS: numberArg(1)}),
+            {
+                opcode: 'initializeDisplay',
+                text: formatMessage({id: 'sarduActuators.initializeDisplay', default: 'initialize [MODEL] I2C display at address [ADDRESS]', description: 'Initialize an I2C LCD using the board default pins'}),
+                blockType: BlockType.COMMAND,
+                hideFromPalette: displayUnavailable,
+                tooltip: formatMessage({id: 'sarduActuators.initializeDisplay.tooltip', default: 'Initializes the selected 16-column display using the board default I2C pins.', description: 'Default-pin I2C LCD initialization tooltip'}),
+                arguments: {
+                    MODEL: {type: ArgumentType.STRING, menu: 'DISPLAY_MODEL', defaultValue: '1602'},
+                    ADDRESS: {type: ArgumentType.STRING, menu: 'DISPLAY_ADDRESS', defaultValue: '0x27'}
+                }
+            }, {
+                opcode: 'initializeDisplayWithPins',
+                text: formatMessage({id: 'sarduActuators.initializeDisplayWithPins', default: 'initialize [MODEL] I2C display at address [ADDRESS] with SDA [SDA] and SCL [SCL]', description: 'Initialize an I2C LCD using custom ESP32 pins'}),
+                blockType: BlockType.COMMAND,
+                hideFromPalette: customI2cUnavailable,
+                tooltip: formatMessage({id: 'sarduActuators.initializeDisplayWithPins.tooltip', default: 'Initializes the display using selectable SDA and SCL pins on an ESP32 board.', description: 'Custom-pin I2C LCD initialization tooltip'}),
+                arguments: {
+                    MODEL: {type: ArgumentType.STRING, menu: 'DISPLAY_MODEL', defaultValue: '1602'},
+                    ADDRESS: {type: ArgumentType.STRING, menu: 'DISPLAY_ADDRESS', defaultValue: '0x27'},
+                    SDA: {type: ArgumentType.STRING, menu: 'DIGITAL_PIN', defaultValue: selection?.busPins?.i2c?.sda || pins[0]},
+                    SCL: {type: ArgumentType.STRING, menu: 'DIGITAL_PIN', defaultValue: selection?.busPins?.i2c?.scl || pins[1] || pins[0]}
+                }
+            }, {
+                opcode: 'setDisplayCursor',
+                text: formatMessage({id: 'sarduActuators.setDisplayCursor', default: 'set display cursor position X [X] Y [Y]', description: 'Set the I2C LCD cursor position'}),
+                blockType: BlockType.COMMAND,
+                hideFromPalette: displayUnavailable,
+                tooltip: formatMessage({id: 'sarduActuators.setDisplayCursor.tooltip', default: 'Sets the cursor using zero-based coordinates limited to the initialized display.', description: 'I2C LCD cursor tooltip'}),
+                arguments: {X: numberArg(0), Y: numberArg(0)}
+            }, {
+                opcode: 'printDisplay',
+                text: formatMessage({id: 'sarduActuators.printDisplay', default: 'print on display [TEXT]', description: 'Print text on the I2C LCD'}),
+                blockType: BlockType.COMMAND,
+                hideFromPalette: displayUnavailable,
+                tooltip: formatMessage({id: 'sarduActuators.printDisplay.tooltip', default: 'Prints text or a value at the current display cursor position.', description: 'I2C LCD print tooltip'}),
+                arguments: {TEXT: {type: ArgumentType.STRING, defaultValue: 'Hello!'}}
+            }, {
+                opcode: 'clearDisplay',
+                text: formatMessage({id: 'sarduActuators.clearDisplay', default: 'clear display', description: 'Clear the I2C LCD'}),
+                blockType: BlockType.COMMAND,
+                hideFromPalette: displayUnavailable,
+                tooltip: formatMessage({id: 'sarduActuators.clearDisplay.tooltip', default: 'Clears all text from the display.', description: 'I2C LCD clear tooltip'})
+            }, {
+                opcode: 'setDisplayBacklight',
+                text: formatMessage({id: 'sarduActuators.setDisplayBacklight', default: 'set display backlight to [STATE]', description: 'Set the I2C LCD backlight'}),
+                blockType: BlockType.COMMAND,
+                hideFromPalette: displayUnavailable,
+                tooltip: formatMessage({id: 'sarduActuators.setDisplayBacklight.tooltip', default: 'Turns the display backlight on or off.', description: 'I2C LCD backlight tooltip'}),
+                arguments: {STATE: {type: ArgumentType.STRING, menu: 'ON_OFF', defaultValue: 'ON'}}
+            }, {
+                opcode: 'setDisplayCursorStyle',
+                text: formatMessage({id: 'sarduActuators.setDisplayCursorStyle', default: 'set display cursor [VISIBILITY] style [BLINK]', description: 'Set the I2C LCD cursor visibility and blink style'}),
+                blockType: BlockType.COMMAND,
+                hideFromPalette: displayUnavailable,
+                tooltip: formatMessage({id: 'sarduActuators.setDisplayCursorStyle.tooltip', default: 'Shows or hides the cursor and enables or disables blinking.', description: 'I2C LCD cursor style tooltip'}),
+                arguments: {
+                    VISIBILITY: {type: ArgumentType.STRING, menu: 'SHOW_HIDE', defaultValue: 'SHOW'},
+                    BLINK: {type: ArgumentType.STRING, menu: 'BLINK_STYLE', defaultValue: 'BLINK'}
+                }
+            }],
             menus: {
                 DIGITAL_PIN: {acceptReporters: false, items: pins},
                 PWM_PIN: {acceptReporters: false, items: pwmPins},
-                LED_STATE: {acceptReporters: false, items: ['HIGH', 'LOW']}
+                LED_STATE: {acceptReporters: false, items: ['HIGH', 'LOW']},
+                DISPLAY_MODEL: {acceptReporters: false, items: ['1602', '1604']},
+                DISPLAY_ADDRESS: {acceptReporters: false, items: [
+                    '0x20', '0x21', '0x22', '0x23', '0x24', '0x25', '0x26', '0x27'
+                ]},
+                ON_OFF: {acceptReporters: false, items: [{
+                    text: formatMessage({id: 'sarduActuators.menu.on', default: 'On', description: 'On menu item'}),
+                    value: 'ON'
+                }, {
+                    text: formatMessage({id: 'sarduActuators.menu.off', default: 'Off', description: 'Off menu item'}),
+                    value: 'OFF'
+                }]},
+                SHOW_HIDE: {acceptReporters: false, items: [{
+                    text: formatMessage({id: 'sarduActuators.menu.show', default: 'Show', description: 'Show menu item'}),
+                    value: 'SHOW'
+                }, {
+                    text: formatMessage({id: 'sarduActuators.menu.hide', default: 'Hide', description: 'Hide menu item'}),
+                    value: 'HIDE'
+                }]},
+                BLINK_STYLE: {acceptReporters: false, items: [{
+                    text: formatMessage({id: 'sarduActuators.menu.blink', default: 'Blinking', description: 'Blinking cursor menu item'}),
+                    value: 'BLINK'
+                }, {
+                    text: formatMessage({id: 'sarduActuators.menu.noBlink', default: 'Not blinking', description: 'Non-blinking cursor menu item'}),
+                    value: 'NO_BLINK'
+                }]}
             }
         };
     }
@@ -186,6 +273,41 @@ class Scratch3SarduActuators {
     rotateNeoPixels (args) { return this._neoPixel('O', args, 'POSITIONS'); }
     shiftNeoPixels (args) { return this._neoPixel('T', args, 'POSITIONS'); }
     rainbowNeoPixels (args) { return this._neoPixel('W', args, 'HUE', 'REPETITIONS'); }
+
+    _display (action, ...values) {
+        if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return;
+        const transport = this.runtime.sarduEduLiveTransport;
+        if (!transport?.connected) {
+            return Promise.reject(new Error(`SARDU Edu live transport is not connected in display ${action}`));
+        }
+        return transport.runDisplay(action, ...values);
+    }
+
+    initializeDisplay (args) {
+        const rows = String(args.MODEL) === '1604' ? 4 : 2;
+        this.displayRows = rows;
+        return this._display('I', Number(args.ADDRESS), 16, rows, -1, -1);
+    }
+
+    initializeDisplayWithPins (args) {
+        const rows = String(args.MODEL) === '1604' ? 4 : 2;
+        this.displayRows = rows;
+        return this._display('I', Number(args.ADDRESS), 16, rows, String(args.SDA), String(args.SCL));
+    }
+
+    setDisplayCursor (args) {
+        const x = Math.max(0, Math.min(15, Math.trunc(Number(args.X)) || 0));
+        const y = Math.max(0, Math.min((this.displayRows || 2) - 1, Math.trunc(Number(args.Y)) || 0));
+        return this._display('C', x, y);
+    }
+
+    printDisplay (args) { return this._display('T', String(args.TEXT)); }
+    clearDisplay () { return this._display('X'); }
+    setDisplayBacklight (args) { return this._display('B', String(args.STATE) === 'ON' ? 1 : 0); }
+    setDisplayCursorStyle (args) {
+        return this._display('U', String(args.VISIBILITY) === 'SHOW' ? 1 : 0,
+            String(args.BLINK) === 'BLINK' ? 1 : 0);
+    }
 }
 
 module.exports = Scratch3SarduActuators;
