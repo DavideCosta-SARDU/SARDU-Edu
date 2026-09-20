@@ -792,11 +792,14 @@ const xmlClose = '</xml>';
  * @param {?string} backdropName - The name of the default selected backdrop dropdown.
  * @param {?string} soundName -  The name of the default selected sound dropdown.
  * @param {?object} colors - The colors for the color mode.
+ * @param {?object} hardwareSelection - The selected SARDU Edu hardware configuration.
+ * @param {?boolean} hasBoardProgram - Whether the workspace already contains an Arduino program block.
+ * @param {?object} messages - Localized SARDU Edu interface messages.
  * @returns {string} - a ScratchBlocks-style XML document for the contents of the toolbox.
  */
 const makeToolboxXML = function (isInitialSetup, isStage = true, targetId, categoriesXML = [],
     costumeName = '', backdropName = '', soundName = '', colors = defaultColors, hardwareSelection = null,
-    hasBoardProgram = false) {
+    hasBoardProgram = false, messages = {}) {
     isStage = isInitialSetup || isStage;
     const gap = [categorySeparator];
 
@@ -824,7 +827,7 @@ const makeToolboxXML = function (isInitialSetup, isStage = true, targetId, categ
     const sensorCategory = categoriesXML.find(categoryInfo => categoryInfo.id === 'sarduSensors');
     const actuatorCategory = categoriesXML.find(categoryInfo => categoryInfo.id === 'sarduActuators');
     const rfidLabel = ScratchBlocks.ScratchMsgs.translate('SARDU_RFID_NFC', 'RFID/NFC');
-    const advancedLabel = ScratchBlocks.ScratchMsgs.translate('SARDU_RFID_ADVANCED', 'Advanced');
+    const advancedLabel = messages['gui.sarduEdu.rfidAdvanced'] || 'Advanced';
     if (sensorCategory) {
         sensorCategory.xml = sensorCategory.xml.replace(/(<category\b[^>]*>)/,
             '$1\n<label text="DHT11/DHT22"/>').replace(
@@ -846,8 +849,8 @@ const makeToolboxXML = function (isInitialSetup, isStage = true, targetId, categ
             /<block type="sarduSensors_rfidConfigure(?:Pn532I2c|Rc522Spi)"/,
             match => `<label text="${rfidLabel}"/>\n${match}`
         ).replace(
-            '<block type="sarduSensors_rfidAuthenticate"',
-            `<sep gap="36"/>\n<label text="${advancedLabel}"/>\n<block type="sarduSensors_rfidAuthenticate"`
+            '<block type="sarduSensors_pn532Authenticate"',
+            `<sep gap="36"/>\n<label text="${advancedLabel}"/>\n<block type="sarduSensors_pn532Authenticate"`
         );
     }
     if (actuatorCategory) {

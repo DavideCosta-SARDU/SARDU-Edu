@@ -1,6 +1,11 @@
 export { HardwareCatalog } from './catalog'
 export { checkCompatibility } from './compatibility'
-export { SARDU_ARDUINO_TOOLCHAIN_LAYOUT, createArduinoCliInvocation } from './arduino-toolchain'
+export {
+  ARDUINO_PORT_DISCOVERY_TIMEOUTS,
+  DEFAULT_ARDUINO_PORT_DISCOVERY_TIMEOUT,
+  SARDU_ARDUINO_TOOLCHAIN_LAYOUT,
+  createArduinoCliInvocation,
+} from './arduino-toolchain'
 export type {
   ArduinoCliInvocation,
   ArduinoCliInvocationOptions,

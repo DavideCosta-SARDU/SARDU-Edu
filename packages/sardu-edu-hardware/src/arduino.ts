@@ -202,6 +202,10 @@ export interface ArduinoSourceTarget {
 export interface ArduinoSketchRequest {
   readonly boardId: string
   readonly targets: readonly ArduinoSourceTarget[]
+  readonly messages?: {
+    readonly pn532Found: string
+    readonly pn532NotFound: string
+  }
 }
 
 export type ArduinoOperation =
@@ -210,6 +214,7 @@ export type ArduinoOperation =
   | { readonly type: 'servo-write'; readonly pin: string; readonly angle: string; readonly waitMilliseconds?: string }
   | { readonly type: 'delay'; readonly milliseconds: number | string }
   | { readonly type: 'custom-code'; readonly source: string }
+  | { readonly type: 'pn532-config' }
   | { readonly type: 'serial-begin'; readonly baud: number }
   | { readonly type: 'serial-print'; readonly value: string; readonly newline: boolean }
   | { readonly type: 'set-variable'; readonly variable: string; readonly value: string }
@@ -237,6 +242,30 @@ export interface ArduinoProgram {
   readonly usesOtto: boolean
   readonly usesWifi: boolean
   readonly usesRfid: boolean
+  readonly usesPn532: boolean
+  readonly usesRc522: boolean
+  readonly usesPn532I2c: boolean
+  readonly usesPn532Spi: boolean
+  readonly pn532Operations: ReadonlySet<string>
+  readonly rc522Operations: ReadonlySet<string>
+  readonly pn532Config: null | {
+    readonly bus: 'I2C' | 'SPI'
+    readonly sda: string
+    readonly scl: string
+    readonly mosi: string
+    readonly miso: string
+    readonly sck: string
+    readonly ss: string
+    readonly irq: string
+    readonly reset: string
+  }
+  readonly rc522Config: null | {
+    readonly mosi: string
+    readonly miso: string
+    readonly sck: string
+    readonly ss: string
+    readonly reset: string
+  }
 }
 
 const getBoard = (boardId: string): ArduinoBoardDefinition => {
@@ -267,24 +296,44 @@ const getDhtModel = (block: ArduinoSourceBlock): string => block.fields.MODEL?.v
 const getDhtObjectName = (block: ArduinoSourceBlock): string =>
   `sardu_dht_${getDhtModel(block).toLowerCase()}_${getField(block, 'PIN')}`
 
-const getRfidConnection = (block: ArduinoSourceBlock): string => {
-  if (!block.fields.READER?.value) {
-    return 'sarduRfidReader, sarduRfidBus, sarduRfidSda, sarduRfidScl, sarduRfidMosi, sarduRfidMiso, ' +
-      'sarduRfidSck, sarduRfidSs, sarduRfidIrq, sarduRfidReset'
-  }
-  const reader = getField(block, 'READER').toUpperCase()
-  const bus = getField(block, 'BUS').toUpperCase()
-  if (!['PN532', 'RC522'].includes(reader)) throw new Error(`Unsupported RFID reader: ${reader}`)
-  if (!['I2C', 'I2C_IRQ', 'SPI'].includes(bus)) throw new Error(`Unsupported RFID bus: ${bus}`)
-  if (reader === 'RC522' && bus !== 'SPI') throw new Error('RC522 supports SPI only')
-  return [reader, bus, 'SDA', 'SCL', 'MOSI', 'MISO', 'SCK', 'SS', 'IRQ', 'RESET']
-    .map((value, index) => index < 2 ? `"${value}"` : getField(block, value))
-    .join(', ')
-}
+const legacyRfidReader = (block: ArduinoSourceBlock): 'pn532' | 'rc522' =>
+  block.fields.READER?.value?.toUpperCase() === 'RC522' ? 'rc522' : 'pn532'
 
 const arduinoTypes = new Set([
   'bool', 'byte', 'int', 'unsigned int', 'long', 'unsigned long', 'float', 'double', 'char', 'String',
 ])
+
+const getReachableArduinoBlocks = (targets: readonly ArduinoSourceTarget[]): ArduinoSourceBlock[] => {
+  const reachable: ArduinoSourceBlock[] = []
+  targets.forEach(({blocks}) => {
+    const pending = Object.values(blocks).filter((block): block is ArduinoSourceBlock => Boolean(
+      block?.topLevel && ['sarduBoard_program', 'sarduBoard_interrupt', 'sarduSensors_whenTouch'].includes(block.opcode),
+    ))
+    const visited = new Set<string>()
+    while (pending.length) {
+      const block = pending.pop()
+      if (!block || visited.has(block.id)) continue
+      visited.add(block.id)
+      reachable.push(block)
+      const linkedIds = [block.next, ...Object.values(block.inputs).map(input => input?.block ?? null)]
+      linkedIds.forEach(id => {
+        const linkedBlock = id ? blocks[id] : undefined
+        if (linkedBlock) pending.push(linkedBlock)
+      })
+    }
+  })
+  return reachable
+}
+
+const getRfidOperation = (opcode: string): string | null => {
+  if (opcode.endsWith('TagPresent')) return 'present'
+  if (opcode.endsWith('Uid')) return 'uid'
+  if (opcode.endsWith('TagType')) return 'type'
+  if (opcode.endsWith('Authenticate')) return 'authenticate'
+  if (opcode.endsWith('ReadBlock')) return 'read'
+  if (opcode.endsWith('WriteBlock')) return 'write'
+  return null
+}
 
 const getLiteralInput = (
   blocks: Readonly<Record<string, ArduinoSourceBlock | undefined>>,
@@ -353,11 +402,21 @@ const getExpression = (
       return getField(inputBlock, 'FORMAT') === 'percent' ? `(((1023 - ${value}) * 100L) / 1023)` : value
     }
     case 'sarduSensors_touch': return `(digitalRead(${getField(inputBlock, 'PIN')}) == HIGH)`
-    case 'sarduSensors_rfidTagPresent': return `sarduRfidPresent(${getRfidConnection(inputBlock)})`
-    case 'sarduSensors_rfidUid': return `sarduRfidUid(${getRfidConnection(inputBlock)})`
-    case 'sarduSensors_rfidTagType': return `sarduRfidType(${getRfidConnection(inputBlock)})`
-    case 'sarduSensors_rfidReadBlock': return `sarduRfidRead(${getRfidConnection(inputBlock)}, ${getExpression(blocks, inputBlock, 'BLOCK', variables)})`
-    case 'sarduSensors_rfidAuthenticate': return `sarduRfidAuthenticate(${getRfidConnection(inputBlock)}, ${getExpression(blocks, inputBlock, 'BLOCK', variables)}, "${getField(inputBlock, 'KEY_TYPE')}", ${JSON.stringify(getLiteralInput(blocks, inputBlock, 'KEY'))})`
+    case 'sarduSensors_rfidTagPresent': return `${legacyRfidReader(inputBlock)}CercaTag()`
+    case 'sarduSensors_pn532TagPresent': return 'pn532CercaTag()'
+    case 'sarduSensors_pn532Uid': return 'pn532Uid()'
+    case 'sarduSensors_pn532TagType': return 'pn532Tipo()'
+    case 'sarduSensors_pn532ReadBlock': return `pn532Leggi(${getExpression(blocks, inputBlock, 'BLOCK', variables)})`
+    case 'sarduSensors_pn532Authenticate': return `pn532Autentica(${getExpression(blocks, inputBlock, 'BLOCK', variables)}, "${getField(inputBlock, 'KEY_TYPE')}", ${JSON.stringify(getLiteralInput(blocks, inputBlock, 'KEY'))})`
+    case 'sarduSensors_rfidUid': return `${legacyRfidReader(inputBlock)}Uid()`
+    case 'sarduSensors_rfidTagType': return `${legacyRfidReader(inputBlock)}Tipo()`
+    case 'sarduSensors_rfidReadBlock': return `${legacyRfidReader(inputBlock)}Leggi(${getExpression(blocks, inputBlock, 'BLOCK', variables)})`
+    case 'sarduSensors_rfidAuthenticate': return `${legacyRfidReader(inputBlock)}Autentica(${getExpression(blocks, inputBlock, 'BLOCK', variables)}, "${getField(inputBlock, 'KEY_TYPE')}", ${JSON.stringify(getLiteralInput(blocks, inputBlock, 'KEY'))})`
+    case 'sarduSensors_rc522TagPresent': return 'rc522CercaTag()'
+    case 'sarduSensors_rc522Uid': return 'rc522Uid()'
+    case 'sarduSensors_rc522TagType': return 'rc522Tipo()'
+    case 'sarduSensors_rc522ReadBlock': return `rc522Leggi(${getExpression(blocks, inputBlock, 'BLOCK', variables)})`
+    case 'sarduSensors_rc522Authenticate': return `rc522Autentica(${getExpression(blocks, inputBlock, 'BLOCK', variables)}, "${getField(inputBlock, 'KEY_TYPE')}", ${JSON.stringify(getLiteralInput(blocks, inputBlock, 'KEY'))})`
     case 'sarduSensors_laserDistance': return getField(inputBlock, 'UNIT') === 'cm' ?
       '(vl53l0x.readRangeSingleMillimeters() / 10)' : 'vl53l0x.readRangeSingleMillimeters()'
     case 'sarduActuators_servoAngle': return `servo_${getField(inputBlock, 'PIN')}.read()`
@@ -544,19 +603,24 @@ const generateStack = (
         operations.push({type: 'custom-code', source: 'WiFi.disconnect();'})
         break
       case 'sarduSensors_rfidConfigurePn532I2c':
-        operations.push({type: 'custom-code', source: `sarduRfidConfigure("PN532", "I2C", ${getField(block, 'SDA')}, ${getField(block, 'SCL')}, -1, -1, -1, -1, -1, -1);`})
+        operations.push({type: 'pn532-config'})
         break
       case 'sarduSensors_rfidConfigurePn532I2cAdvanced':
-        operations.push({type: 'custom-code', source: `sarduRfidConfigure("PN532", "I2C_IRQ", ${getField(block, 'SDA')}, ${getField(block, 'SCL')}, -1, -1, -1, -1, ${getField(block, 'IRQ')}, ${getField(block, 'RESET')});`})
+        operations.push({type: 'pn532-config'})
         break
       case 'sarduSensors_rfidConfigurePn532Spi':
-        operations.push({type: 'custom-code', source: `sarduRfidConfigure("PN532", "SPI", -1, -1, ${getField(block, 'MOSI')}, ${getField(block, 'MISO')}, ${getField(block, 'SCK')}, ${getField(block, 'SS')}, -1, -1);`})
+        operations.push({type: 'pn532-config'})
         break
       case 'sarduSensors_rfidConfigureRc522Spi':
-        operations.push({type: 'custom-code', source: `sarduRfidConfigure("RC522", "SPI", -1, -1, ${getField(block, 'MOSI')}, ${getField(block, 'MISO')}, ${getField(block, 'SCK')}, ${getField(block, 'SS')}, -1, ${getField(block, 'RESET')});`})
         break
       case 'sarduSensors_rfidWriteBlock':
-        operations.push({type: 'custom-code', source: `sarduRfidWrite(${getRfidConnection(block)}, ${getExpression(blocks, block, 'BLOCK', variables)}, ${JSON.stringify(getLiteralInput(blocks, block, 'DATA'))});`})
+        operations.push({type: 'custom-code', source: `${legacyRfidReader(block)}Scrivi(${getExpression(blocks, block, 'BLOCK', variables)}, ${JSON.stringify(getLiteralInput(blocks, block, 'DATA'))});`})
+        break
+      case 'sarduSensors_pn532WriteBlock':
+        operations.push({type: 'custom-code', source: `pn532Scrivi(${getExpression(blocks, block, 'BLOCK', variables)}, ${JSON.stringify(getLiteralInput(blocks, block, 'DATA'))});`})
+        break
+      case 'sarduSensors_rc522WriteBlock':
+        operations.push({type: 'custom-code', source: `rc522Scrivi(${getExpression(blocks, block, 'BLOCK', variables)}, ${JSON.stringify(getLiteralInput(blocks, block, 'DATA'))});`})
         break
       case 'sarduActuators_setLedBrightness': {
         const pin = getField(block, 'PIN')
@@ -811,6 +875,45 @@ export const compileArduinoProgram = ({ boardId, targets }: ArduinoSketchRequest
     touchEvents.push({pin, level, body: generateStack(blocks, block.next, board, outputPins, variables, typedVariables)})
   }))
 
+  const reachableBlocks = getReachableArduinoBlocks(targets)
+  const pn532Blocks = reachableBlocks.filter(block =>
+    block.opcode.startsWith('sarduSensors_pn532') || block.opcode.startsWith('sarduSensors_rfidConfigurePn532') ||
+    (getRfidOperation(block.opcode) && block.fields.READER?.value !== 'RC522'))
+  const rc522Blocks = reachableBlocks.filter(block =>
+    block.opcode.startsWith('sarduSensors_rc522') || block.opcode === 'sarduSensors_rfidConfigureRc522Spi' ||
+    (getRfidOperation(block.opcode) && block.fields.READER?.value === 'RC522'))
+  const pn532Operations = new Set(pn532Blocks.map(block => getRfidOperation(block.opcode)).filter((operation): operation is string => Boolean(operation)))
+  const rc522Operations = new Set(rc522Blocks.map(block => getRfidOperation(block.opcode)).filter((operation): operation is string => Boolean(operation)))
+  const pn532Configs = pn532Blocks.flatMap((block): NonNullable<ArduinoProgram['pn532Config']>[] => {
+    if (block.opcode === 'sarduSensors_rfidConfigurePn532I2c') return [{
+      bus: 'I2C' as const, sda: getField(block, 'SDA'), scl: getField(block, 'SCL'),
+      mosi: '-1', miso: '-1', sck: '-1', ss: '-1', irq: '-1', reset: '-1',
+    }]
+    if (block.opcode === 'sarduSensors_rfidConfigurePn532I2cAdvanced') return [{
+      bus: 'I2C' as const, sda: getField(block, 'SDA'), scl: getField(block, 'SCL'),
+      mosi: '-1', miso: '-1', sck: '-1', ss: '-1', irq: getField(block, 'IRQ'), reset: getField(block, 'RESET'),
+    }]
+    if (block.opcode === 'sarduSensors_rfidConfigurePn532Spi' ||
+      (block.fields.READER?.value === 'PN532' && block.fields.BUS?.value === 'SPI')) return [{
+      bus: 'SPI' as const, sda: '-1', scl: '-1', mosi: getField(block, 'MOSI'), miso: getField(block, 'MISO'),
+      sck: getField(block, 'SCK'), ss: getField(block, 'SS'), irq: '-1', reset: '-1',
+    }]
+    if (block.fields.READER?.value === 'PN532') return [{
+      bus: 'I2C' as const, sda: getField(block, 'SDA'), scl: getField(block, 'SCL'),
+      mosi: '-1', miso: '-1', sck: '-1', ss: '-1', irq: getField(block, 'IRQ'), reset: getField(block, 'RESET'),
+    }]
+    return []
+  })
+  const rc522Configs = rc522Blocks.flatMap(block =>
+    block.opcode === 'sarduSensors_rfidConfigureRc522Spi' || block.fields.READER?.value === 'RC522' ? [{
+      mosi: getField(block, 'MOSI'), miso: getField(block, 'MISO'), sck: getField(block, 'SCK'),
+      ss: getField(block, 'SS'), reset: getField(block, 'RESET'),
+    }] : [])
+  if (new Set(pn532Configs.map(config => JSON.stringify(config))).size > 1) throw new Error('PN532 has conflicting configurations')
+  if (new Set(rc522Configs.map(config => JSON.stringify(config))).size > 1) throw new Error('RC522 has conflicting configurations')
+  const pn532Config = pn532Configs[0] || null
+  const rc522Config = rc522Configs[0] || null
+
   return {
     boardId,
     boardName: board.name,
@@ -830,23 +933,19 @@ export const compileArduinoProgram = ({ boardId, targets }: ArduinoSketchRequest
     loop,
     usesOtto: targets.some(({blocks}) => Object.values(blocks).some(block => block?.opcode.startsWith('sarduOtto_'))),
     usesWifi,
-    usesRfid: targets.some(({blocks}) => Object.values(blocks).some(block => block?.opcode.startsWith('sarduSensors_rfid'))),
+    usesRfid: pn532Blocks.length > 0 || rc522Blocks.length > 0,
+    usesPn532: pn532Blocks.length > 0,
+    usesRc522: rc522Blocks.length > 0,
+    usesPn532I2c: pn532Config?.bus === 'I2C',
+    usesPn532Spi: pn532Config?.bus === 'SPI',
+    pn532Operations,
+    rc522Operations,
+    pn532Config,
+    rc522Config,
   }
 }
 
-const rfidHelpers = `Adafruit_PN532 *sarduPn532 = nullptr;
-PN532_I2C *sarduPn532I2cTransport = nullptr;
-PN532 *sarduPn532I2c = nullptr;
-MFRC522 *sarduRc522 = nullptr;
-String sarduRfidReader;
-String sarduRfidBus;
-int sarduRfidSda = -1, sarduRfidScl = -1, sarduRfidMosi = -1, sarduRfidMiso = -1;
-int sarduRfidSck = -1, sarduRfidSs = -1, sarduRfidIrq = -1, sarduRfidReset = -1;
-uint8_t sarduRfidUidBytes[10];
-uint8_t sarduRfidUidLength = 0;
-int sarduRfidAuthenticatedBlock = -1;
-
-bool sarduHex(const String &text, uint8_t *bytes, size_t count) {
+const rfidParseHelper = `bool rfidHex(const String &text, uint8_t *bytes, size_t count) {
   if (text.length() != count * 2) return false;
   for (size_t i = 0; i < count; ++i) {
     char pair[3] = {text[i * 2], text[i * 2 + 1], 0};
@@ -854,114 +953,181 @@ bool sarduHex(const String &text, uint8_t *bytes, size_t count) {
     if (!end || *end) return false; bytes[i] = (uint8_t)value;
   }
   return true;
-}
+}`
 
-String sarduHexText(const uint8_t *bytes, size_t count) {
+const rfidTextHelper = `String rfidHexText(const uint8_t *bytes, size_t count) {
   const char digits[] = "0123456789ABCDEF"; String result; result.reserve(count * 2);
   for (size_t i = 0; i < count; ++i) { result += digits[bytes[i] >> 4]; result += digits[bytes[i] & 15]; }
   return result;
-}
+}`
 
-void sarduRfidConfigure(const String &reader, const String &bus, int sda, int scl, int mosi, int miso, int sck, int ss, int irq, int reset) {
-  delete sarduPn532; delete sarduPn532I2c; delete sarduPn532I2cTransport; delete sarduRc522;
-  sarduPn532 = nullptr; sarduPn532I2c = nullptr; sarduPn532I2cTransport = nullptr; sarduRc522 = nullptr;
-  sarduRfidReader = reader; sarduRfidBus = bus; sarduRfidSda = sda; sarduRfidScl = scl;
-  sarduRfidMosi = mosi; sarduRfidMiso = miso; sarduRfidSck = sck; sarduRfidSs = ss;
-  sarduRfidIrq = irq; sarduRfidReset = reset; sarduRfidUidLength = 0; sarduRfidAuthenticatedBlock = -1;
-}
+const pn532StateHelpers = `Adafruit_PN532 *pn532 = nullptr;
+uint8_t pn532UidBytes[10];
+uint8_t pn532UidLength = 0;
+uint8_t pn532Sak = 0;
+int pn532AuthenticatedBlock = -1;
+String pn532Bus;
+int pn532Pins[4] = {-1, -1, -1, -1};
 
-bool sarduRfidPrepare(const String &reader, const String &bus, int sda, int scl, int mosi, int miso, int sck, int ss, int irq, int reset) {
-  if (reader == "RC522" && bus != "SPI") return false;
-  if (reader == sarduRfidReader && bus == sarduRfidBus && sda == sarduRfidSda && scl == sarduRfidScl &&
-      mosi == sarduRfidMosi && miso == sarduRfidMiso && sck == sarduRfidSck && ss == sarduRfidSs &&
-      irq == sarduRfidIrq && reset == sarduRfidReset &&
-      ((reader == "PN532" && ((bus == "I2C" && sarduPn532I2c) || (bus != "I2C" && sarduPn532))) ||
-       (reader == "RC522" && sarduRc522))) return true;
-  delete sarduPn532; delete sarduPn532I2c; delete sarduPn532I2cTransport; delete sarduRc522;
-  sarduPn532 = nullptr; sarduPn532I2c = nullptr; sarduPn532I2cTransport = nullptr; sarduRc522 = nullptr;
-  sarduRfidUidLength = 0; sarduRfidAuthenticatedBlock = -1;
-  sarduRfidReader = reader; sarduRfidBus = bus; sarduRfidSda = sda; sarduRfidScl = scl;
-  sarduRfidMosi = mosi; sarduRfidMiso = miso; sarduRfidSck = sck;
-  sarduRfidSs = ss; sarduRfidIrq = irq; sarduRfidReset = reset;
-  if (reader == "PN532") {
-    if (bus == "I2C") {
-      sarduPn532I2cTransport = new PN532_I2C(Wire, sda, scl);
-      sarduPn532I2c = new PN532(*sarduPn532I2cTransport);
-    } else if (bus == "I2C_IRQ") {
+bool pn532Avvia() {
+  if (!pn532) return false;
+  pn532->begin();
+  if (!pn532->getFirmwareVersion()) return false;
+  pn532->SAMConfig();
+  return true;
+}`
+
+const pn532I2cHelpers = `void pn532ConfiguraI2c(int sda, int scl, int irq, int reset) {
+  if (pn532 && pn532Bus == "I2C" && pn532Pins[0] == sda && pn532Pins[1] == scl && pn532Pins[2] == irq && pn532Pins[3] == reset) return;
+  delete pn532;
 #if defined(ARDUINO_ARCH_ESP32)
-      Wire.begin(sda, scl);
+  Wire.begin(sda, scl);
+  Wire.setTimeOut(25);
 #else
-      Wire.begin();
+  (void)sda; (void)scl; Wire.begin();
+  Wire.setWireTimeout(25000, true);
 #endif
-      sarduPn532 = new Adafruit_PN532(irq, reset, &Wire);
-    } else {
+  delay(100);
+  pn532 = new Adafruit_PN532(irq, reset, &Wire);
+  pn532Bus = "I2C"; pn532Pins[0] = sda; pn532Pins[1] = scl; pn532Pins[2] = irq; pn532Pins[3] = reset;
+  pn532UidLength = 0; pn532AuthenticatedBlock = -1;
+  bool pronto = false;
+  for (uint8_t tentativo = 0; tentativo < 5 && !pronto; ++tentativo) {
+    pronto = pn532Avvia();
+#if !defined(ARDUINO_ARCH_ESP32)
+    if (Wire.getWireTimeoutFlag()) { Wire.clearWireTimeoutFlag(); pronto = false; }
+#endif
+    if (!pronto && tentativo < 4) {
+      Wire.end(); delay(100);
 #if defined(ARDUINO_ARCH_ESP32)
-      SPI.begin(sck, miso, mosi, ss);
-      sarduPn532 = new Adafruit_PN532(ss, &SPI);
+      Wire.begin(sda, scl); Wire.setTimeOut(25);
 #else
-      sarduPn532 = new Adafruit_PN532(sck, miso, mosi, ss);
+      Wire.begin(); Wire.setWireTimeout(25000, true);
 #endif
+      delay(100);
     }
-    if (bus == "I2C") {
-      sarduPn532I2c->begin(); if (!sarduPn532I2c->getFirmwareVersion()) return false; sarduPn532I2c->SAMConfig(); return true;
-    }
-    sarduPn532->begin(); if (!sarduPn532->getFirmwareVersion()) return false; sarduPn532->SAMConfig(); return true;
   }
-  if (reader == "RC522") {
+  if (!pronto) Serial.println("Errore: lettore PN532 non trovato");
+}`
+
+const pn532SpiHelpers = `void pn532ConfiguraSpi(int mosi, int miso, int sck, int ss) {
+  if (pn532 && pn532Bus == "SPI" && pn532Pins[0] == mosi && pn532Pins[1] == miso && pn532Pins[2] == sck && pn532Pins[3] == ss) return;
+  delete pn532;
 #if defined(ARDUINO_ARCH_ESP32)
-    SPI.begin(sck, miso, mosi, ss);
+  SPI.begin(sck, miso, mosi, ss); pn532 = new Adafruit_PN532(ss, &SPI);
 #else
-    SPI.begin();
+  pn532 = new Adafruit_PN532(sck, miso, mosi, ss);
 #endif
-    sarduRc522 = new MFRC522(ss, reset); sarduRc522->PCD_Init(); return true;
+  pn532Bus = "SPI"; pn532Pins[0] = mosi; pn532Pins[1] = miso; pn532Pins[2] = sck; pn532Pins[3] = ss;
+  pn532UidLength = 0; pn532AuthenticatedBlock = -1;
+  if (!pn532Avvia()) Serial.println("Errore: lettore PN532 non trovato");
+}`
+
+const pn532PresentHelper = (withType: boolean): string => `bool pn532CercaTag() {
+  if (!pn532) return false;
+  pn532UidLength = 0;${withType ? ' pn532Sak = 0;' : ''} pn532AuthenticatedBlock = -1;
+  if (!pn532->readPassiveTargetID(PN532_MIFARE_ISO14443A, pn532UidBytes, &pn532UidLength, 50)) return false;${withType ? '\n  // Adafruit-PN532 1.3.4 keeps the final SAK in this response buffer.\n  extern byte pn532_packetbuffer[];\n  pn532Sak = pn532_packetbuffer[11];' : ''}
+  return true;
+}`
+
+const pn532UidHelper = `String pn532Uid() { return (pn532UidLength || pn532CercaTag()) ? rfidHexText(pn532UidBytes, pn532UidLength) : String(""); }`
+const pn532TypeHelper = `String pn532Tipo() {
+  if (!pn532UidLength && !pn532CercaTag()) return String("");
+  if (pn532Sak == 0x09) return String("MIFARE Classic Mini");
+  if (pn532Sak == 0x08) return String("likely MIFARE Classic 1K");
+  if (pn532Sak == 0x18) return String("likely MIFARE Classic 4K");
+  uint8_t command = 0x60; uint8_t version[8]; uint8_t versionLength = sizeof(version);
+  const bool hasVersion = pn532->inListPassiveTarget() &&
+    pn532->inDataExchange(&command, 1, version, &versionLength);
+  if (hasVersion) {
+    if (versionLength == 8 && version[0] == 0x00 && version[1] == 0x04 && version[7] == 0x03) {
+      const uint8_t productType = version[2] & 0x0F;
+      if (productType == 0x03) {
+        if ((version[3] == 0x01 || version[3] == 0x02) && version[4] == 0x01 && version[5] == 0x00) {
+          if (version[6] == 0x0B) return String("MIFARE Ultralight EV1 MF0UL11");
+          if (version[6] == 0x0E) return String("MIFARE Ultralight EV1 MF0UL21");
+        }
+        return String("MIFARE Ultralight");
+      }
+      if (productType == 0x04) {
+        if (version[3] == 0x02 && version[4] == 0x01 && version[5] == 0x00) {
+          if (version[6] == 0x0F) return String("NTAG213");
+          if (version[6] == 0x11) return String("NTAG215");
+          if (version[6] == 0x13) return String("NTAG216");
+        }
+        return String("NTAG");
+      }
+    }
+    return String("ISO14443A");
   }
-  return false;
-}
+  if (pn532Sak == 0x00) return String("likely MIFARE Ultralight or NTAG");
+  return String("ISO14443A");
+}`
 
-bool sarduRfidPresent(const String &reader, const String &bus, int sda, int scl, int mosi, int miso, int sck, int ss, int irq, int reset) {
-  if (!sarduRfidPrepare(reader, bus, sda, scl, mosi, miso, sck, ss, irq, reset)) return false;
-  if (reader == "PN532") return bus == "I2C" ?
-    sarduPn532I2c->readPassiveTargetID(PN532_MIFARE_ISO14443A, sarduRfidUidBytes, &sarduRfidUidLength, 50) :
-    sarduPn532->readPassiveTargetID(PN532_MIFARE_ISO14443A, sarduRfidUidBytes, &sarduRfidUidLength, 50);
-  if (!sarduRc522->PICC_IsNewCardPresent() || !sarduRc522->PICC_ReadCardSerial()) return false;
-  sarduRfidUidLength = sarduRc522->uid.size; memcpy(sarduRfidUidBytes, sarduRc522->uid.uidByte, sarduRfidUidLength); return true;
-}
+const pn532AuthenticateHelper = `bool pn532Autentica(int block, const String &keyType, const String &keyText) {
+  uint8_t key[6]; if (!pn532 || (!pn532UidLength && !pn532CercaTag()) || !rfidHex(keyText, key, 6)) return false;
+  const bool ok = pn532->mifareclassic_AuthenticateBlock(pn532UidBytes, pn532UidLength, block, keyType == "B" ? 1 : 0, key);
+  pn532AuthenticatedBlock = ok ? block : -1; return ok;
+}`
 
-String sarduRfidUid(const String &reader, const String &bus, int sda, int scl, int mosi, int miso, int sck, int ss, int irq, int reset) {
-  return sarduRfidPresent(reader, bus, sda, scl, mosi, miso, sck, ss, irq, reset) ? sarduHexText(sarduRfidUidBytes, sarduRfidUidLength) : String("");
-}
+const pn532ReadHelper = `String pn532Leggi(int block) {
+  if ((!pn532UidLength && !pn532CercaTag()) || (pn532AuthenticatedBlock != block && !pn532Autentica(block, "A", "FFFFFFFFFFFF"))) return String("");
+  uint8_t data[16]; return pn532->mifareclassic_ReadDataBlock(block, data) ? rfidHexText(data, 16) : String("");
+}`
 
-String sarduRfidType(const String &reader, const String &bus, int sda, int scl, int mosi, int miso, int sck, int ss, int irq, int reset) {
-  if (!sarduRfidPresent(reader, bus, sda, scl, mosi, miso, sck, ss, irq, reset)) return String("");
-  if (reader == "PN532") return String("ISO14443A/MIFARE");
-  return String(sarduRc522->PICC_GetTypeName(sarduRc522->PICC_GetType(sarduRc522->uid.sak)));
-}
+const pn532WriteHelper = `bool pn532Scrivi(int block, const String &dataText) {
+  uint8_t data[16];
+  return rfidHex(dataText, data, 16) && (pn532UidLength || pn532CercaTag()) &&
+    (pn532AuthenticatedBlock == block || pn532Autentica(block, "A", "FFFFFFFFFFFF")) &&
+    pn532->mifareclassic_WriteDataBlock(block, data);
+}`
 
-bool sarduRfidAuthenticate(const String &reader, const String &bus, int sda, int scl, int mosi, int miso, int sck, int ss, int irq, int reset, int block, const String &keyType, const String &keyText) {
-  uint8_t key[6]; if (!sarduHex(keyText, key, 6) || (!sarduRfidUidLength && !sarduRfidPresent(reader, bus, sda, scl, mosi, miso, sck, ss, irq, reset))) return false;
-  if (reader == "PN532") { const bool ok = bus == "I2C" ?
-    sarduPn532I2c->mifareclassic_AuthenticateBlock(sarduRfidUidBytes, sarduRfidUidLength, block, keyType == "B" ? 1 : 0, key) :
-    sarduPn532->mifareclassic_AuthenticateBlock(sarduRfidUidBytes, sarduRfidUidLength, block, keyType == "B" ? 1 : 0, key); sarduRfidAuthenticatedBlock = ok ? block : -1; return ok; }
+const rc522StateHelpers = `MFRC522 *rc522 = nullptr;
+uint8_t rc522UidBytes[10];
+uint8_t rc522UidLength = 0;
+int rc522AuthenticatedBlock = -1;
+int rc522Pins[5] = {-1, -1, -1, -1, -1};`
+
+const rc522ConfigHelper = `void rc522Configura(int mosi, int miso, int sck, int ss, int reset) {
+  if (rc522 && rc522Pins[0] == mosi && rc522Pins[1] == miso && rc522Pins[2] == sck && rc522Pins[3] == ss && rc522Pins[4] == reset) return;
+  delete rc522;
+#if defined(ARDUINO_ARCH_ESP32)
+  SPI.begin(sck, miso, mosi, ss);
+#else
+  (void)mosi; (void)miso; (void)sck; SPI.begin();
+#endif
+  rc522 = new MFRC522(ss, reset); rc522->PCD_Init();
+  rc522Pins[0] = mosi; rc522Pins[1] = miso; rc522Pins[2] = sck; rc522Pins[3] = ss; rc522Pins[4] = reset;
+  rc522UidLength = 0; rc522AuthenticatedBlock = -1;
+}`
+
+const rc522PresentHelper = `bool rc522CercaTag() {
+  if (!rc522 || !rc522->PICC_IsNewCardPresent() || !rc522->PICC_ReadCardSerial()) return false;
+  rc522UidLength = rc522->uid.size; memcpy(rc522UidBytes, rc522->uid.uidByte, rc522UidLength);
+  rc522AuthenticatedBlock = -1; return true;
+}`
+
+const rc522UidHelper = `String rc522Uid() { return (rc522UidLength || rc522CercaTag()) ? rfidHexText(rc522UidBytes, rc522UidLength) : String(""); }`
+const rc522TypeHelper = `String rc522Tipo() { return (rc522UidLength || rc522CercaTag()) ? String(rc522->PICC_GetTypeName(rc522->PICC_GetType(rc522->uid.sak))) : String(""); }`
+
+const rc522AuthenticateHelper = `bool rc522Autentica(int block, const String &keyType, const String &keyText) {
+  uint8_t key[6]; if (!rc522 || (!rc522UidLength && !rc522CercaTag()) || !rfidHex(keyText, key, 6)) return false;
   MFRC522::MIFARE_Key rcKey; memcpy(rcKey.keyByte, key, 6);
-  const bool ok = sarduRc522->PCD_Authenticate(keyType == "B" ? MFRC522::PICC_CMD_MF_AUTH_KEY_B : MFRC522::PICC_CMD_MF_AUTH_KEY_A, block, &rcKey, &sarduRc522->uid) == MFRC522::STATUS_OK;
-  sarduRfidAuthenticatedBlock = ok ? block : -1; return ok;
-}
+  const bool ok = rc522->PCD_Authenticate(keyType == "B" ? MFRC522::PICC_CMD_MF_AUTH_KEY_B : MFRC522::PICC_CMD_MF_AUTH_KEY_A, block, &rcKey, &rc522->uid) == MFRC522::STATUS_OK;
+  rc522AuthenticatedBlock = ok ? block : -1; return ok;
+}`
 
-String sarduRfidRead(const String &reader, const String &bus, int sda, int scl, int mosi, int miso, int sck, int ss, int irq, int reset, int block) {
-  if ((!sarduRfidUidLength && !sarduRfidPresent(reader, bus, sda, scl, mosi, miso, sck, ss, irq, reset)) ||
-      (sarduRfidAuthenticatedBlock != block && !sarduRfidAuthenticate(reader, bus, sda, scl, mosi, miso, sck, ss, irq, reset, block, "A", "FFFFFFFFFFFF"))) return String("");
+const rc522ReadHelper = `String rc522Leggi(int block) {
+  if ((!rc522UidLength && !rc522CercaTag()) || (rc522AuthenticatedBlock != block && !rc522Autentica(block, "A", "FFFFFFFFFFFF"))) return String("");
   uint8_t data[18]; uint8_t size = sizeof(data);
-  bool ok = reader == "PN532" ? (bus == "I2C" ? sarduPn532I2c->mifareclassic_ReadDataBlock(block, data) :
-    sarduPn532->mifareclassic_ReadDataBlock(block, data)) : sarduRc522->MIFARE_Read(block, data, &size) == MFRC522::STATUS_OK;
-  return ok ? sarduHexText(data, 16) : String("");
-}
+  return rc522->MIFARE_Read(block, data, &size) == MFRC522::STATUS_OK ? rfidHexText(data, 16) : String("");
+}`
 
-bool sarduRfidWrite(const String &reader, const String &bus, int sda, int scl, int mosi, int miso, int sck, int ss, int irq, int reset, int block, const String &dataText) {
-  uint8_t data[16]; if (!sarduHex(dataText, data, 16) ||
-      (!sarduRfidUidLength && !sarduRfidPresent(reader, bus, sda, scl, mosi, miso, sck, ss, irq, reset)) ||
-      (sarduRfidAuthenticatedBlock != block && !sarduRfidAuthenticate(reader, bus, sda, scl, mosi, miso, sck, ss, irq, reset, block, "A", "FFFFFFFFFFFF"))) return false;
-  return reader == "PN532" ? (bus == "I2C" ? sarduPn532I2c->mifareclassic_WriteDataBlock(block, data) :
-    sarduPn532->mifareclassic_WriteDataBlock(block, data)) : sarduRc522->MIFARE_Write(block, data, 16) == MFRC522::STATUS_OK;
+const rc522WriteHelper = `bool rc522Scrivi(int block, const String &dataText) {
+  uint8_t data[16];
+  return rfidHex(dataText, data, 16) && (rc522UidLength || rc522CercaTag()) &&
+    (rc522AuthenticatedBlock == block || rc522Autentica(block, "A", "FFFFFFFFFFFF")) &&
+    rc522->MIFARE_Write(block, data, 16) == MFRC522::STATUS_OK;
 }`
 
 const operationLines = (operation: ArduinoOperation): string[] => {
@@ -987,6 +1153,7 @@ const operationLines = (operation: ArduinoOperation): string[] => {
     if (!operation.multiline) return [`// ${source.replace(/\n/g, ' ')}`]
     return ['/*', ...source.split('\n').map((line) => ` * ${line}`), ' */']
   }
+  if (operation.type === 'pn532-config') return []
   if (operation.type === 'forever') {
     return ['while (true) {', ...operation.body.flatMap(operationLines).map((line) => `  ${line}`), '}']
   }
@@ -1003,6 +1170,24 @@ const operationLines = (operation: ArduinoOperation): string[] => {
 
 export const generateArduinoSketch = (request: ArduinoSketchRequest): string => {
   const program = compileArduinoProgram(request)
+  const pn532NeedsPresent = program.pn532Operations.size > 0
+  const pn532NeedsAuthenticate = ['authenticate', 'read', 'write'].some(operation => program.pn532Operations.has(operation))
+  const rc522NeedsPresent = program.rc522Operations.size > 0
+  const rc522NeedsAuthenticate = ['authenticate', 'read', 'write'].some(operation => program.rc522Operations.has(operation))
+  if (pn532NeedsPresent && !program.pn532Config) throw new Error('Configure PN532 before using its operations')
+  if (rc522NeedsPresent && !program.rc522Config) throw new Error('Configure RC522 before using its operations')
+  const usesRfidParse = ['authenticate', 'read', 'write'].some(operation =>
+    program.pn532Operations.has(operation) || program.rc522Operations.has(operation))
+  const usesRfidText = ['uid', 'read'].some(operation =>
+    program.pn532Operations.has(operation) || program.rc522Operations.has(operation))
+  const setupSerialInitializers = program.pn532Config ?
+    program.setup.filter(operation => operation.type === 'serial-begin') : []
+  const setupOperations = program.pn532Config ?
+    program.setup.filter(operation => operation.type !== 'serial-begin') : program.setup
+  const pn532Messages = request.messages || {
+    pn532Found: 'PN532 reader found',
+    pn532NotFound: 'Error: PN532 reader not found',
+  }
   const pinModes = program.outputPins.map((pin) => `pinMode(${pin}, OUTPUT);`)
   const declarations = program.variables.map((variable) => `double ${variable} = 0;`)
   const typedDeclarations = program.typedVariables.map(({ type, name, value }) => `${type} ${name} = ${value};`)
@@ -1031,6 +1216,102 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
     ...event.body.flatMap(operationLines).map(line => `  ${line}`), '}',
     `sardu_touch_${index} = sardu_touch_now_${index};`,
   ])
+  const pn532Declarations = program.pn532Config ? [
+    ...(pn532NeedsPresent ? ['uint8_t pn532UidBytes[10];', 'uint8_t pn532UidLength = 0;'] : []),
+    ...(program.pn532Operations.has('type') ? ['uint8_t pn532Sak = 0;'] : []),
+    ...(pn532NeedsAuthenticate ? ['int pn532AuthenticatedBlock = -1;'] : []),
+    ...(program.pn532Config.bus === 'I2C' ? [
+      `Adafruit_PN532 pn532(${program.pn532Config.irq}, ${program.pn532Config.reset}, &Wire);`,
+    ] : [
+      '#if defined(ARDUINO_ARCH_ESP32)',
+      `Adafruit_PN532 pn532(${program.pn532Config.ss}, &SPI);`,
+      '#else',
+      `Adafruit_PN532 pn532(${program.pn532Config.sck}, ${program.pn532Config.miso}, ${program.pn532Config.mosi}, ${program.pn532Config.ss});`,
+      '#endif',
+    ]),
+  ] : []
+  const pn532I2cBegin = program.pn532Config?.bus === 'I2C' ?
+    (program.boardId.startsWith('esp32-') ?
+      [`Wire.begin(${program.pn532Config.sda}, ${program.pn532Config.scl});`, 'Wire.setTimeOut(25);'] :
+      ['Wire.begin();', 'Wire.setWireTimeout(25000, true);']) : []
+  const pn532Initializers = program.pn532Config ?
+    (program.pn532Config.bus === 'I2C' ? [
+      ...pn532I2cBegin,
+      'delay(100);',
+      'bool pn532Pronto = false;',
+      'for (uint8_t pn532Tentativo = 0; pn532Tentativo < 5 && !pn532Pronto; ++pn532Tentativo) {',
+      '  pn532.begin();',
+      '  pn532Pronto = pn532.getFirmwareVersion();',
+      ...(program.boardId.startsWith('esp32-') ? [] : [
+        '  if (Wire.getWireTimeoutFlag()) { Wire.clearWireTimeoutFlag(); pn532Pronto = false; }',
+      ]),
+      '  if (pn532Pronto) { pn532.SAMConfig(); break; }',
+      '  if (pn532Tentativo < 4) {',
+      '    Wire.end();',
+      '    delay(100);',
+      ...pn532I2cBegin.map(line => `    ${line}`),
+      '    delay(100);',
+      '  }',
+      '}',
+      ...(setupSerialInitializers.length ? [
+        'if (pn532Pronto) {',
+        `  Serial.println(${JSON.stringify(pn532Messages.pn532Found)});`,
+        '} else {',
+        `  Serial.println(${JSON.stringify(pn532Messages.pn532NotFound)});`,
+        '}',
+      ] : []),
+    ] : [
+      ...(program.boardId.startsWith('esp32-') ?
+        [`SPI.begin(${program.pn532Config.sck}, ${program.pn532Config.miso}, ${program.pn532Config.mosi}, ${program.pn532Config.ss});`] : []),
+      'pn532.begin();',
+      ...(setupSerialInitializers.length ? [
+        'if (!pn532.getFirmwareVersion()) {',
+        `  Serial.println(${JSON.stringify(pn532Messages.pn532NotFound)});`,
+        '} else {',
+        '  pn532.SAMConfig();',
+        `  Serial.println(${JSON.stringify(pn532Messages.pn532Found)});`,
+        '}',
+      ] : [
+        'if (pn532.getFirmwareVersion()) {',
+        '  pn532.SAMConfig();',
+        '}',
+      ]),
+    ]) : []
+  const rc522Declarations = program.rc522Config ? [
+    ...(rc522NeedsPresent ? ['uint8_t rc522UidBytes[10];', 'uint8_t rc522UidLength = 0;'] : []),
+    ...(rc522NeedsAuthenticate ? ['int rc522AuthenticatedBlock = -1;'] : []),
+    `MFRC522 rc522(${program.rc522Config.ss}, ${program.rc522Config.reset});`,
+  ] : []
+  const rc522Initializers = program.rc522Config ? [
+    ...(program.boardId.startsWith('esp32-') ?
+      [`SPI.begin(${program.rc522Config.sck}, ${program.rc522Config.miso}, ${program.rc522Config.mosi}, ${program.rc522Config.ss});`] : ['SPI.begin();']),
+    'rc522.PCD_Init();',
+  ] : []
+  const hasTopLevelPn532Config = setupOperations.some(operation => operation.type === 'pn532-config')
+  let pn532Initialized = false
+  const setupOperationLines = setupOperations.flatMap(operation => {
+    if (operation.type === 'pn532-config') {
+      if (pn532Initialized) return []
+      pn532Initialized = true
+      return pn532Initializers
+    }
+    return operationLines(operation)
+  })
+  const offlinePn532Helper = (source: string): string => source
+    .replace(/pn532->/g, 'pn532.')
+    .replace('  if (!pn532) return false;\n', '')
+    .replace('if (!pn532 || ', 'if (')
+  const offlineRc522Helper = (source: string): string => source
+    .replace(/rc522->/g, 'rc522.')
+    .replace('if (!rc522 || ', 'if (')
+  const pn532Present = offlinePn532Helper(pn532PresentHelper(program.pn532Operations.has('type'))).replace(
+    `  pn532UidLength = 0;${program.pn532Operations.has('type') ? ' pn532Sak = 0;' : ''} pn532AuthenticatedBlock = -1;`,
+    `  pn532UidLength = 0;${program.pn532Operations.has('type') ? ' pn532Sak = 0;' : ''}${pn532NeedsAuthenticate ? ' pn532AuthenticatedBlock = -1;' : ''}`,
+  )
+  const rc522Present = offlineRc522Helper(rc522PresentHelper).replace(
+    '  rc522AuthenticatedBlock = -1; return true;',
+    `  ${rc522NeedsAuthenticate ? 'rc522AuthenticatedBlock = -1; ' : ''}return true;`,
+  )
 
   return [
     '// Generated by SARDU Edu - davide@sardu.pro',
@@ -1043,7 +1324,27 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
     ...(program.neoPixelPins.length ? ['#include <Adafruit_NeoPixel.h>', ''] : []),
     ...(program.usesOtto ? ['#include <Otto.h>', '', 'Otto Otto;', ''] : []),
     ...(program.usesWifi ? ['#include <WiFi.h>', ''] : []),
-    ...(program.usesRfid ? ['#include <SPI.h>', '#include <Wire.h>', '#include <PN532_I2C.h>', '#include <PN532.h>', '#include <Adafruit_PN532.h>', '#include <MFRC522.h>', '', rfidHelpers, ''] : []),
+    ...(program.usesPn532I2c ? ['#include <Wire.h>'] : []),
+    ...(program.usesPn532Spi || program.usesRc522 ? ['#include <SPI.h>'] : []),
+    ...(program.usesPn532 ? ['#include <Adafruit_PN532.h>'] : []),
+    ...(program.usesRc522 ? ['#include <MFRC522.h>'] : []),
+    ...(usesRfidParse ? ['', rfidParseHelper] : []),
+    ...(usesRfidText ? ['', rfidTextHelper] : []),
+    ...(pn532Declarations.length ? ['', ...pn532Declarations] : []),
+    ...(pn532NeedsPresent ? ['', pn532Present] : []),
+    ...(program.pn532Operations.has('uid') ? ['', offlinePn532Helper(pn532UidHelper)] : []),
+    ...(program.pn532Operations.has('type') ? ['', offlinePn532Helper(pn532TypeHelper)] : []),
+    ...(pn532NeedsAuthenticate ? ['', offlinePn532Helper(pn532AuthenticateHelper)] : []),
+    ...(program.pn532Operations.has('read') ? ['', offlinePn532Helper(pn532ReadHelper)] : []),
+    ...(program.pn532Operations.has('write') ? ['', offlinePn532Helper(pn532WriteHelper)] : []),
+    ...(rc522Declarations.length ? ['', ...rc522Declarations] : []),
+    ...(rc522NeedsPresent ? ['', rc522Present] : []),
+    ...(program.rc522Operations.has('uid') ? ['', offlineRc522Helper(rc522UidHelper)] : []),
+    ...(program.rc522Operations.has('type') ? ['', offlineRc522Helper(rc522TypeHelper)] : []),
+    ...(rc522NeedsAuthenticate ? ['', offlineRc522Helper(rc522AuthenticateHelper)] : []),
+    ...(program.rc522Operations.has('read') ? ['', offlineRc522Helper(rc522ReadHelper)] : []),
+    ...(program.rc522Operations.has('write') ? ['', offlineRc522Helper(rc522WriteHelper)] : []),
+    ...(program.usesRfid ? [''] : []),
     ...dhtDeclarations,
     ...(dhtDeclarations.length ? [''] : []),
     ...servoDeclarations,
@@ -1063,7 +1364,10 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
     indent([...pinModes, ...dhtInitializers, ...servoInitializers,
       ...(program.usesVl53l0x ? ['Wire.begin();', 'vl53l0x.setTimeout(500);', 'vl53l0x.init();'] : []),
       ...interruptInitializers, ...touchInitializers,
-      ...program.setup.flatMap(operationLines)]),
+      ...setupSerialInitializers.flatMap(operationLines),
+      ...(!hasTopLevelPn532Config ? pn532Initializers : []),
+      ...rc522Initializers,
+      ...setupOperationLines]),
     '}',
     '',
     'void loop() {',
@@ -1085,12 +1389,46 @@ export const generateSarduLiveFirmware = (): string => `// SARDU Edu Live firmwa
 #include <VL53L0X.h>
 #include <Adafruit_NeoPixel.h>
 #include <SPI.h>
-#include <PN532_I2C.h>
-#include <PN532.h>
 #include <Adafruit_PN532.h>
 #include <MFRC522.h>
 
-${rfidHelpers}
+${rfidParseHelper}
+
+${rfidTextHelper}
+
+${pn532StateHelpers}
+
+${pn532I2cHelpers}
+
+${pn532SpiHelpers}
+
+${pn532PresentHelper(true)}
+
+${pn532UidHelper}
+
+${pn532TypeHelper}
+
+${pn532AuthenticateHelper}
+
+${pn532ReadHelper}
+
+${pn532WriteHelper}
+
+${rc522StateHelpers}
+
+${rc522ConfigHelper}
+
+${rc522PresentHelper}
+
+${rc522UidHelper}
+
+${rc522TypeHelper}
+
+${rc522AuthenticateHelper}
+
+${rc522ReadHelper}
+
+${rc522WriteHelper}
 
 const unsigned long SARDU_BAUD_RATE = 115200;
 #if !defined(ARDUINO_ARCH_ESP32)
@@ -1223,12 +1561,25 @@ void loop() {
     const int mosi = Serial.parseInt(); const int miso = Serial.parseInt(); const int sck = Serial.parseInt();
     const int ss = Serial.parseInt(); const int irq = Serial.parseInt(); const int reset = Serial.parseInt();
     while (Serial.peek() == ' ') Serial.read(); const char action = Serial.read();
-    if (action == 'P') Serial.println(sarduRfidPresent(reader, bus, sda, scl, mosi, miso, sck, ss, irq, reset) ? 1 : 0);
-    else if (action == 'U') Serial.println(sarduRfidUid(reader, bus, sda, scl, mosi, miso, sck, ss, irq, reset));
-    else if (action == 'T') Serial.println(sarduRfidType(reader, bus, sda, scl, mosi, miso, sck, ss, irq, reset));
-    else if (action == 'R') Serial.println(sarduRfidRead(reader, bus, sda, scl, mosi, miso, sck, ss, irq, reset, Serial.parseInt()));
-    else if (action == 'A') { const int block=Serial.parseInt(); while(Serial.peek()==' ')Serial.read(); const String keyType=Serial.readStringUntil(' '); const String key=Serial.readStringUntil('\n'); Serial.println(sarduRfidAuthenticate(reader,bus,sda,scl,mosi,miso,sck,ss,irq,reset,block,keyType,key)?1:0); }
-    else if (action == 'W') { const int block=Serial.parseInt(); while(Serial.peek()==' ')Serial.read(); const String data=Serial.readStringUntil('\n'); Serial.println(sarduRfidWrite(reader,bus,sda,scl,mosi,miso,sck,ss,irq,reset,block,data)?1:0); }
+    if (reader == "PN532") {
+      if (bus == "SPI") pn532ConfiguraSpi(mosi, miso, sck, ss); else pn532ConfiguraI2c(sda, scl, irq, reset);
+      if (action == 'P') Serial.println(pn532CercaTag() ? 1 : 0);
+      else if (action == 'U') Serial.println(pn532Uid());
+      else if (action == 'T') Serial.println(pn532Tipo());
+      else if (action == 'R') Serial.println(pn532Leggi(Serial.parseInt()));
+      else if (action == 'A') { const int block=Serial.parseInt(); while(Serial.peek()==' ')Serial.read(); const String keyType=Serial.readStringUntil(' '); const String key=Serial.readStringUntil('\n'); Serial.println(pn532Autentica(block,keyType,key)?1:0); }
+      else if (action == 'W') { const int block=Serial.parseInt(); while(Serial.peek()==' ')Serial.read(); const String data=Serial.readStringUntil('\n'); Serial.println(pn532Scrivi(block,data)?1:0); }
+      else Serial.println(0);
+    } else if (reader == "RC522" && bus == "SPI") {
+      rc522Configura(mosi, miso, sck, ss, reset);
+      if (action == 'P') Serial.println(rc522CercaTag() ? 1 : 0);
+      else if (action == 'U') Serial.println(rc522Uid());
+      else if (action == 'T') Serial.println(rc522Tipo());
+      else if (action == 'R') Serial.println(rc522Leggi(Serial.parseInt()));
+      else if (action == 'A') { const int block=Serial.parseInt(); while(Serial.peek()==' ')Serial.read(); const String keyType=Serial.readStringUntil(' '); const String key=Serial.readStringUntil('\n'); Serial.println(rc522Autentica(block,keyType,key)?1:0); }
+      else if (action == 'W') { const int block=Serial.parseInt(); while(Serial.peek()==' ')Serial.read(); const String data=Serial.readStringUntil('\n'); Serial.println(rc522Scrivi(block,data)?1:0); }
+      else Serial.println(0);
+    }
     else Serial.println(0);
   } else if (command == 'P') {
     Serial.println("SARDU-LIVE 5");

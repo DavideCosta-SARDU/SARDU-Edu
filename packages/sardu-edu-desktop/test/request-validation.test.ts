@@ -3,6 +3,7 @@ import {
   validateCompileRequest,
   validateLiveDiagnostic,
   validatePort,
+  validatePortListRequest,
   validateUploadRequest,
 } from '../src/request-validation'
 
@@ -33,6 +34,14 @@ describe('desktop hardware request validation', () => {
       'Arduino source must contain',
     )
     expect(() => validatePort('COM4 & erase')).toThrow('Invalid serial port')
+  })
+
+  test('validates the Arduino port discovery timeout', () => {
+    expect(validatePortListRequest(undefined)).toEqual({ discoveryTimeoutMs: 250 })
+    expect(validatePortListRequest({ discoveryTimeoutMs: 100 })).toEqual({ discoveryTimeoutMs: 100 })
+    expect(() => validatePortListRequest({ discoveryTimeoutMs: 101 })).toThrow(
+      'Invalid Arduino port discovery timeout: 101',
+    )
   })
 
   test('validates bounded Live diagnostics before writing them to disk', () => {

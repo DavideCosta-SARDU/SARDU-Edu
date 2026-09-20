@@ -44,7 +44,6 @@ DHT sensor library 1.4.7 — Adafruit Industries and contributors — MIT — ht
 Adafruit Unified Sensor 1.1.15 — Adafruit Industries and contributors — Apache-2.0 — https://github.com/adafruit/Adafruit_Sensor
 Adafruit BusIO 1.17.4 — Adafruit Industries and contributors — MIT — https://github.com/adafruit/Adafruit_BusIO
 Adafruit PN532 1.3.4 — Adafruit Industries and contributors — BSD-3-Clause — https://github.com/adafruit/Adafruit-PN532
-Seeed Studio PN532 and PN532_I2C components (revision 2c47f5c836af53158c4e29685551612181fd8f9b) — Adafruit Industries, Seeed Technology Inc., picospuch and contributors — BSD-3-Clause — https://github.com/Seeed-Studio/PN532
 MFRC522 1.4.12 — Miguel Balboa, Rotzbua and contributors — Unlicense — https://github.com/miguelbalboa/rfid
 Servo 1.3.0 — Arduino and contributors — LGPL-2.1-or-later — https://github.com/arduino-libraries/Servo
 Ultrasonic 3.0.0 — Erick Simões and contributors — MIT — https://github.com/ErickSimoes/Ultrasonic

@@ -3,7 +3,11 @@ import { randomUUID } from 'node:crypto'
 import { access, appendFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { promisify } from 'node:util'
-import { createArduinoCliInvocation, parseHardwareResourceManifest } from '@sardu-edu/hardware'
+import {
+  DEFAULT_ARDUINO_PORT_DISCOVERY_TIMEOUT,
+  createArduinoCliInvocation,
+  parseHardwareResourceManifest,
+} from '@sardu-edu/hardware'
 import type { ArduinoToolchainLayout, HardwareResourceManifest } from '@sardu-edu/hardware'
 import { describeArduinoPorts, parseArduinoPorts } from './arduino-ports'
 import type {
@@ -19,11 +23,16 @@ type HardwareOutputListener = (event: HardwareOutputEvent) => void
 
 const execFileAsync = promisify(execFile)
 
-export const createBoardListArguments = (configuration: string): readonly string[] => [
+export const createBoardListArguments = (
+  configuration: string,
+  discoveryTimeoutMs = DEFAULT_ARDUINO_PORT_DISCOVERY_TIMEOUT,
+): readonly string[] => [
   '--config-file',
   configuration,
   'board',
   'list',
+  '--discovery-timeout',
+  `${discoveryTimeoutMs}ms`,
   '--json',
 ]
 
@@ -67,9 +76,11 @@ export class ArduinoService {
     return { arduinoCliAvailable, arduinoCoreAvailable }
   }
 
-  async listPorts(): Promise<readonly ArduinoPort[]> {
+  async listPorts(
+    discoveryTimeoutMs = DEFAULT_ARDUINO_PORT_DISCOVERY_TIMEOUT,
+  ): Promise<readonly ArduinoPort[]> {
     try {
-      const output = await this.run(createBoardListArguments(this.layout.configuration))
+      const output = await this.run(createBoardListArguments(this.layout.configuration, discoveryTimeoutMs))
       const ports = parseArduinoPorts(output)
       const summary = describeArduinoPorts(output).join('; ') || 'nessuna porta rilevata'
       if (summary !== this.lastPortSummary) {

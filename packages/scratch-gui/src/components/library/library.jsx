@@ -360,7 +360,7 @@ class LibraryComponent extends React.Component {
                     {key === 'undefined' ?
                         null :
                         <span className={styles.libraryCategoryTitle}>
-                            {this.props.intl.formatMessage(this.props.categoryMessages[key] || messages[key])}
+                            {this.props.intl.formatMessage(this.props.categoryMessages?.[key] || messages[key])}
                         </span>
                     }
                     <div
@@ -375,6 +375,7 @@ class LibraryComponent extends React.Component {
             <Modal
                 fullScreen
                 contentLabel={this.props.title}
+                headerAction={this.props.headerAction}
                 id={this.props.id}
                 onRequestClose={this.handleClose}
             >
@@ -463,6 +464,7 @@ LibraryComponent.propTypes = {
     emptyMessage: PropTypes.node,
     filterable: PropTypes.bool,
     hardwareThumbnails: PropTypes.bool,
+    headerAction: PropTypes.node,
     withCategories: PropTypes.bool,
     id: PropTypes.string.isRequired,
     intl: intlShape.isRequired,

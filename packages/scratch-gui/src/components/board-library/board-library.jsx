@@ -8,6 +8,12 @@ import LibraryComponent from '../library/library.jsx';
 import unoIcon from '../../../../../docs/SVG/Schede/arduino_uno.svg';
 import nanoIcon from '../../../../../docs/SVG/Schede/Arduino_Nano.svg';
 import esp32Icon from '../../../../../docs/SVG/ESP32.svg';
+import {
+    BOARD_DISCOVERY_TIMEOUTS,
+    getBoardDiscoveryTimeout,
+    setBoardDiscoveryTimeout
+} from '../../lib/sardu-board-discovery-settings';
+import styles from './board-library.css';
 
 const BOARD_ITEMS = [
     {
@@ -102,12 +108,36 @@ const getPwmPins = boardId => ARDUINO_BOARDS.find(board => board.id === boardId)
     .filter(pin => pin.capabilities.includes('pwm')).map(pin => pin.id) || [];
 const getBusPins = boardId => Object.fromEntries((ARDUINO_BOARDS.find(board => board.id === boardId)?.buses || [])
     .map(bus => [bus.type, {...bus.signals}]));
+const DISCOVERY_TIMEOUT_LABELS = {
+    100: {
+        id: 'gui.sardu.boardDiscoveryFastest',
+        defaultMessage: 'Very fast',
+        description: 'Fastest board discovery timeout option'
+    },
+    250: {
+        id: 'gui.sardu.boardDiscoveryRecommended',
+        defaultMessage: 'Fast (default)',
+        description: 'Recommended board discovery timeout option'
+    },
+    500: {
+        id: 'gui.sardu.boardDiscoveryCompatible',
+        defaultMessage: 'More reliable',
+        description: 'Compatible board discovery timeout option'
+    },
+    1000: {
+        id: 'gui.sardu.boardDiscoveryMaximum',
+        defaultMessage: 'Maximum wait',
+        description: 'Maximum compatibility board discovery timeout option'
+    }
+};
 
 const BoardLibrary = ({onRequestClose, vm}) => {
     const intl = useIntl();
     const selection = vm.getSarduEduProjectData()?.hardwareSelection;
     const [selectedBoardName, setSelectedBoardName] = useState(selection?.boardName ||
         BOARD_ITEMS.find(item => item.boardId === selection?.boardId)?.name);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [discoveryTimeout, setDiscoveryTimeout] = useState(getBoardDiscoveryTimeout);
     const handleRemove = () => {
         if (!vm.clearSarduEduHardwareSelection() && (!window.confirm(intl.formatMessage({
             id: 'gui.sardu.removeBoardWithCode',
@@ -177,6 +207,67 @@ const BoardLibrary = ({onRequestClose, vm}) => {
         <LibraryComponent
             data={boardItems}
             filterable={false}
+            headerAction={(
+                <div className={styles.settings}>
+                    <button
+                        aria-expanded={settingsOpen}
+                        aria-label={intl.formatMessage({
+                            id: 'gui.sardu.boardTechnicalSettings',
+                            defaultMessage: 'Technical settings',
+                            description: 'Accessible label for board technical settings'
+                        })}
+                        className={styles.settingsButton}
+                        title={intl.formatMessage({
+                            id: 'gui.sardu.boardTechnicalSettings',
+                            defaultMessage: 'Technical settings',
+                            description: 'Tooltip for board technical settings'
+                        })}
+                        type="button"
+                        onClick={() => setSettingsOpen(open => !open)}
+                    >
+                        ⚙
+                    </button>
+                    {settingsOpen ? (
+                        <div className={styles.settingsPanel}>
+                            <h2 className={styles.settingsTitle}>
+                                <FormattedMessage
+                                    id="gui.sardu.boardTechnicalSettings"
+                                    defaultMessage="Technical settings"
+                                    description="Title of board technical settings"
+                                />
+                            </h2>
+                            <label className={styles.settingsLabel}>
+                                <FormattedMessage
+                                    id="gui.sardu.boardDiscoveryTimeout"
+                                    defaultMessage="Maximum detection time"
+                                    description="Label for Arduino CLI port discovery timeout"
+                                />
+                                <select
+                                    className={styles.settingsSelect}
+                                    value={discoveryTimeout}
+                                    onChange={event => {
+                                        const timeout = setBoardDiscoveryTimeout(event.target.value);
+                                        setDiscoveryTimeout(timeout);
+                                    }}
+                                >
+                                    {BOARD_DISCOVERY_TIMEOUTS.map(timeout => (
+                                        <option key={timeout} value={timeout}>
+                                            {`${timeout} ms — ${intl.formatMessage(DISCOVERY_TIMEOUT_LABELS[timeout])}`}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            <p className={styles.settingsNote}>
+                                <FormattedMessage
+                                    id="gui.sardu.boardDiscoveryTimeoutNote"
+                                    defaultMessage="Specifies how long Arduino CLI waits for discovery procedures to find connected boards. A lower value makes refreshing faster, but it might not detect boards or ports that respond slowly. If a board is not found, increase this value."
+                                    description="Explanation below the board discovery timeout setting"
+                                />
+                            </p>
+                        </div>
+                    ) : null}
+                </div>
+            )}
             hardwareThumbnails
             id="boardLibrary"
             title={intl.formatMessage({

@@ -90,6 +90,11 @@ const ModalComponent = props => (
                         />
                     )}
                 </div>
+                {props.headerAction ? (
+                    <div className={styles.headerAction}>
+                        {props.headerAction}
+                    </div>
+                ) : null}
             </div>
             {props.children}
         </Box>
@@ -105,6 +110,7 @@ ModalComponent.propTypes = {
     ]).isRequired,
     fullScreen: PropTypes.bool,
     headerClassName: PropTypes.string,
+    headerAction: PropTypes.node,
     headerImage: PropTypes.string,
     isRtl: PropTypes.bool,
     onHelp: PropTypes.func,

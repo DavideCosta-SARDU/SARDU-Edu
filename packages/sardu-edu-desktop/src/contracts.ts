@@ -27,6 +27,10 @@ export interface ArduinoPort {
   readonly vid?: string
 }
 
+export interface ArduinoPortListRequest {
+  readonly discoveryTimeoutMs?: number
+}
+
 export interface HardwareOperationResult {
   readonly output: string
 }
@@ -51,7 +55,7 @@ export interface LiveDiagnostic {
 export interface SarduDesktopHardwareApi {
   compile(request: ArduinoCompileRequest): Promise<HardwareOperationResult>
   getStatus(): Promise<HardwareStatus>
-  listPorts(): Promise<readonly ArduinoPort[]>
+  listPorts(request?: ArduinoPortListRequest): Promise<readonly ArduinoPort[]>
   logLiveDiagnostic(diagnostic: LiveDiagnostic): Promise<void>
   onOutput(listener: (event: HardwareOutputEvent) => void): () => void
   selectLivePort(port: string): Promise<void>

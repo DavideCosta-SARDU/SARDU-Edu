@@ -9,8 +9,11 @@ describe('Arduino CLI output', () => {
       'arduino-cli.yaml',
       'board',
       'list',
+      '--discovery-timeout',
+      '250ms',
       '--json',
     ])
+    expect(createBoardListArguments('arduino-cli.yaml', 100)).toContain('100ms')
   })
 
   test('maps detected ports without coupling the GUI to Arduino CLI JSON', () => {

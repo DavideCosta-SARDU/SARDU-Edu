@@ -89,6 +89,7 @@ class Blocks extends React.Component {
             'handleBlocksInfoUpdate',
             'handleSarduHardwareChanged',
             'initializeToolboxResizeHandle',
+            'ensurePn532SerialForNewBlock',
             'ensureSarduBoardProgram',
             'onTargetsUpdate',
             'onVisualReport',
@@ -108,6 +109,7 @@ class Blocks extends React.Component {
             prompt: null
         };
         this.onTargetsUpdate = debounce(this.onTargetsUpdate, 100);
+        this.pendingPn532SerialBlocks = new Set();
         this.selectSarduBoardWhenReady = false;
         this.toolboxUpdateQueue = [];
     }
@@ -216,6 +218,16 @@ class Blocks extends React.Component {
         );
 
         this.toolboxUpdateChangeListener = event => {
+            if (event.type === this.ScratchBlocks.Events.BLOCK_CREATE && event.recordUndo &&
+                event.json?.type?.startsWith('sarduSensors_rfidConfigurePn532')) {
+                this.pendingPn532SerialBlocks.add(event.blockId);
+                window.setTimeout(() => this.ensurePn532SerialForNewBlock(event.blockId), 0);
+            } else if (event.type === this.ScratchBlocks.Events.BLOCK_MOVE &&
+                this.pendingPn532SerialBlocks.has(event.blockId)) {
+                window.setTimeout(() => this.ensurePn532SerialForNewBlock(event.blockId), 0);
+            } else if (event.type === this.ScratchBlocks.Events.BLOCK_DELETE) {
+                this.pendingPn532SerialBlocks.delete(event.blockId);
+            }
             if (
                 event.type === this.ScratchBlocks.Events.VAR_CREATE ||
                 event.type === this.ScratchBlocks.Events.VAR_RENAME ||
@@ -547,6 +559,39 @@ class Blocks extends React.Component {
             this.ScratchBlocks.Events.setGroup(false);
         }
     }
+    ensurePn532SerialForNewBlock (blockId) {
+        const configuration = this.workspace?.getBlockById(blockId);
+        if (!configuration || !this.pendingPn532SerialBlocks.has(blockId)) return;
+        let program = configuration;
+        while (program?.getParent()) program = program.getParent();
+        if (program?.type !== 'sarduBoard_program') return;
+
+        this.pendingPn532SerialBlocks.delete(blockId);
+        const setupConnection = program.getInput('SUBSTACK')?.connection;
+        if (!setupConnection) return;
+        const setupRoot = setupConnection.targetBlock();
+        if (setupRoot?.type === 'sarduBoard_serialBegin' ||
+            setupRoot?.getDescendants(false).some(block => block.type === 'sarduBoard_serialBegin')) return;
+
+        this.ScratchBlocks.Events.setGroup(true);
+        try {
+            const serial = this.workspace.newBlock('sarduBoard_serialBegin');
+            const baud = this.workspace.newBlock('math_number');
+            serial.initSvg();
+            baud.initSvg();
+            baud.setFieldValue('9600', 'NUM');
+            serial.getInput('BAUD').connection.connect(baud.outputConnection);
+            if (setupRoot) {
+                setupConnection.disconnect();
+                serial.nextConnection.connect(setupRoot.previousConnection);
+            }
+            setupConnection.connect(serial.previousConnection);
+            baud.render();
+            serial.render();
+        } finally {
+            this.ScratchBlocks.Events.setGroup(false);
+        }
+    }
     getToolboxXML () {
         // Use try/catch because this requires digging pretty deep into the VM
         // Code inside intentionally ignores several error situations (no stage, etc.)
@@ -576,7 +621,8 @@ class Blocks extends React.Component {
                 targetSounds.length > 0 ? targetSounds[targetSounds.length - 1].name : '',
                 getColorsForMode(this.props.colorMode),
                 hardwareSelection,
-                hasBoardProgram
+                hasBoardProgram,
+                this.props.messages
             );
         } catch {
             return null;

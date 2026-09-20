@@ -5,7 +5,7 @@ const BlockType = require('../../extension-support/block-type');
 class Scratch3SarduSensors {
     constructor (runtime) {
         this.runtime = runtime;
-        this.rfidConfiguration = null;
+        this.rfidConfigurations = {PN532: null, RC522: null};
     }
 
     getInfo () {
@@ -18,7 +18,6 @@ class Scratch3SarduSensors {
         const soundUnavailable = !selection?.componentIds?.includes('sound-sensor');
         const lightUnavailable = !selection?.componentIds?.includes('photoresistor');
         const laserUnavailable = !selection?.componentIds?.includes('vl53l0x');
-        const rfidUnavailable = !selection?.componentIds?.some(id => id === 'pn532' || id === 'rc522');
         const i2cPins = selection?.busPins?.i2c || {};
         const spiPins = selection?.busPins?.spi || {};
         const rfidArguments = {
@@ -126,7 +125,7 @@ class Scratch3SarduSensors {
                 }, {
                     opcode: 'rfidConfigurePn532I2c', text: formatMessage({id: 'sarduSensors.rfidConfigurePn532I2c', default: 'configure PN532 I2C SDA [SDA] SCL [SCL]', description: 'Configure PN532 using simple I2C wiring'}),
                     blockType: BlockType.COMMAND, hideFromPalette: !selection?.componentIds?.includes('pn532'),
-                    tooltip: formatMessage({id: 'sarduSensors.rfidConfigurePn532I2c.tooltip', default: 'Uses the Seeed Studio PN532 I2C driver with SDA and SCL only.', description: 'Simple PN532 I2C configuration tooltip'}),
+                    tooltip: formatMessage({id: 'sarduSensors.rfidConfigurePn532I2c.tooltip', default: 'Uses the Adafruit PN532 library over I2C; IRQ and reset may remain disconnected.', description: 'Simple PN532 I2C configuration tooltip'}),
                     arguments: {SDA: rfidArguments.SDA, SCL: rfidArguments.SCL}
                 }, {
                     opcode: 'rfidConfigurePn532I2cAdvanced', text: formatMessage({id: 'sarduSensors.rfidConfigurePn532I2cAdvanced', default: 'configure PN532 I2C advanced SDA [SDA] SCL [SCL] IRQ [IRQ] reset [RESET]', description: 'Configure PN532 using I2C with IRQ and reset'}),
@@ -143,34 +142,10 @@ class Scratch3SarduSensors {
                     blockType: BlockType.COMMAND, hideFromPalette: !selection?.componentIds?.includes('rc522'),
                     tooltip: formatMessage({id: 'sarduSensors.rfidConfigureRc522Spi.tooltip', default: 'Uses RC522 over SPI with configurable bus and reset pins.', description: 'RC522 SPI configuration tooltip'}),
                     arguments: {MOSI: rfidArguments.MOSI, MISO: rfidArguments.MISO, SCK: rfidArguments.SCK, SS: rfidArguments.SS, RESET: rfidArguments.RESET}
-                }, {
-                    opcode: 'rfidTagPresent', text: formatMessage({id: 'sarduSensors.rfidTagPresent', default: 'RFID/NFC tag present?', description: 'RFID tag presence reporter'}),
-                    blockType: BlockType.BOOLEAN, disableMonitor: true, hideFromPalette: rfidUnavailable,
-                    tooltip: formatMessage({id: 'sarduSensors.rfidTagPresent.tooltip', default: 'Checks whether the selected RFID/NFC reader detects a tag.', description: 'RFID tag presence tooltip'})
-                }, {
-                    opcode: 'rfidUid', text: formatMessage({id: 'sarduSensors.rfidUid', default: 'RFID/NFC tag UID', description: 'RFID UID reporter'}),
-                    blockType: BlockType.REPORTER, disableMonitor: true, hideFromPalette: rfidUnavailable,
-                    tooltip: formatMessage({id: 'sarduSensors.rfidUid.tooltip', default: 'Returns the detected tag UID as hexadecimal text.', description: 'RFID UID tooltip'})
-                }, {
-                    opcode: 'rfidTagType', text: formatMessage({id: 'sarduSensors.rfidTagType', default: 'RFID/NFC tag type', description: 'RFID tag type reporter'}),
-                    blockType: BlockType.REPORTER, disableMonitor: true, hideFromPalette: rfidUnavailable,
-                    tooltip: formatMessage({id: 'sarduSensors.rfidTagType.tooltip', default: 'Returns the detected tag type.', description: 'RFID tag type tooltip'})
-                }, {
-                    opcode: 'rfidReadBlock', text: formatMessage({id: 'sarduSensors.rfidReadBlock', default: 'read RFID/NFC block [BLOCK]', description: 'RFID block read reporter'}),
-                    blockType: BlockType.REPORTER, disableMonitor: true, hideFromPalette: rfidUnavailable,
-                    tooltip: formatMessage({id: 'sarduSensors.rfidReadBlock.tooltip', default: 'Reads 16 bytes and returns 32 hexadecimal characters.', description: 'RFID block read tooltip'}),
-                    arguments: {BLOCK: {type: ArgumentType.NUMBER, defaultValue: 4}}
-                }, {
-                    opcode: 'rfidAuthenticate', text: formatMessage({id: 'sarduSensors.rfidAuthenticate', default: 'authenticate RFID/NFC block [BLOCK] key [KEY_TYPE] [KEY]', description: 'RFID authentication reporter'}),
-                    blockType: BlockType.BOOLEAN, disableMonitor: true, hideFromPalette: rfidUnavailable,
-                    tooltip: formatMessage({id: 'sarduSensors.rfidAuthenticate.tooltip', default: 'Authenticates a block using a 12-character hexadecimal key.', description: 'RFID authentication tooltip'}),
-                    arguments: {BLOCK: {type: ArgumentType.NUMBER, defaultValue: 4}, KEY_TYPE: {type: ArgumentType.STRING, menu: 'RFID_KEY_TYPE', defaultValue: 'A'}, KEY: {type: ArgumentType.STRING, defaultValue: 'FFFFFFFFFFFF'}}
-                }, {
-                    opcode: 'rfidWriteBlock', text: formatMessage({id: 'sarduSensors.rfidWriteBlock', default: 'write RFID/NFC block [BLOCK] data [DATA]', description: 'RFID block write command'}),
-                    blockType: BlockType.COMMAND, hideFromPalette: rfidUnavailable,
-                    tooltip: formatMessage({id: 'sarduSensors.rfidWriteBlock.tooltip', default: 'Writes 16 bytes supplied as 32 hexadecimal characters.', description: 'RFID block write tooltip'}),
-                    arguments: {BLOCK: {type: ArgumentType.NUMBER, defaultValue: 4}, DATA: {type: ArgumentType.STRING, defaultValue: '00000000000000000000000000000000'}}
-                }
+                }, ...this._rfidBlocks(formatMessage, 'pn532', !selection?.componentIds?.includes('pn532'), false),
+                ...this._rfidBlocks(formatMessage, 'rc522', !selection?.componentIds?.includes('rc522'), false),
+                ...this._rfidBlocks(formatMessage, 'pn532', !selection?.componentIds?.includes('pn532'), true),
+                ...this._rfidBlocks(formatMessage, 'rc522', !selection?.componentIds?.includes('rc522'), true)
             ],
             menus: {
                 DHT_MODEL: {acceptReporters: false, items: ['DHT11', 'DHT22']},
@@ -233,18 +208,31 @@ class Scratch3SarduSensors {
     rfidConfigurePn532Spi (args) { this._configureRfid('PN532', 'SPI', args); }
     rfidConfigureRc522Spi (args) { this._configureRfid('RC522', 'SPI', args); }
 
-    rfidTagPresent (args) { return this._rfid(args, 'P').then(value => value === '1'); }
-    rfidUid (args) { return this._rfid(args, 'U'); }
-    rfidTagType (args) { return this._rfid(args, 'T'); }
-    rfidReadBlock (args) { return this._rfid(args, 'R', args.BLOCK); }
-    rfidAuthenticate (args) { return this._rfid(args, 'A', args.BLOCK, args.KEY_TYPE, args.KEY).then(value => value === '1'); }
-    rfidWriteBlock (args) { return this._rfid(args, 'W', args.BLOCK, args.DATA).then(value => value === '1'); }
+    pn532TagPresent () { return this._rfid('PN532', 'P').then(value => value === '1'); }
+    pn532Uid () { return this._rfid('PN532', 'U'); }
+    pn532TagType () { return this._rfid('PN532', 'T'); }
+    pn532ReadBlock (args) { return this._rfid('PN532', 'R', args.BLOCK); }
+    pn532Authenticate (args) { return this._rfid('PN532', 'A', args.BLOCK, args.KEY_TYPE, args.KEY).then(value => value === '1'); }
+    pn532WriteBlock (args) { return this._rfid('PN532', 'W', args.BLOCK, args.DATA).then(value => value === '1'); }
+    rc522TagPresent () { return this._rfid('RC522', 'P').then(value => value === '1'); }
+    rc522Uid () { return this._rfid('RC522', 'U'); }
+    rc522TagType () { return this._rfid('RC522', 'T'); }
+    rc522ReadBlock (args) { return this._rfid('RC522', 'R', args.BLOCK); }
+    rc522Authenticate (args) { return this._rfid('RC522', 'A', args.BLOCK, args.KEY_TYPE, args.KEY).then(value => value === '1'); }
+    rc522WriteBlock (args) { return this._rfid('RC522', 'W', args.BLOCK, args.DATA).then(value => value === '1'); }
 
-    _rfid (args, action, ...values) {
+    // Common RFID opcodes resolve to PN532 so saved projects have deterministic behavior.
+    rfidTagPresent () { return this.pn532TagPresent(); }
+    rfidUid () { return this.pn532Uid(); }
+    rfidTagType () { return this.pn532TagType(); }
+    rfidReadBlock (args) { return this.pn532ReadBlock(args); }
+    rfidAuthenticate (args) { return this.pn532Authenticate(args); }
+    rfidWriteBlock (args) { return this.pn532WriteBlock(args); }
+
+    _rfid (reader, action, ...values) {
         if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return Promise.resolve('');
-        const configuration = args.READER ? args : this.rfidConfiguration;
-        if (!configuration) return Promise.reject(new Error('Configure the RFID/NFC reader before using it'));
-        const reader = String(configuration.READER).toUpperCase();
+        const configuration = this.rfidConfigurations[reader];
+        if (!configuration) return Promise.reject(new Error(`Configure the ${reader} reader before using it`));
         const bus = String(configuration.BUS).toUpperCase();
         if (reader === 'RC522' && bus !== 'SPI') return Promise.reject(new Error('RC522 supports SPI only'));
         const transport = this.runtime.sarduEduLiveTransport;
@@ -255,11 +243,58 @@ class Scratch3SarduSensors {
     }
 
     _configureRfid (reader, bus, args) {
-        this.rfidConfiguration = {
+        this.rfidConfigurations[reader] = {
             READER: reader, BUS: bus,
             SDA: args.SDA ?? -1, SCL: args.SCL ?? -1, MOSI: args.MOSI ?? -1, MISO: args.MISO ?? -1,
             SCK: args.SCK ?? -1, SS: args.SS ?? -1, IRQ: args.IRQ ?? -1, RESET: args.RESET ?? -1
         };
+    }
+
+    _rfidBlocks (formatMessage, prefix, hidden, advanced) {
+        const common = (suffix, blockType, text, tooltip, blockArguments) => ({
+            opcode: `${prefix}${suffix}`, text,
+            blockType, disableMonitor: blockType !== BlockType.COMMAND, hideFromPalette: hidden,
+            tooltip,
+            ...(blockArguments ? {arguments: blockArguments} : {})
+        });
+        const messages = prefix === 'pn532' ? {
+            tagPresent: formatMessage({id: 'sarduSensors.pn532TagPresent', default: 'PN532 tag present?', description: 'PN532 RFID tag presence block'}),
+            tagPresentTooltip: formatMessage({id: 'sarduSensors.pn532TagPresent.tooltip', default: 'Checks whether the PN532 detects a tag.', description: 'PN532 RFID tag presence tooltip'}),
+            uid: formatMessage({id: 'sarduSensors.pn532Uid', default: 'PN532 tag UID', description: 'PN532 RFID UID block'}),
+            uidTooltip: formatMessage({id: 'sarduSensors.pn532Uid.tooltip', default: 'Returns the PN532 tag UID.', description: 'PN532 RFID UID tooltip'}),
+            type: formatMessage({id: 'sarduSensors.pn532TagType', default: 'PN532 tag type', description: 'PN532 RFID tag type block'}),
+            typeTooltip: formatMessage({id: 'sarduSensors.pn532TagType.tooltip', default: 'Returns the PN532 tag type.', description: 'PN532 RFID tag type tooltip'}),
+            authenticate: formatMessage({id: 'sarduSensors.pn532Authenticate', default: 'PN532 authenticate block [BLOCK] key [KEY_TYPE] [KEY]', description: 'PN532 RFID authentication block'}),
+            authenticateTooltip: formatMessage({id: 'sarduSensors.pn532Authenticate.tooltip', default: 'Authenticates a PN532 block.', description: 'PN532 RFID authentication tooltip'}),
+            read: formatMessage({id: 'sarduSensors.pn532ReadBlock', default: 'PN532 read block [BLOCK]', description: 'PN532 RFID read block'}),
+            readTooltip: formatMessage({id: 'sarduSensors.pn532ReadBlock.tooltip', default: 'Reads 16 bytes from the PN532.', description: 'PN532 RFID read tooltip'}),
+            write: formatMessage({id: 'sarduSensors.pn532WriteBlock', default: 'PN532 write block [BLOCK] data [DATA]', description: 'PN532 RFID write block'}),
+            writeTooltip: formatMessage({id: 'sarduSensors.pn532WriteBlock.tooltip', default: 'Writes 16 bytes with the PN532.', description: 'PN532 RFID write tooltip'})
+        } : {
+            tagPresent: formatMessage({id: 'sarduSensors.rc522TagPresent', default: 'RC522 tag present?', description: 'RC522 RFID tag presence block'}),
+            tagPresentTooltip: formatMessage({id: 'sarduSensors.rc522TagPresent.tooltip', default: 'Checks whether the RC522 detects a tag.', description: 'RC522 RFID tag presence tooltip'}),
+            uid: formatMessage({id: 'sarduSensors.rc522Uid', default: 'RC522 tag UID', description: 'RC522 RFID UID block'}),
+            uidTooltip: formatMessage({id: 'sarduSensors.rc522Uid.tooltip', default: 'Returns the RC522 tag UID.', description: 'RC522 RFID UID tooltip'}),
+            type: formatMessage({id: 'sarduSensors.rc522TagType', default: 'RC522 tag type', description: 'RC522 RFID tag type block'}),
+            typeTooltip: formatMessage({id: 'sarduSensors.rc522TagType.tooltip', default: 'Returns the RC522 tag type.', description: 'RC522 RFID tag type tooltip'}),
+            authenticate: formatMessage({id: 'sarduSensors.rc522Authenticate', default: 'RC522 authenticate block [BLOCK] key [KEY_TYPE] [KEY]', description: 'RC522 RFID authentication block'}),
+            authenticateTooltip: formatMessage({id: 'sarduSensors.rc522Authenticate.tooltip', default: 'Authenticates an RC522 block.', description: 'RC522 RFID authentication tooltip'}),
+            read: formatMessage({id: 'sarduSensors.rc522ReadBlock', default: 'RC522 read block [BLOCK]', description: 'RC522 RFID read block'}),
+            readTooltip: formatMessage({id: 'sarduSensors.rc522ReadBlock.tooltip', default: 'Reads 16 bytes from the RC522.', description: 'RC522 RFID read tooltip'}),
+            write: formatMessage({id: 'sarduSensors.rc522WriteBlock', default: 'RC522 write block [BLOCK] data [DATA]', description: 'RC522 RFID write block'}),
+            writeTooltip: formatMessage({id: 'sarduSensors.rc522WriteBlock.tooltip', default: 'Writes 16 bytes with the RC522.', description: 'RC522 RFID write tooltip'})
+        };
+        const commonBlocks = [
+            common('TagPresent', BlockType.BOOLEAN, messages.tagPresent, messages.tagPresentTooltip),
+            common('Uid', BlockType.REPORTER, messages.uid, messages.uidTooltip),
+            common('TagType', BlockType.REPORTER, messages.type, messages.typeTooltip)
+        ];
+        const advancedBlocks = [
+            common('Authenticate', BlockType.BOOLEAN, messages.authenticate, messages.authenticateTooltip, {BLOCK: {type: ArgumentType.NUMBER, defaultValue: 4}, KEY_TYPE: {type: ArgumentType.STRING, menu: 'RFID_KEY_TYPE', defaultValue: 'A'}, KEY: {type: ArgumentType.STRING, defaultValue: 'FFFFFFFFFFFF'}}),
+            common('ReadBlock', BlockType.REPORTER, messages.read, messages.readTooltip, {BLOCK: {type: ArgumentType.NUMBER, defaultValue: 4}}),
+            common('WriteBlock', BlockType.COMMAND, messages.write, messages.writeTooltip, {BLOCK: {type: ArgumentType.NUMBER, defaultValue: 4}, DATA: {type: ArgumentType.STRING, defaultValue: '00000000000000000000000000000000'}})
+        ];
+        return advanced ? advancedBlocks : commonBlocks;
     }
 
     _analogLevel (args, invert) {

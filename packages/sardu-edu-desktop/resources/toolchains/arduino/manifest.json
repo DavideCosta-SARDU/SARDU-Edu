@@ -121,22 +121,7 @@
       "source": "https://github.com/adafruit/Adafruit_NeoPixel"
     }
   ],
-  "bundledLibraries": [
-    {
-      "id": "PN532_Seeed",
-      "revision": "2c47f5c836af53158c4e29685551612181fd8f9b",
-      "license": "BSD-3-Clause",
-      "copyright": [
-        "Copyright (c) 2012, Adafruit Industries",
-        "Copyright (c) 2013, Seeed Technology Inc."
-      ],
-      "attribution": [
-        "PN532_I2C modified by picospuch"
-      ],
-      "source": "https://github.com/Seeed-Studio/PN532",
-      "sourceDirectory": "PN532_Seeed"
-    }
-  ],
+  "bundledLibraries": [],
   "drivers": [
     {
       "id": "wch-ch341",

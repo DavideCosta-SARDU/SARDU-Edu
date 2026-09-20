@@ -34,3 +34,27 @@ test('rejects an invalid Offline serial speed', async () => {
     const monitor = new SarduSerialMonitor({});
     await expect(monitor.connect(0)).rejects.toThrow('Invalid serial monitor baud rate');
 });
+
+test('reopens the previously selected serial port without requesting it again', async () => {
+    const reader = {
+        cancel: jest.fn(() => Promise.resolve()),
+        read: jest.fn(() => Promise.resolve({done: true})),
+        releaseLock: jest.fn()
+    };
+    const port = {
+        close: jest.fn(() => Promise.resolve()),
+        open: jest.fn(() => Promise.resolve()),
+        readable: {getReader: () => reader}
+    };
+    const serial = {requestPort: jest.fn(() => Promise.resolve(port))};
+    const monitor = new SarduSerialMonitor(serial);
+
+    await monitor.connect(9600);
+    await monitor.readTask;
+    await monitor.disconnect();
+    await monitor.connect(9600);
+    await monitor.readTask;
+
+    expect(serial.requestPort).toHaveBeenCalledTimes(1);
+    expect(port.open).toHaveBeenCalledTimes(2);
+});

@@ -23,6 +23,9 @@ export interface ArduinoCliInvocationOptions {
   readonly layout?: ArduinoToolchainLayout
 }
 
+export const ARDUINO_PORT_DISCOVERY_TIMEOUTS = [100, 250, 500, 1000] as const
+export const DEFAULT_ARDUINO_PORT_DISCOVERY_TIMEOUT = 250
+
 export const SARDU_ARDUINO_TOOLCHAIN_LAYOUT: ArduinoToolchainLayout = {
   executable: 'resources/toolchains/arduino/arduino-cli.exe',
   configuration: 'resources/toolchains/arduino/arduino-cli.yaml',

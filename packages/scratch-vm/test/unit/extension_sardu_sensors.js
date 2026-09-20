@@ -29,15 +29,15 @@ test('SARDU sensors exposes RFID standard and advanced blocks with hexadecimal d
     const info = extension.getInfo();
     const blocks = Object.fromEntries(info.blocks.map(item => [item.opcode, item]));
 
-    t.equal(blocks.rfidReadBlock.hideFromPalette, false);
-    t.equal(blocks.rfidAuthenticate.arguments.KEY.defaultValue, 'FFFFFFFFFFFF');
-    t.equal(blocks.rfidWriteBlock.arguments.DATA.defaultValue, '00000000000000000000000000000000');
+    t.equal(blocks.pn532ReadBlock.hideFromPalette, false);
+    t.equal(blocks.pn532Authenticate.arguments.KEY.defaultValue, 'FFFFFFFFFFFF');
+    t.equal(blocks.rc522WriteBlock.arguments.DATA.defaultValue, '00000000000000000000000000000000');
     t.equal(blocks.rfidConfigurePn532I2c.arguments.SDA.defaultValue, '2');
     t.equal(blocks.rfidConfigurePn532I2c.arguments.SCL.defaultValue, '3');
     t.notOk(blocks.rfidConfigurePn532I2c.arguments.IRQ);
     t.equal(blocks.rfidConfigurePn532I2cAdvanced.arguments.IRQ.defaultValue, '2');
     t.equal(blocks.rfidConfigurePn532Spi.arguments.SCK.defaultValue, '13');
-    t.notOk(blocks.rfidReadBlock.arguments.SDA);
+    t.notOk(blocks.pn532ReadBlock.arguments.SDA);
     t.end();
 });
 
@@ -55,10 +55,13 @@ test('SARDU sensors sends only the pins belonging to the selected RFID configura
     });
 
     extension.rfidConfigurePn532I2c({SDA: 'A4', SCL: 'A5'});
-    t.equal(await extension.rfidTagPresent({}), true);
+    t.equal(await extension.pn532TagPresent({}), true);
     t.same(calls[0], ['PN532', 'I2C', 'A4', 'A5', -1, -1, -1, -1, -1, -1, 'P']);
 
     extension.rfidConfigureRc522Spi({MOSI: '11', MISO: '12', SCK: '13', SS: '10', RESET: '9'});
-    t.equal(await extension.rfidTagPresent({}), true);
+    t.equal(await extension.rc522TagPresent({}), true);
     t.same(calls[1], ['RC522', 'SPI', -1, -1, '11', '12', '13', '10', -1, '9', 'P']);
+
+    t.equal(await extension.pn532Uid({}), '1');
+    t.same(calls[2], ['PN532', 'I2C', 'A4', 'A5', -1, -1, -1, -1, -1, -1, 'U']);
 });

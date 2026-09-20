@@ -1,6 +1,7 @@
 /* eslint-env jest */
 import {
     appendHardwareOutput,
+    getArduinoGenerationErrorMessage,
     getArduinoPanelWidth,
     getCompatiblePorts,
     getDisplayedSource,
@@ -8,6 +9,23 @@ import {
     getPreselectedPort,
     getSerialBaudRate
 } from '../../../src/components/arduino-code-panel/arduino-code-panel.jsx';
+
+test('replaces the technical missing-condition error with a localized instruction', () => {
+    const intl = {formatMessage: jest.fn(message => message.id)};
+    expect(getArduinoGenerationErrorMessage(
+        new Error('Missing CONDITION input on block internal-id'),
+        intl
+    )).toBe('gui.sardu.missingIfCondition');
+    expect(intl.formatMessage).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'gui.sardu.missingIfCondition'
+    }));
+});
+
+test('preserves Arduino generation errors unrelated to an empty if condition', () => {
+    const intl = {formatMessage: jest.fn()};
+    expect(getArduinoGenerationErrorMessage(new Error('Unknown Arduino board'), intl)).toBe('Unknown Arduino board');
+    expect(intl.formatMessage).not.toHaveBeenCalled();
+});
 
 test('accepts an unidentified serial adapter for the board selected by the user', () => {
     const ch340Port = {address: 'COM5', matchingBoardFqbns: []};

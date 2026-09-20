@@ -1,4 +1,8 @@
-import type { ArduinoCompileRequest, ArduinoUploadRequest, LiveDiagnostic } from './contracts'
+import {
+  ARDUINO_PORT_DISCOVERY_TIMEOUTS,
+  DEFAULT_ARDUINO_PORT_DISCOVERY_TIMEOUT,
+} from '@sardu-edu/hardware'
+import type { ArduinoCompileRequest, ArduinoPortListRequest, ArduinoUploadRequest, LiveDiagnostic } from './contracts'
 
 const MAX_SOURCE_LENGTH = 2_000_000
 const BOARD_ID = /^[a-z0-9][a-z0-9-]{0,63}$/
@@ -31,6 +35,17 @@ export const validatePort = (value: unknown): string => {
     throw new Error(`Invalid serial port: ${String(value)}`)
   }
   return /^COM\d+$/i.test(value) ? value.toUpperCase() : value
+}
+
+export const validatePortListRequest = (value: unknown): Required<ArduinoPortListRequest> => {
+  if (value === undefined) return { discoveryTimeoutMs: DEFAULT_ARDUINO_PORT_DISCOVERY_TIMEOUT }
+  if (!isRecord(value) || !ARDUINO_PORT_DISCOVERY_TIMEOUTS.includes(
+    value.discoveryTimeoutMs as typeof ARDUINO_PORT_DISCOVERY_TIMEOUTS[number],
+  )) {
+    const invalidValue = isRecord(value) ? value.discoveryTimeoutMs : value
+    throw new Error(`Invalid Arduino port discovery timeout: ${String(invalidValue)}`)
+  }
+  return { discoveryTimeoutMs: value.discoveryTimeoutMs as number }
 }
 
 export const validateUploadRequest = (value: unknown): ArduinoUploadRequest => ({

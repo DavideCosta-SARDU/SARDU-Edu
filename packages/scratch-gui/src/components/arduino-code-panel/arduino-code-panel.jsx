@@ -10,9 +10,21 @@ import getSarduDesktopHardware from '../../lib/sardu-desktop-api';
 import {getDraggedPanelPosition} from '../../lib/sardu-panel-position';
 import SarduSerialMonitor from '../../lib/sardu-serial-monitor';
 import SarduSerialTransport from '../../lib/sardu-serial-transport';
+import {getBoardDiscoveryTimeout} from '../../lib/sardu-board-discovery-settings';
 import arduinoUnoImage from '../../../../../docs/SVG/Schede/ArduinoUIno.svg';
 import arduinoNanoImage from '../../../../../docs/SVG/Schede/Arduino_Nano.svg';
 import styles from './arduino-code-panel.css';
+
+export const getArduinoGenerationErrorMessage = (error, intl) => {
+    if (/^Missing CONDITION input on block /.test(error.message)) {
+        return intl.formatMessage({
+            id: 'gui.sardu.missingIfCondition',
+            defaultMessage: 'The “if” block is missing its condition. Insert a hexagonal block in the condition slot.',
+            description: 'Arduino generation error shown when an if block has no condition'
+        });
+    }
+    return error.message;
+};
 
 const boardImages = {
     'arduino-nano': arduinoNanoImage,
@@ -199,15 +211,27 @@ const ArduinoCodePanel = ({
         try {
             const source = generateArduinoSketch({
                 boardId: selection.boardId,
+                messages: {
+                    pn532Found: intl.formatMessage({
+                        id: 'gui.sarduEdu.pn532Found',
+                        defaultMessage: 'PN532 reader found',
+                        description: 'Arduino serial message shown when the PN532 reader is detected'
+                    }),
+                    pn532NotFound: intl.formatMessage({
+                        id: 'gui.sarduEdu.pn532NotFound',
+                        defaultMessage: 'Error: PN532 reader not found',
+                        description: 'Arduino serial message shown when the PN532 reader is not detected'
+                    })
+                },
                 targets: vm.runtime.targets
                     .filter(target => target.isOriginal)
                     .map(target => ({blocks: target.blocks._blocks}))
             });
             setSnapshot({selection, source, error: null});
         } catch (error) {
-            setSnapshot({selection, source: '', error: error.message});
+            setSnapshot({selection, source: '', error: getArduinoGenerationErrorMessage(error, intl)});
         }
-    }, [vm]);
+    }, [intl, vm]);
 
     const refreshDesktop = useCallback(async (showLoading = true) => {
         if (operationRunningRef.current) return;
@@ -234,7 +258,9 @@ const ArduinoCodePanel = ({
         try {
             const resourceStatus = await hardware.getStatus();
             const resourcesReady = resourceStatus.arduinoCliAvailable && resourceStatus.arduinoCoreAvailable;
-            const detectedPorts = resourcesReady ? await hardware.listPorts() : [];
+            const detectedPorts = resourcesReady ? await hardware.listPorts({
+                discoveryTimeoutMs: getBoardDiscoveryTimeout()
+            }) : [];
             const selectedBoardId = vm.getSarduEduProjectData()?.hardwareSelection?.boardId;
             const selectedBoard = ARDUINO_BOARDS.find(board => board.id === selectedBoardId);
             const ports = getCompatiblePorts(detectedPorts, selectedBoard);
@@ -771,6 +797,14 @@ const ArduinoCodePanel = ({
                                     onClick={() => {
                                         connectionPromptRequestedRef.current = false;
                                         setConnectionPromptOpen(false);
+                                        onStatusChange({
+                                            kind: 'neutral',
+                                            message: intl.formatMessage({
+                                                id: 'gui.sarduEdu.status.connectionCancelled',
+                                                defaultMessage: 'Connection to {board} was not confirmed.',
+                                                description: 'Status detail recorded when the board connection dialog is cancelled'
+                                            }, {board: board?.name || snapshot.selection.boardName})
+                                        });
                                     }}
                                 >
                                     <FormattedMessage
@@ -793,6 +827,17 @@ const ArduinoCodePanel = ({
                                         connectionPromptRequestedRef.current = false;
                                         vm.setSarduEduHardwarePort(desktopState.selectedPort);
                                         setConnectionPromptOpen(false);
+                                        onStatusChange({
+                                            kind: 'success',
+                                            message: intl.formatMessage({
+                                                id: 'gui.sarduEdu.status.connectionConfirmed',
+                                                defaultMessage: '{board} was confirmed on {port}.',
+                                                description: 'Status detail recorded when the board connection is confirmed'
+                                            }, {
+                                                board: board?.name || snapshot.selection.boardName,
+                                                port: desktopState.selectedPort
+                                            })
+                                        });
                                     }}
                                 >
                                     {desktopState.ports.length ? (
@@ -1051,7 +1096,10 @@ const ArduinoCodePanel = ({
                 <button
                     className={styles.controlButton}
                     disabled={operationRunning || monitorActive}
-                    onClick={() => refreshDesktop()}
+                    onClick={() => {
+                        connectionPromptRequestedRef.current = !vm.runtime.sarduEduHardwarePort;
+                        void refreshDesktop();
+                    }}
                 >
                     <FormattedMessage
                         id="gui.sardu.refreshPorts"

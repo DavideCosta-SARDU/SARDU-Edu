@@ -17,7 +17,7 @@ const api: SarduDesktopApi = {
   hardware: {
     compile: (request) => ipcRenderer.invoke(HARDWARE_IPC.compile, request),
     getStatus: () => ipcRenderer.invoke(HARDWARE_IPC.getStatus),
-    listPorts: () => ipcRenderer.invoke(HARDWARE_IPC.listPorts),
+    listPorts: (request) => ipcRenderer.invoke(HARDWARE_IPC.listPorts, request),
     logLiveDiagnostic: (diagnostic) => ipcRenderer.invoke(HARDWARE_IPC.logLiveDiagnostic, diagnostic),
     onOutput: (listener) => {
       const handleOutput = (_event: IpcRendererEvent, output: HardwareOutputEvent): void => listener(output)

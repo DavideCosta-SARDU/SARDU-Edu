@@ -81,6 +81,27 @@ describe('SARDU Edu toolbox modes', () => {
         expect(toolbox).toContain('<label text="DHT11/DHT22"/>');
     });
 
+    test('uses the localized advanced RFID label', () => {
+        const toolbox = makeToolboxXML(
+            false,
+            true,
+            'stage',
+            [{
+                id: 'sarduSensors',
+                xml: '<category name="Sensori"><block type="sarduSensors_pn532Authenticate"/></category>'
+            }],
+            '',
+            '',
+            '',
+            undefined,
+            {mode: 'standalone'},
+            false,
+            {'gui.sarduEdu.rfidAdvanced': 'Avanzate'}
+        );
+
+        expect(toolbox).toContain('<label text="Avanzate"/>');
+    });
+
     test('places Arduino variables in a separate section of the Variables category', () => {
         const toolbox = makeToolboxXML(
             false,

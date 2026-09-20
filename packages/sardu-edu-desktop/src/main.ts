@@ -9,6 +9,7 @@ import {
   validateCompileRequest,
   validateLiveDiagnostic,
   validatePort,
+  validatePortListRequest,
   validateUploadRequest,
 } from './request-validation'
 
@@ -81,9 +82,9 @@ const registerHardwareIpc = (): void => {
     validateSender(event)
     return service.getStatus()
   })
-  ipcMain.handle(HARDWARE_IPC.listPorts, (event) => {
+  ipcMain.handle(HARDWARE_IPC.listPorts, (event, request) => {
     validateSender(event)
-    return service.listPorts()
+    return service.listPorts(validatePortListRequest(request).discoveryTimeoutMs)
   })
   ipcMain.handle(HARDWARE_IPC.logLiveDiagnostic, (event, diagnostic) => {
     validateSender(event)

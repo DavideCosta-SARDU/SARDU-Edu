@@ -476,25 +476,38 @@ describe('generateArduinoSketch', () => {
 
   test('generates PN532 read and write support', () => {
     const blocks = {
-      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK2: {block: 'configure'}}}),
+      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK: {block: 'serial'}, SUBSTACK2: {block: 'configure'}}}),
+      serial: block('serial', 'sarduBoard_serialBegin', {inputs: {BAUD: {block: 'baud'}}}),
+      baud: block('baud', 'math_number', {fields: {NUM: {value: '9600'}}}),
       configure: block('configure', 'sarduSensors_rfidConfigurePn532I2c', {
         next: 'print', fields: {SDA: {value: 'A4'}, SCL: {value: 'A5'}},
       }),
       print: block('print', 'sarduBoard_serialPrintln', {next: 'write', inputs: {VALUE: {block: 'read'}}}),
-      read: block('read', 'sarduSensors_rfidReadBlock', {inputs: {BLOCK: {block: 'readBlock'}}}),
+      read: block('read', 'sarduSensors_pn532ReadBlock', {inputs: {BLOCK: {block: 'readBlock'}}}),
       readBlock: block('readBlock', 'math_number', {fields: {NUM: {value: '4'}}}),
-      write: block('write', 'sarduSensors_rfidWriteBlock', {inputs: {BLOCK: {block: 'writeBlock'}, DATA: {block: 'data'}}}),
+      write: block('write', 'sarduSensors_pn532WriteBlock', {inputs: {BLOCK: {block: 'writeBlock'}, DATA: {block: 'data'}}}),
       writeBlock: block('writeBlock', 'math_number', {fields: {NUM: {value: '4'}}}),
       data: block('data', 'text', {fields: {TEXT: {value: '00112233445566778899AABBCCDDEEFF'}}}),
     }
     const source = generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})
 
-    expect(source).toContain('#include <PN532_I2C.h>')
-    expect(source).toContain('#include <PN532.h>')
-    expect(source).toContain('#include <MFRC522.h>')
-    expect(source).toContain('sarduRfidConfigure("PN532", "I2C", A4, A5, -1, -1, -1, -1, -1, -1);')
-    expect(source).toContain('sarduRfidRead(sarduRfidReader, sarduRfidBus')
-    expect(source).toContain('sarduRfidWrite(sarduRfidReader, sarduRfidBus')
+    expect(source).toContain('#include <Adafruit_PN532.h>')
+    expect(source).not.toContain('#include <MFRC522.h>')
+    expect(source).not.toContain('#include <PN532_I2C.h>')
+    expect(source).toContain('Serial.begin(9600);')
+    expect(source).toContain('Serial.println("PN532 reader found");')
+    expect(source).toContain('Serial.println("Error: PN532 reader not found");')
+    expect(source).toContain('Adafruit_PN532 pn532(-1, -1, &Wire);')
+    expect(source).toContain('Wire.setWireTimeout(25000, true);')
+    expect(source).toContain('delay(100);')
+    expect(source).toContain('for (uint8_t pn532Tentativo = 0; pn532Tentativo < 5 && !pn532Pronto; ++pn532Tentativo)')
+    expect(source).toContain('Wire.getWireTimeoutFlag()')
+    expect(source).toContain('pn532.begin();')
+    expect(source.indexOf('Serial.begin(9600);')).toBeLessThan(source.indexOf('pn532.begin();'))
+    expect(source.indexOf('pn532.SAMConfig();')).toBeLessThan(source.indexOf('Serial.println("PN532 reader found");'))
+    expect(source).toContain('pn532Leggi(4)')
+    expect(source).toContain('pn532Scrivi(4')
+    expect(source).not.toContain('sarduRfid')
   })
 
   test('keeps generating RFID operations saved with the previous inline connection fields', () => {
@@ -514,6 +527,248 @@ describe('generateArduinoSketch', () => {
     }
 
     const source = generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})
-    expect(source).toContain('sarduRfidWrite("RC522", "SPI", A4, A5, 11, 12, 13, 10, 2, 9, 4')
+    expect(source).toContain('MFRC522 rc522(10, 9);')
+    expect(source).toContain('rc522.PCD_Init();')
+    expect(source).toContain('rc522Scrivi(4')
+    expect(source).toContain('#include <MFRC522.h>')
+    expect(source).not.toContain('#include <Adafruit_PN532.h>')
+  })
+
+  test('generates independent PN532 and RC522 modules in the same sketch', () => {
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK: {block: 'serial'}, SUBSTACK2: {block: 'pnConfig'}}}),
+      serial: block('serial', 'sarduBoard_serialBegin', {inputs: {BAUD: {block: 'baud'}}}),
+      baud: block('baud', 'math_number', {fields: {NUM: {value: '115200'}}}),
+      pnConfig: block('pnConfig', 'sarduSensors_rfidConfigurePn532I2cAdvanced', {
+        next: 'rcConfig', fields: {SDA: {value: 'A4'}, SCL: {value: 'A5'}, IRQ: {value: '-1'}, RESET: {value: '-1'}},
+      }),
+      rcConfig: block('rcConfig', 'sarduSensors_rfidConfigureRc522Spi', {
+        next: 'pnPrint', fields: {MOSI: {value: '11'}, MISO: {value: '12'}, SCK: {value: '13'}, SS: {value: '10'}, RESET: {value: '9'}},
+      }),
+      pnPrint: block('pnPrint', 'sarduBoard_serialPrintln', {next: 'rcPrint', inputs: {VALUE: {block: 'pnPresent'}}}),
+      pnPresent: block('pnPresent', 'sarduSensors_pn532TagPresent'),
+      rcPrint: block('rcPrint', 'sarduBoard_serialPrintln', {inputs: {VALUE: {block: 'rcType'}}}),
+      rcType: block('rcType', 'sarduSensors_rc522TagType'),
+    }
+
+    const source = generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})
+    expect(source).toContain('#include <Adafruit_PN532.h>')
+    expect(source).toContain('#include <MFRC522.h>')
+    expect(source).toContain('Adafruit_PN532 pn532(-1, -1, &Wire);')
+    expect(source).toContain('MFRC522 rc522(10, 9);')
+    expect(source).toContain('pn532CercaTag()')
+    expect(source).toContain('rc522Tipo()')
+    expect(source.match(/Serial\.begin\(/g)).toHaveLength(1)
+    expect(source).toContain('Serial.begin(115200);')
+  })
+
+  test('generates PN532 SPI without RC522 or Wire', () => {
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK2: {block: 'configure'}}}),
+      configure: block('configure', 'sarduSensors_rfidConfigurePn532Spi', {
+        fields: {MOSI: {value: '11'}, MISO: {value: '12'}, SCK: {value: '13'}, SS: {value: '10'}},
+      }),
+    }
+    const source = generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})
+    expect(source).toContain('#include <SPI.h>')
+    expect(source).not.toContain('#include <Wire.h>')
+    expect(source).not.toContain('#include <MFRC522.h>')
+    expect(source).toContain('Adafruit_PN532 pn532(13, 12, 11, 10);')
+  })
+
+  test('ignores disconnected RFID blocks', () => {
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true}),
+      disconnected: block('disconnected', 'sarduSensors_rfidConfigurePn532I2c', {
+        topLevel: true, fields: {SDA: {value: 'A4'}, SCL: {value: 'A5'}},
+      }),
+    }
+    const source = generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})
+    expect(source).not.toContain('#include <Adafruit_PN532.h>')
+    expect(source).not.toContain('pn532')
+    expect(source).toContain('void setup() {\n\n}')
+    expect(source).toContain('void loop() {\n\n}')
+  })
+
+  test('generates only PN532 configuration support when no operation is connected', () => {
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK: {block: 'configure'}}}),
+      configure: block('configure', 'sarduSensors_rfidConfigurePn532I2c', {
+        fields: {SDA: {value: 'A4'}, SCL: {value: 'A5'}},
+      }),
+    }
+    const source = generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})
+    expect(source).toContain('Adafruit_PN532 pn532(-1, -1, &Wire);')
+    expect(source).toContain('pn532.begin();')
+    expect(source).not.toContain('Serial.begin(')
+    expect(source).not.toContain('Serial.println(')
+    expect(source).not.toContain('pn532CercaTag()')
+    expect(source).not.toContain('pn532Uid()')
+    expect(source).not.toContain('pn532Tipo()')
+    expect(source).not.toContain('pn532Autentica(')
+    expect(source).not.toContain('pn532Leggi(')
+    expect(source).not.toContain('pn532Scrivi(')
+    expect(source).not.toContain('rfidHex(')
+    expect(source).not.toContain('new Adafruit_PN532')
+    expect(source).not.toContain('delete pn532')
+    expect(source).not.toContain('pn532Bus')
+    expect(source).not.toContain('pn532Pins')
+    expect(source).not.toContain('pn532UidBytes')
+    expect(source).not.toContain('pn532AuthenticatedBlock')
+    expect(source).not.toContain('setPassiveActivationRetries')
+    expect(source).not.toContain('pn532_packetbuffer')
+  })
+
+  test('keeps user setup code before a later PN532 configuration block', () => {
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK: {block: 'serial'}}}),
+      serial: block('serial', 'sarduBoard_serialBegin', {next: 'print', inputs: {BAUD: {block: 'baud'}}}),
+      baud: block('baud', 'math_number', {fields: {NUM: {value: '9600'}}}),
+      print: block('print', 'sarduBoard_serialPrintln', {next: 'configure', inputs: {VALUE: {block: 'message'}}}),
+      message: block('message', 'text', {fields: {TEXT: {value: 'hello'}}}),
+      configure: block('configure', 'sarduSensors_rfidConfigurePn532I2c', {
+        fields: {SDA: {value: 'A4'}, SCL: {value: 'A5'}},
+      }),
+    }
+    const source = generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})
+    expect(source.indexOf('Serial.println("hello");')).toBeLessThan(source.indexOf('Wire.begin();'))
+    expect(source.indexOf('Wire.begin();')).toBeLessThan(source.indexOf('pn532.begin();'))
+  })
+
+  test('generates only RC522 configuration support when no operation is connected', () => {
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK: {block: 'configure'}}}),
+      configure: block('configure', 'sarduSensors_rfidConfigureRc522Spi', {
+        fields: {MOSI: {value: '11'}, MISO: {value: '12'}, SCK: {value: '13'}, SS: {value: '10'}, RESET: {value: '9'}},
+      }),
+    }
+    const source = generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})
+    expect(source).toContain('MFRC522 rc522(10, 9);')
+    expect(source).toContain('rc522.PCD_Init();')
+    expect(source).not.toContain('#include <Adafruit_PN532.h>')
+    expect(source).not.toContain('rc522CercaTag()')
+    expect(source).not.toContain('rc522Uid()')
+    expect(source).not.toContain('rc522Tipo()')
+    expect(source).not.toContain('rc522Autentica(')
+    expect(source).not.toContain('rc522Leggi(')
+    expect(source).not.toContain('rc522Scrivi(')
+    expect(source).not.toContain('rfidHex(')
+    expect(source).not.toContain('new MFRC522')
+    expect(source).not.toContain('delete rc522')
+    expect(source).not.toContain('rc522Pins')
+    expect(source).not.toContain('rc522UidBytes')
+    expect(source).not.toContain('rc522AuthenticatedBlock')
+  })
+
+  test('generates only the PN532 operation connected to the Arduino stack', () => {
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK2: {block: 'configure'}}}),
+      configure: block('configure', 'sarduSensors_rfidConfigurePn532I2c', {
+        next: 'print', fields: {SDA: {value: 'A4'}, SCL: {value: 'A5'}},
+      }),
+      print: block('print', 'sarduBoard_serialPrintln', {inputs: {VALUE: {block: 'present'}}}),
+      present: block('present', 'sarduSensors_pn532TagPresent'),
+      disconnected: block('disconnected', 'sarduSensors_pn532WriteBlock', {
+        topLevel: true, inputs: {BLOCK: {block: 'writeBlock'}, DATA: {block: 'data'}},
+      }),
+      writeBlock: block('writeBlock', 'math_number', {fields: {NUM: {value: '4'}}}),
+      data: block('data', 'text', {fields: {TEXT: {value: '00112233445566778899AABBCCDDEEFF'}}}),
+    }
+    const source = generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})
+    expect(source).toContain('bool pn532CercaTag()')
+    expect(source).not.toContain('pn532Uid()')
+    expect(source).not.toContain('pn532Tipo()')
+    expect(source).not.toContain('pn532Autentica(')
+    expect(source).not.toContain('pn532Leggi(')
+    expect(source).not.toContain('pn532Scrivi(')
+    expect(source).not.toContain('rfidHex(')
+    expect(source).not.toContain('pn532AuthenticatedBlock')
+    expect(source).not.toContain('pn532Sak')
+    expect(source).toContain('pn532.readPassiveTargetID(PN532_MIFARE_ISO14443A')
+    expect(source).not.toContain('pn532.inListPassiveTarget()')
+    expect(source).not.toContain('inDataExchange(')
+  })
+
+  test('classifies PN532 ISO14443A tags with GET_VERSION and final SAK', () => {
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK2: {block: 'configure'}}}),
+      configure: block('configure', 'sarduSensors_rfidConfigurePn532I2c', {
+        next: 'print', fields: {SDA: {value: 'A4'}, SCL: {value: 'A5'}},
+      }),
+      print: block('print', 'sarduBoard_serialPrintln', {inputs: {VALUE: {block: 'type'}}}),
+      type: block('type', 'sarduSensors_pn532TagType'),
+    }
+    const source = generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})
+    expect(source).not.toContain('setPassiveActivationRetries')
+    expect(source).toContain('pn532.readPassiveTargetID(PN532_MIFARE_ISO14443A')
+    expect(source).toContain('pn532.inListPassiveTarget()')
+    expect(source).toContain('Adafruit-PN532 1.3.4 keeps the final SAK')
+    expect(source).toContain('extern byte pn532_packetbuffer[];')
+    expect(source).toContain('pn532Sak = pn532_packetbuffer[11];')
+    expect(source).toContain('uint8_t command = 0x60;')
+    expect(source).toContain('pn532.inDataExchange(&command, 1, version, &versionLength)')
+    expect(source).toContain('return String("MIFARE Ultralight EV1 MF0UL11");')
+    expect(source).toContain('return String("MIFARE Ultralight EV1 MF0UL21");')
+    expect(source).toContain('return String("NTAG213");')
+    expect(source).toContain('return String("NTAG215");')
+    expect(source).toContain('return String("NTAG216");')
+    expect(source).toContain('if (pn532Sak == 0x08) return String("likely MIFARE Classic 1K");')
+    expect(source).toContain('if (pn532Sak == 0x18) return String("likely MIFARE Classic 4K");')
+    expect(source.indexOf('if (pn532Sak == 0x08)')).toBeLessThan(source.indexOf('pn532.inListPassiveTarget()'))
+    expect(source.indexOf('if (pn532Sak == 0x18)')).toBeLessThan(source.indexOf('pn532.inListPassiveTarget()'))
+    expect(source).toContain('if (pn532Sak == 0x00) return String("likely MIFARE Ultralight or NTAG");')
+    expect(source).toContain('return String("ISO14443A");')
+    expect(source).not.toContain('pn532UidLength == 4')
+    expect(source).not.toContain('pn532UidLength == 7')
+    expect(source).not.toContain('ISO14443A/MIFARE')
+    expect(source).not.toContain('pn532Autentica(')
+    expect(source).not.toContain('pn532Leggi(')
+    expect(source).not.toContain('pn532Scrivi(')
+    expect(source).not.toContain('rfidHex(')
+    expect(source).not.toContain('rfidHexText(')
+  })
+
+  test.each([
+    ['PN532', 'sarduSensors_rfidConfigurePn532I2c', 'sarduSensors_pn532Authenticate', 'pn532Autentica', 'rc522Autentica'],
+    ['RC522', 'sarduSensors_rfidConfigureRc522Spi', 'sarduSensors_rc522Authenticate', 'rc522Autentica', 'pn532Autentica'],
+  ])('generates independent %s authentication support', (_reader, configureOpcode, operationOpcode, ownFunction, otherFunction) => {
+    const configFields = configureOpcode.endsWith('Rc522Spi') ?
+      {MOSI: {value: '11'}, MISO: {value: '12'}, SCK: {value: '13'}, SS: {value: '10'}, RESET: {value: '9'}} :
+      {SDA: {value: 'A4'}, SCL: {value: 'A5'}}
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK2: {block: 'configure'}}}),
+      configure: block('configure', configureOpcode, {next: 'print', fields: configFields}),
+      print: block('print', 'sarduBoard_serialPrintln', {inputs: {VALUE: {block: 'authenticate'}}}),
+      authenticate: block('authenticate', operationOpcode, {
+        fields: {KEY_TYPE: {value: 'A'}},
+        inputs: {BLOCK: {block: 'authBlock'}, KEY: {block: 'key'}},
+      }),
+      authBlock: block('authBlock', 'math_number', {fields: {NUM: {value: '4'}}}),
+      key: block('key', 'text', {fields: {TEXT: {value: 'FFFFFFFFFFFF'}}}),
+    }
+    const source = generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})
+    expect(source).toContain(`bool ${ownFunction}(`)
+    expect(source).not.toContain(otherFunction)
+    expect(source).not.toContain('Leggi(')
+    expect(source).not.toContain('Scrivi(')
+  })
+
+  test.each([
+    ['PN532', 'sarduSensors_rfidConfigurePn532I2c', 'sarduSensors_pn532ReadBlock', 'pn532Leggi', 'pn532Scrivi'],
+    ['RC522', 'sarduSensors_rfidConfigureRc522Spi', 'sarduSensors_rc522ReadBlock', 'rc522Leggi', 'rc522Scrivi'],
+  ])('generates %s read support without write support', (_reader, configureOpcode, operationOpcode, readFunction, writeFunction) => {
+    const configFields = configureOpcode.endsWith('Rc522Spi') ?
+      {MOSI: {value: '11'}, MISO: {value: '12'}, SCK: {value: '13'}, SS: {value: '10'}, RESET: {value: '9'}} :
+      {SDA: {value: 'A4'}, SCL: {value: 'A5'}}
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK2: {block: 'configure'}}}),
+      configure: block('configure', configureOpcode, {next: 'print', fields: configFields}),
+      print: block('print', 'sarduBoard_serialPrintln', {inputs: {VALUE: {block: 'read'}}}),
+      read: block('read', operationOpcode, {inputs: {BLOCK: {block: 'readBlock'}}}),
+      readBlock: block('readBlock', 'math_number', {fields: {NUM: {value: '4'}}}),
+    }
+    const source = generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})
+    expect(source).toContain(`String ${readFunction}(`)
+    expect(source).not.toContain(writeFunction)
   })
 })

@@ -8,6 +8,7 @@ class SarduSerialMonitor {
         this.onData = onData;
         this.onDiagnostic = onDiagnostic;
         this.port = null;
+        this.lastPort = null;
         this.reader = null;
         this.readTask = null;
         this.active = false;
@@ -30,13 +31,15 @@ class SarduSerialMonitor {
 
         this._diagnose('serial-monitor-opening', `baud=${baudRate}`);
         try {
-            this.port = await this.serial.requestPort();
+            this.port = this.lastPort || await this.serial.requestPort();
             await this.port.open({baudRate});
+            this.lastPort = this.port;
             this.reader = this.port.readable.getReader();
             this.active = true;
             this._diagnose('serial-monitor-opened', `baud=${baudRate}`);
             this.readTask = this._readLoop();
         } catch (error) {
+            this.lastPort = null;
             this._diagnose('serial-monitor-error', error.message);
             await this.disconnect();
             throw error;

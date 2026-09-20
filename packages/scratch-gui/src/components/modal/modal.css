@@ -59,6 +59,7 @@
 $sides: 20rem;
 
 .header {
+    position: relative;
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
@@ -72,6 +73,14 @@ $sides: 20rem;
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     font-size: 1rem;
     font-weight: normal;
+}
+
+.header-action {
+    position: absolute;
+    top: 50%;
+    right: 1rem;
+    z-index: 2;
+    transform: translateY(-50%);
 }
 
 .header-item {
