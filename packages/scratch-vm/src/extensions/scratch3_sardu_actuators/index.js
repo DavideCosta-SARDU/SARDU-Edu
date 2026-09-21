@@ -13,6 +13,8 @@ class Scratch3SarduActuators {
             ['2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13'];
         const neoPixelUnavailable = !selection?.componentIds?.includes('neopixel');
         const displayUnavailable = !selection?.componentIds?.includes('lcd-i2c');
+        const oledUnavailable = !selection?.componentIds?.includes('oled-ssd1306');
+        const sh1106Unavailable = !selection?.componentIds?.includes('oled-sh1106');
         const customI2cUnavailable = displayUnavailable || !selection?.boardId?.startsWith('esp32-');
         const ledUnavailable = !selection?.componentIds?.includes('led');
         const pwmPins = selection?.pwmPins?.length ? selection.pwmPins : ['3', '5', '6', '9', '10', '11'];
@@ -24,6 +26,37 @@ class Scratch3SarduActuators {
         });
         const pinArg = {type: ArgumentType.STRING, menu: 'DIGITAL_PIN', defaultValue: '6'};
         const numberArg = defaultValue => ({type: ArgumentType.NUMBER, defaultValue});
+        const oledBlock = (opcode, defaultText, args = {}) => {
+            const text = formatMessage({
+                id: `sarduActuators.${opcode}`,
+                default: defaultText,
+                description: `OLED ${opcode} block and tooltip`
+            });
+            return {opcode, text, blockType: BlockType.COMMAND, hideFromPalette: oledUnavailable, tooltip: text,
+                arguments: args};
+        };
+        const sh1106Block = (opcode, defaultText, args = {}) => {
+            const text = formatMessage({
+                id: `sarduActuators.${opcode}`,
+                default: defaultText,
+                description: `SH1106 ${opcode} block and tooltip`
+            });
+            return {opcode, text, blockType: BlockType.COMMAND, hideFromPalette: sh1106Unavailable, tooltip: text,
+                arguments: args};
+        };
+        const oledImageMenu = [
+            ['HEART', 'Heart'], ['STAR', 'Star'], ['CHECK', 'Check'], ['CROSS', 'Cross'],
+            ['HAPPY', 'Happy face'], ['SAD', 'Sad face'], ['WARNING', 'Warning'],
+            ['INFO', 'Information'], ['BULB', 'Light bulb'], ['THERMOMETER', 'Thermometer'],
+            ['BATTERY', 'Battery'], ['WIFI', 'Wi-Fi']
+        ].map(([value, defaultName]) => ({
+            text: formatMessage({
+                id: `sarduActuators.image.${value.toLowerCase()}`,
+                default: defaultName,
+                description: `OLED ${defaultName} image name`
+            }),
+            value
+        }));
         return {
             id: 'sarduActuators',
             name: formatMessage({
@@ -118,6 +151,85 @@ class Scratch3SarduActuators {
             neoBlock('rotateNeoPixels', 'rotate NeoPixel pin [PIN] by [POSITIONS]', {PIN: pinArg, POSITIONS: numberArg(1)}),
             neoBlock('shiftNeoPixels', 'shift NeoPixel pin [PIN] by [POSITIONS]', {PIN: pinArg, POSITIONS: numberArg(1)}),
             neoBlock('rainbowNeoPixels', 'NeoPixel pin [PIN] rainbow from hue [HUE] repetitions [REPETITIONS]', {PIN: pinArg, HUE: numberArg(0), REPETITIONS: numberArg(1)}),
+            oledBlock('initializeOled', 'initialize OLED format [FORMAT] I2C address [ADDRESS]', {
+                FORMAT: {type: ArgumentType.STRING, menu: 'OLED_FORMAT', defaultValue: '128x64'},
+                ADDRESS: {type: ArgumentType.STRING, menu: 'OLED_ADDRESS', defaultValue: '0x3C'}
+            }),
+            oledBlock('initializeOledCustom', 'initialize OLED width [WIDTH] height [HEIGHT] I2C address [ADDRESS]', {
+                WIDTH: numberArg(128), HEIGHT: numberArg(64),
+                ADDRESS: {type: ArgumentType.STRING, menu: 'OLED_ADDRESS', defaultValue: '0x3C'}
+            }),
+            oledBlock('setOledCursor', 'OLED set cursor x [X] y [Y]', {X: numberArg(0), Y: numberArg(0)}),
+            oledBlock('setOledText', 'OLED set text size [SIZE] color [COLOR] background [BACKGROUND]', {
+                SIZE: {type: ArgumentType.STRING, menu: 'OLED_TEXT_SIZE', defaultValue: '1'},
+                COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'},
+                BACKGROUND: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'BLACK'}
+            }),
+            oledBlock('printOled', 'OLED print [TEXT] [ENDING]', {
+                TEXT: {type: ArgumentType.STRING, defaultValue: 'Hello SARDU Edu'},
+                ENDING: {type: ArgumentType.STRING, menu: 'OLED_PRINT_ENDING', defaultValue: 'NEWLINE'}
+            }),
+            oledBlock('clearOled', 'clear OLED'),
+            oledBlock('drawOledLine', 'OLED draw line x0 [X0] y0 [Y0] x1 [X1] y1 [Y1] color [COLOR]',
+                {X0: numberArg(0), Y0: numberArg(0), X1: numberArg(32), Y1: numberArg(16), COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'}}),
+            oledBlock('drawOledRect', 'OLED draw rectangle x [X] y [Y] width [WIDTH] height [HEIGHT] color [COLOR]',
+                {X: numberArg(0), Y: numberArg(0), WIDTH: numberArg(32), HEIGHT: numberArg(16), COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'}}),
+            oledBlock('fillOledRect', 'OLED fill rectangle x [X] y [Y] width [WIDTH] height [HEIGHT] color [COLOR]',
+                {X: numberArg(0), Y: numberArg(0), WIDTH: numberArg(32), HEIGHT: numberArg(16), COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'}}),
+            oledBlock('drawOledCircle', 'OLED draw circle x [X] y [Y] radius [RADIUS] color [COLOR]',
+                {X: numberArg(16), Y: numberArg(16), RADIUS: numberArg(8), COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'}}),
+            oledBlock('fillOledCircle', 'OLED fill circle x [X] y [Y] radius [RADIUS] color [COLOR]',
+                {X: numberArg(16), Y: numberArg(16), RADIUS: numberArg(8), COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'}}),
+            oledBlock('drawOledRoundRect', 'OLED draw rounded rectangle x [X] y [Y] width [WIDTH] height [HEIGHT] radius [RADIUS] color [COLOR]',
+                {X: numberArg(0), Y: numberArg(0), WIDTH: numberArg(32), HEIGHT: numberArg(16), RADIUS: numberArg(4), COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'}}),
+            oledBlock('fillOledRoundRect', 'OLED fill rounded rectangle x [X] y [Y] width [WIDTH] height [HEIGHT] radius [RADIUS] color [COLOR]',
+                {X: numberArg(0), Y: numberArg(0), WIDTH: numberArg(32), HEIGHT: numberArg(16), RADIUS: numberArg(4), COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'}}),
+            oledBlock('drawOledTriangle', 'OLED draw triangle x0 [X0] y0 [Y0] x1 [X1] y1 [Y1] x2 [X2] y2 [Y2] color [COLOR]',
+                {X0: numberArg(0), Y0: numberArg(0), X1: numberArg(16), Y1: numberArg(0), X2: numberArg(8), Y2: numberArg(16), COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'}}),
+            oledBlock('fillOledTriangle', 'OLED fill triangle x0 [X0] y0 [Y0] x1 [X1] y1 [Y1] x2 [X2] y2 [Y2] color [COLOR]',
+                {X0: numberArg(0), Y0: numberArg(0), X1: numberArg(16), Y1: numberArg(0), X2: numberArg(8), Y2: numberArg(16), COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'}}),
+            oledBlock('drawOledImage', 'OLED show image [IMAGE] size [SCALE]', {
+                IMAGE: {type: ArgumentType.STRING, menu: 'OLED_IMAGE', defaultValue: 'HEART'},
+                SCALE: {type: ArgumentType.STRING, menu: 'OLED_IMAGE_SCALE', defaultValue: '16'}
+            }),
+            oledBlock('showOled', 'update OLED'),
+            sh1106Block('initializeSh1106', 'initialize SH1106 OLED 128x64 I2C address [ADDRESS]', {
+                ADDRESS: {type: ArgumentType.STRING, menu: 'OLED_ADDRESS', defaultValue: '0x3C'}
+            }),
+            sh1106Block('setSh1106Cursor', 'SH1106 set cursor x [X] y [Y]', {X: numberArg(0), Y: numberArg(0)}),
+            sh1106Block('setSh1106Text', 'SH1106 set text size [SIZE] color [COLOR] background [BACKGROUND]', {
+                SIZE: {type: ArgumentType.STRING, menu: 'OLED_TEXT_SIZE', defaultValue: '1'},
+                COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'},
+                BACKGROUND: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'BLACK'}
+            }),
+            sh1106Block('printSh1106', 'SH1106 print [TEXT] [ENDING]', {
+                TEXT: {type: ArgumentType.STRING, defaultValue: 'Hello SARDU Edu'},
+                ENDING: {type: ArgumentType.STRING, menu: 'OLED_PRINT_ENDING', defaultValue: 'NEWLINE'}
+            }),
+            sh1106Block('clearSh1106', 'clear SH1106 OLED'),
+            sh1106Block('drawSh1106Line', 'SH1106 draw line x0 [X0] y0 [Y0] x1 [X1] y1 [Y1] color [COLOR]',
+                {X0: numberArg(0), Y0: numberArg(0), X1: numberArg(32), Y1: numberArg(16), COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'}}),
+            sh1106Block('drawSh1106Rect', 'SH1106 draw rectangle x [X] y [Y] width [WIDTH] height [HEIGHT] color [COLOR]',
+                {X: numberArg(0), Y: numberArg(0), WIDTH: numberArg(32), HEIGHT: numberArg(16), COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'}}),
+            sh1106Block('fillSh1106Rect', 'SH1106 fill rectangle x [X] y [Y] width [WIDTH] height [HEIGHT] color [COLOR]',
+                {X: numberArg(0), Y: numberArg(0), WIDTH: numberArg(32), HEIGHT: numberArg(16), COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'}}),
+            sh1106Block('drawSh1106Circle', 'SH1106 draw circle x [X] y [Y] radius [RADIUS] color [COLOR]',
+                {X: numberArg(16), Y: numberArg(16), RADIUS: numberArg(8), COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'}}),
+            sh1106Block('fillSh1106Circle', 'SH1106 fill circle x [X] y [Y] radius [RADIUS] color [COLOR]',
+                {X: numberArg(16), Y: numberArg(16), RADIUS: numberArg(8), COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'}}),
+            sh1106Block('drawSh1106RoundRect', 'SH1106 draw rounded rectangle x [X] y [Y] width [WIDTH] height [HEIGHT] radius [RADIUS] color [COLOR]',
+                {X: numberArg(0), Y: numberArg(0), WIDTH: numberArg(32), HEIGHT: numberArg(16), RADIUS: numberArg(4), COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'}}),
+            sh1106Block('fillSh1106RoundRect', 'SH1106 fill rounded rectangle x [X] y [Y] width [WIDTH] height [HEIGHT] radius [RADIUS] color [COLOR]',
+                {X: numberArg(0), Y: numberArg(0), WIDTH: numberArg(32), HEIGHT: numberArg(16), RADIUS: numberArg(4), COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'}}),
+            sh1106Block('drawSh1106Triangle', 'SH1106 draw triangle x0 [X0] y0 [Y0] x1 [X1] y1 [Y1] x2 [X2] y2 [Y2] color [COLOR]',
+                {X0: numberArg(0), Y0: numberArg(0), X1: numberArg(16), Y1: numberArg(0), X2: numberArg(8), Y2: numberArg(16), COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'}}),
+            sh1106Block('fillSh1106Triangle', 'SH1106 fill triangle x0 [X0] y0 [Y0] x1 [X1] y1 [Y1] x2 [X2] y2 [Y2] color [COLOR]',
+                {X0: numberArg(0), Y0: numberArg(0), X1: numberArg(16), Y1: numberArg(0), X2: numberArg(8), Y2: numberArg(16), COLOR: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'WHITE'}}),
+            sh1106Block('drawSh1106Image', 'SH1106 show image [IMAGE] size [SCALE]', {
+                IMAGE: {type: ArgumentType.STRING, menu: 'OLED_IMAGE', defaultValue: 'HEART'},
+                SCALE: {type: ArgumentType.STRING, menu: 'OLED_IMAGE_SCALE', defaultValue: '16'}
+            }),
+            sh1106Block('showSh1106', 'update SH1106 OLED'),
             {
                 opcode: 'initializeDisplay',
                 text: formatMessage({id: 'sarduActuators.initializeDisplay', default: 'initialize [MODEL] I2C display at address [ADDRESS]', description: 'Initialize an I2C LCD using the board default pins'}),
@@ -185,6 +297,25 @@ class Scratch3SarduActuators {
                 DISPLAY_MODEL: {acceptReporters: false, items: ['1602', '1604']},
                 DISPLAY_ADDRESS: {acceptReporters: false, items: [
                     '0x20', '0x21', '0x22', '0x23', '0x24', '0x25', '0x26', '0x27'
+                ]},
+                OLED_FORMAT: {acceptReporters: false, items: ['128x64', '128x32']},
+                OLED_ADDRESS: {acceptReporters: false, items: [{text: '0x3C (0x78)', value: '0x3C'}, {
+                    text: '0x3D (0x7A)', value: '0x3D'
+                }]},
+                OLED_COLOR: {acceptReporters: false, items: [{
+                    text: formatMessage({id: 'sarduActuators.menu.white', default: 'White', description: 'OLED white color'}),
+                    value: 'WHITE'
+                }, {
+                    text: formatMessage({id: 'sarduActuators.menu.black', default: 'Black', description: 'OLED black color'}),
+                    value: 'BLACK'
+                }]},
+                OLED_TEXT_SIZE: {acceptReporters: false, items: [{text: '6x8', value: '1'}, {text: '12x16', value: '2'}, {text: '18x24', value: '3'}, {text: '24x32', value: '4'}]},
+                OLED_PRINT_ENDING: {acceptReporters: false, items: [{
+                    text: formatMessage({id: 'sarduActuators.menu.newLine', default: 'New line', description: 'OLED print newline'}), value: 'NEWLINE'
+                }, {text: formatMessage({id: 'sarduActuators.menu.sameLine', default: 'Same line', description: 'OLED print same line'}), value: 'SAME_LINE'}]},
+                OLED_IMAGE: {acceptReporters: false, items: oledImageMenu},
+                OLED_IMAGE_SCALE: {acceptReporters: false, items: [
+                    {text: '16x16', value: '16'}, {text: '32x32', value: '32'}, {text: '64x64', value: '64'}
                 ]},
                 ON_OFF: {acceptReporters: false, items: [{
                     text: formatMessage({id: 'sarduActuators.menu.on', default: 'On', description: 'On menu item'}),
@@ -273,6 +404,76 @@ class Scratch3SarduActuators {
     rotateNeoPixels (args) { return this._neoPixel('O', args, 'POSITIONS'); }
     shiftNeoPixels (args) { return this._neoPixel('T', args, 'POSITIONS'); }
     rainbowNeoPixels (args) { return this._neoPixel('W', args, 'HUE', 'REPETITIONS'); }
+
+    _oled (action, args, ...names) {
+        if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return;
+        const transport = this.runtime.sarduEduLiveTransport;
+        if (!transport?.connected) return Promise.reject(new Error(`SARDU Edu live transport is not connected in OLED ${action}`));
+        return transport.runOled(action, ...names.map(name => {
+            if (name === 'COLOR' || name === 'BACKGROUND') return String(args[name]) === 'WHITE' ? 1 : 0;
+            if (name === 'ENDING') return String(args[name]) === 'NEWLINE' ? 1 : 0;
+            return args[name];
+        }));
+    }
+
+    initializeOled (args) {
+        const [width, height] = String(args.FORMAT).split('x');
+        return this._oled('I', {...args, WIDTH: width, HEIGHT: height}, 'WIDTH', 'HEIGHT', 'ADDRESS');
+    }
+    initializeOledCustom (args) { return this._oled('I', args, 'WIDTH', 'HEIGHT', 'ADDRESS'); }
+    drawOledLine (args) { return this._oled('L', args, 'X0', 'Y0', 'X1', 'Y1', 'COLOR'); }
+    drawOledRect (args) { return this._oled('R', args, 'X', 'Y', 'WIDTH', 'HEIGHT', 'COLOR'); }
+    fillOledRect (args) { return this._oled('F', args, 'X', 'Y', 'WIDTH', 'HEIGHT', 'COLOR'); }
+    drawOledCircle (args) { return this._oled('C', args, 'X', 'Y', 'RADIUS', 'COLOR'); }
+    fillOledCircle (args) { return this._oled('D', args, 'X', 'Y', 'RADIUS', 'COLOR'); }
+    drawOledRoundRect (args) { return this._oled('J', args, 'X', 'Y', 'WIDTH', 'HEIGHT', 'RADIUS', 'COLOR'); }
+    fillOledRoundRect (args) { return this._oled('K', args, 'X', 'Y', 'WIDTH', 'HEIGHT', 'RADIUS', 'COLOR'); }
+    drawOledTriangle (args) { return this._oled('G', args, 'X0', 'Y0', 'X1', 'Y1', 'X2', 'Y2', 'COLOR'); }
+    fillOledTriangle (args) { return this._oled('H', args, 'X0', 'Y0', 'X1', 'Y1', 'X2', 'Y2', 'COLOR'); }
+    setOledText (args) { return this._oled('S', args, 'SIZE', 'COLOR', 'BACKGROUND'); }
+    setOledCursor (args) { return this._oled('P', args, 'X', 'Y'); }
+    printOled (args) { return this._oled('T', args, 'TEXT', 'ENDING'); }
+    _oledImageArguments (args) {
+        const image = String(args.IMAGE);
+        const size = String(args.SCALE);
+        if (image.endsWith('_16') || image.endsWith('_32')) return {IMAGE: image, SCALE: size};
+        if (size === '1' || size === '2') return {IMAGE: `${image}_16`, SCALE: size};
+        if (size === '16') return {IMAGE: `${image}_16`, SCALE: '1'};
+        if (size === '32') return {IMAGE: `${image}_32`, SCALE: '1'};
+        if (size === '64') return {IMAGE: `${image}_32`, SCALE: '2'};
+        return {IMAGE: `${image}_16`, SCALE: '1'};
+    }
+    drawOledImage (args) { return this._oled('B', this._oledImageArguments(args), 'IMAGE', 'SCALE'); }
+    clearOled (args) { return this._oled('X', args); }
+    showOled (args) { return this._oled('U', args); }
+
+    _sh1106 (action, args, ...names) {
+        if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return;
+        const transport = this.runtime.sarduEduLiveTransport;
+        if (!transport?.connected) return Promise.reject(new Error(`SARDU Edu live transport is not connected in SH1106 ${action}`));
+        return transport.runSh1106(action, ...names.map(name => {
+            if (name === 'COLOR') return String(args[name]) === 'WHITE' ? 1 : 0;
+            if (name === 'ENDING') return String(args[name]) === 'NEWLINE' ? 1 : 0;
+            return args[name];
+        }));
+    }
+
+    initializeSh1106 (args) { return this._sh1106('I', args, 'ADDRESS'); }
+    drawSh1106Line (args) { return this._sh1106('L', args, 'X0', 'Y0', 'X1', 'Y1', 'COLOR'); }
+    drawSh1106Rect (args) { return this._sh1106('R', args, 'X', 'Y', 'WIDTH', 'HEIGHT', 'COLOR'); }
+    fillSh1106Rect (args) { return this._sh1106('F', args, 'X', 'Y', 'WIDTH', 'HEIGHT', 'COLOR'); }
+    drawSh1106Circle (args) { return this._sh1106('C', args, 'X', 'Y', 'RADIUS', 'COLOR'); }
+    fillSh1106Circle (args) { return this._sh1106('D', args, 'X', 'Y', 'RADIUS', 'COLOR'); }
+    drawSh1106RoundRect (args) { return this._sh1106('J', args, 'X', 'Y', 'WIDTH', 'HEIGHT', 'RADIUS', 'COLOR'); }
+    fillSh1106RoundRect (args) { return this._sh1106('K', args, 'X', 'Y', 'WIDTH', 'HEIGHT', 'RADIUS', 'COLOR'); }
+    drawSh1106Triangle (args) { return this._sh1106('G', args, 'X0', 'Y0', 'X1', 'Y1', 'X2', 'Y2', 'COLOR'); }
+    fillSh1106Triangle (args) { return this._sh1106('H', args, 'X0', 'Y0', 'X1', 'Y1', 'X2', 'Y2', 'COLOR'); }
+    setSh1106Text (args) { return this._sh1106('S', args, 'SIZE', 'COLOR', 'BACKGROUND'); }
+    setSh1106Cursor (args) { return this._sh1106('P', args, 'X', 'Y'); }
+    printSh1106 (args) { return this._sh1106('T', args, 'TEXT', 'ENDING'); }
+    drawSh1106Image (args) { return this._sh1106('B', this._oledImageArguments(args), 'IMAGE', 'SCALE'); }
+    clearSh1106 (args) { return this._sh1106('X', args); }
+    showSh1106 (args) { return this._sh1106('U', args); }
 
     _display (action, ...values) {
         if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return;

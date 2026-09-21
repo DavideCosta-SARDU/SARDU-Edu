@@ -613,7 +613,9 @@ class Blocks extends React.Component {
                 Object.values(candidate.blocks._blocks).some(block =>
                     block.topLevel && block.opcode === 'sarduBoard_program'));
             if (!hardwareSelection) {
-                dynamicBlocksXML = dynamicBlocksXML.filter(category => category.id !== 'sarduBoard');
+                dynamicBlocksXML = dynamicBlocksXML.filter(category => ![
+                    'sarduBoard', 'sarduSensors', 'sarduActuators', 'sarduOtto', 'sarduWifi'
+                ].includes(category.id));
             }
             return makeToolboxXML(false, target.isStage, target.id, dynamicBlocksXML,
                 targetCostumes[targetCostumes.length - 1].name,

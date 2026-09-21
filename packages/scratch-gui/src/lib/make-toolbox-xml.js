@@ -808,6 +808,11 @@ const makeToolboxXML = function (isInitialSetup, isStage = true, targetId, categ
     soundName = xmlEscape(soundName);
 
     categoriesXML = categoriesXML.slice();
+    if (!hardwareSelection) {
+        categoriesXML = categoriesXML.filter(category => ![
+            'sarduBoard', 'sarduSensors', 'sarduActuators', 'sarduOtto', 'sarduWifi'
+        ].includes(category.id));
+    }
     const moveCategory = categoryId => {
         const index = categoriesXML.findIndex(categoryInfo => categoryInfo.id === categoryId);
         if (index >= 0) {
@@ -863,6 +868,12 @@ const makeToolboxXML = function (isInitialSetup, isStage = true, targetId, categ
         ).replace(
             '<block type="sarduActuators_playTone"',
             '<label text="Buzzer"/>\n<block type="sarduActuators_playTone"'
+        ).replace(
+            '<block type="sarduActuators_initializeOled"',
+            '<label text="OLED SSD1306 I2C"/>\n<block type="sarduActuators_initializeOled"'
+        ).replace(
+            '<block type="sarduActuators_initializeSh1106"',
+            '<label text="OLED SH1106 1.3&quot; I2C"/>\n<block type="sarduActuators_initializeSh1106"'
         ).replace(
             '<block type="sarduActuators_initializeDisplay"',
             '<label text="Display 1602/1604 I2C"/>\n<block type="sarduActuators_initializeDisplay"'

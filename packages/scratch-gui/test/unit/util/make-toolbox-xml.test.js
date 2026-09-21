@@ -16,6 +16,19 @@ describe('SARDU Edu toolbox modes', () => {
         global.ScratchBlocks = originalScratchBlocks;
     });
 
+    test('removes every hardware category when no board is selected', () => {
+        const toolbox = makeToolboxXML(false, true, 'stage', [
+            {id: 'sarduBoard', xml: '<category name="Scheda"/>'},
+            {id: 'sarduSensors', xml: '<category name="Sensori"/>'},
+            {id: 'sarduActuators', xml: '<category name="Attuatori"/>'},
+            {id: 'sarduWifi', xml: '<category name="ESP32 - Wi-Fi"/>'}
+        ]);
+        expect(toolbox).not.toContain('name="Scheda"');
+        expect(toolbox).not.toContain('name="Sensori"');
+        expect(toolbox).not.toContain('name="Attuatori"');
+        expect(toolbox).not.toContain('ESP32 - Wi-Fi');
+    });
+
     test('keeps the unified Arduino program block available in Offline mode', () => {
         const toolbox = makeToolboxXML(
             false,
@@ -100,6 +113,33 @@ describe('SARDU Edu toolbox modes', () => {
         );
 
         expect(toolbox).toContain('<label text="Avanzate"/>');
+    });
+
+    test('labels the selected OLED actuator blocks', () => {
+        const toolbox = makeToolboxXML(
+            false,
+            true,
+            'stage',
+            [{
+                id: 'sarduActuators',
+                xml: '<category name="Attuatori"><block type="sarduActuators_initializeOled"/></category>'
+            }],
+            '',
+            '',
+            '',
+            undefined,
+            {mode: 'standalone', componentIds: ['oled-ssd1306']}
+        );
+
+        expect(toolbox).toContain('<label text="OLED SSD1306 I2C"/>');
+    });
+
+    test('labels the selected SH1106 actuator blocks', () => {
+        const toolbox = makeToolboxXML(false, true, 'stage', [{
+            id: 'sarduActuators',
+            xml: '<category name="Attuatori"><block type="sarduActuators_initializeSh1106"/></category>'
+        }], '', '', '', undefined, {mode: 'standalone', componentIds: ['oled-sh1106']});
+        expect(toolbox).toContain('<label text="OLED SH1106 1.3&quot; I2C"/>');
     });
 
     test('places Arduino variables in a separate section of the Variables category', () => {

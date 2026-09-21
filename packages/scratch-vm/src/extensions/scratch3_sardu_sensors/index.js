@@ -115,7 +115,7 @@ class Scratch3SarduSensors {
                 }, {
                     opcode: 'soundLevel', text: formatMessage({id: 'sarduSensors.soundLevel', default: 'sound level on [PIN] as [FORMAT]', description: 'Sound level reporter'}),
                     blockType: BlockType.REPORTER, disableMonitor: true, hideFromPalette: soundUnavailable,
-                    tooltip: formatMessage({id: 'sarduSensors.soundLevel.tooltip', default: 'Reads the microphone input as 0–1023 or 0–100 percent.', description: 'Sound level tooltip'}),
+                    tooltip: formatMessage({id: 'sarduSensors.soundLevel.tooltip', default: 'Reads the microphone input as 0-1023 or 0-100 percent.', description: 'Sound level tooltip'}),
                     arguments: {PIN: {type: ArgumentType.STRING, menu: 'ANALOG_PIN', defaultValue: 'A1'}, FORMAT: {type: ArgumentType.STRING, menu: 'VALUE_FORMAT', defaultValue: 'raw'}}
                 }, {
                     opcode: 'lightLevel', text: formatMessage({id: 'sarduSensors.lightLevel', default: 'light level on [PIN] as [FORMAT]', description: 'Light level reporter'}),
@@ -154,7 +154,7 @@ class Scratch3SarduSensors {
                 LASER_UNIT: {acceptReporters: false, items: ['mm', 'cm']},
                 TOUCH_PIN: {acceptReporters: false, items: ['A0', 'A2', 'A3']},
                 ANALOG_PIN: {acceptReporters: false, items: selection?.analogInputPins || ['A0', 'A1', 'A2', 'A3', 'A4', 'A5', 'A6']},
-                VALUE_FORMAT: {acceptReporters: false, items: [{text: '0–1023', value: 'raw'}, {text: '0–100%', value: 'percent'}]},
+                VALUE_FORMAT: {acceptReporters: false, items: [{text: '0-1023', value: 'raw'}, {text: '0-100%', value: 'percent'}]},
                 RFID_KEY_TYPE: {acceptReporters: false, items: ['A', 'B']}
             }
         };

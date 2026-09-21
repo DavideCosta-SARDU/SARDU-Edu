@@ -14,7 +14,8 @@ import soundIcon from '../../../../../docs/SVG/SensoreSuono.svg';
 import photoresistorIcon from '../../../../../docs/SVG/photoresistore.svg';
 import buzzerIcon from '../../../../../docs/SVG/buzzer.svg';
 import ledIcon from '../../../../../docs/SVG/led.svg';
-import lcdI2cIcon from '../../../../../docs/SVG/display-1602-1604-i2c.svg';
+import lcdI2cIcon from '../../../../../docs/SVG/1602.svg';
+import oledIcon from '../../../../../docs/SVG/oled.svg';
 import pn532Icon from '../../../../../docs/SVG/Schede/nfc_04.svg';
 import rc522Icon from '../../../../../docs/SVG/rfid_rc522.svg';
 import styles from './component-library.css';
@@ -112,6 +113,20 @@ const COMPONENT_ITEMS = [{
         defaultMessage="16-column LCD display with 2 or 4 rows and a PCF8574 I2C adapter."
         description="1602 and 1604 I2C LCD description"
     />, 'Display; LCD', 'I2C (SDA/SCL)', 'Matthias Hertel', 'LiquidCrystal_PCF8574 2.3.0', 'https://github.com/mathertel/LiquidCrystal_PCF8574')
+}, {
+    category: 'actuators', componentId: 'oled-ssd1306', featured: true, name: 'OLED SSD1306 I2C', rawURL: oledIcon,
+    tags: ['display', 'oled', 'ssd1306', 'i2c', 'schermo'], description: summary(<FormattedMessage
+        id="gui.sardu.oledDescription"
+        defaultMessage="Monochrome OLED display with selectable 128x64 or 128x32 format."
+        description="SSD1306 I2C OLED description"
+    />, 'Display; OLED', 'I2C (VCC/GND/SDA/SCL)', 'Adafruit', 'Adafruit SSD1306 2.5.17; Adafruit GFX 1.12.6', 'https://github.com/adafruit/Adafruit_SSD1306')
+}, {
+    category: 'actuators', componentId: 'oled-sh1106', featured: true, name: 'OLED SH1106 1.3" I2C', rawURL: oledIcon,
+    tags: ['display', 'oled', 'sh1106', '1.3', 'i2c', 'schermo'], description: summary(<FormattedMessage
+        id="gui.sardu.sh1106Description"
+        defaultMessage="Monochrome 128x64 OLED display using the SH1106 controller."
+        description="SH1106 I2C OLED description"
+    />, 'Display; OLED', 'I2C (VCC/GND/SDA/SCL)', 'Adafruit', 'Adafruit SH110X 2.1.14; Adafruit GFX 1.12.6', 'https://github.com/adafruit/Adafruit_SH110x')
 }];
 
 const CATEGORY_MESSAGES = {

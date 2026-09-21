@@ -17,11 +17,11 @@ test('reports each Live handshake stage', () => {
     const transport = new SarduSerialTransport({}, diagnostic => diagnostics.push(diagnostic));
 
     transport._diagnose('handshake-sent');
-    transport._diagnose('handshake-response', 'SARDU-LIVE 6');
+    transport._diagnose('handshake-response', 'SARDU-LIVE 8');
 
     expect(diagnostics).toEqual([
         {stage: 'handshake-sent'},
-        {stage: 'handshake-response', detail: 'SARDU-LIVE 6'}
+        {stage: 'handshake-response', detail: 'SARDU-LIVE 8'}
     ]);
 });
 
@@ -126,6 +126,42 @@ test('encodes display Live commands and text without protocol separators', async
         'Q I 39 16 4 21 22\n',
         'Q C 15 3\n',
         'Q T 56616C6F7265203432\n'
+    ]);
+});
+
+test('encodes OLED Live commands and text without protocol separators', async () => {
+    const write = jest.fn(() => Promise.resolve());
+    const transport = new SarduSerialTransport({});
+    transport.port = {};
+    transport.portOpen = true;
+    transport.writer = {write};
+    transport._readLine = jest.fn().mockResolvedValue('1');
+
+    await transport.runOled('I', 128, 64, '0x3C');
+    await transport.runOled('T', 'Ciao OLED', 1);
+    await transport.runOled('T', '', 0);
+
+    const decoder = new TextDecoder();
+    expect(write.mock.calls.map(call => decoder.decode(call[0]))).toEqual([
+        'E I 128 64 60\n',
+        'E T 4369616F204F4C4544 1\n',
+        'E T - 0\n'
+    ]);
+});
+
+test('encodes SH1106 Live commands and text', async () => {
+    const write = jest.fn(() => Promise.resolve());
+    const transport = new SarduSerialTransport({});
+    transport.port = {};
+    transport.portOpen = true;
+    transport.writer = {write};
+    transport._readLine = jest.fn().mockResolvedValue('1');
+    await transport.runSh1106('I', '0x3C');
+    await transport.runSh1106('T', 'Ciao SH1106', 1);
+    const decoder = new TextDecoder();
+    expect(write.mock.calls.map(call => decoder.decode(call[0]))).toEqual([
+        'X I 60\n',
+        'X T 4369616F20534831313036 1\n'
     ]);
 });
 

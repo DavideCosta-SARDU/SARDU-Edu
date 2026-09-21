@@ -74,7 +74,7 @@ class LibraryItemComponent extends React.PureComponent {
             >
                 <div className={styles.contentWrapper}>
                     <div className={styles.featuredImageContainer}>
-                        {this.props.disabled ? (
+                        {this.props.disabled && this.props.showDisabledLabel ? (
                             <div className={styles.comingSoonText}>
                                 <FormattedMessage
                                     defaultMessage="Coming Soon"
@@ -231,12 +231,14 @@ LibraryItemComponent.propTypes = {
     onStop: PropTypes.func.isRequired,
     platform: PropTypes.oneOf(Object.keys(PLATFORM)),
     showPlayButton: PropTypes.bool,
+    showDisabledLabel: PropTypes.bool,
     isMemberOnly: PropTypes.bool
 };
 
 LibraryItemComponent.defaultProps = {
     disabled: false,
     hardwareThumbnail: false,
+    showDisabledLabel: true,
     showPlayButton: false
 };
 

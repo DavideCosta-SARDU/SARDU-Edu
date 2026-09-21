@@ -161,6 +161,8 @@ export const ARDUINO_COMPONENTS: readonly ComponentDefinition[] = [
   {id: 'vl53l0x', name: 'VL53L0X', version: '1', boardIds: ['arduino-uno', 'arduino-nano'], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['i2c'], modes: ['standalone', 'realtime']},
   {id: 'neopixel', name: 'NeoPixel', version: '1', boardIds: ['arduino-uno', 'arduino-nano'], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['digital-io'], modes: ['standalone', 'realtime']},
   {id: 'lcd-i2c', name: 'Display 1602/1604 I2C', version: '1', boardIds: ['arduino-uno', 'arduino-nano', ...esp32BoardIds], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['i2c'], modes: ['standalone', 'realtime']},
+  {id: 'oled-ssd1306', name: 'OLED SSD1306 I2C', version: '1', boardIds: ['arduino-uno', 'arduino-nano', ...esp32BoardIds], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['i2c'], modes: ['standalone', 'realtime']},
+  {id: 'oled-sh1106', name: 'OLED SH1106 1.3" I2C', version: '1', boardIds: ['arduino-uno', 'arduino-nano', ...esp32BoardIds], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['i2c'], modes: ['standalone', 'realtime']},
   {id: 'led', name: 'LED', version: '1', boardIds: ['arduino-uno', 'arduino-nano', ...esp32BoardIds], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['digital-io'], modes: ['standalone', 'realtime']},
   {id: 'pn532', name: 'PN532', version: '1', boardIds: ['arduino-uno', 'arduino-nano', ...esp32BoardIds], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['i2c', 'spi'], modes: ['standalone', 'realtime']},
   {id: 'rc522', name: 'RC522', version: '1', boardIds: ['arduino-uno', 'arduino-nano', ...esp32BoardIds], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['spi'], modes: ['standalone', 'realtime']},
@@ -206,6 +208,8 @@ export interface ArduinoSketchRequest {
   readonly messages?: {
     readonly pn532Found: string
     readonly pn532NotFound: string
+    readonly generatedBy?: string
+    readonly board?: string
   }
 }
 
@@ -234,6 +238,11 @@ export interface ArduinoProgram {
   readonly usesVl53l0x: boolean
   readonly neoPixelPins: readonly string[]
   readonly usesDisplay: boolean
+  readonly usesOled: boolean
+  readonly usesSh1106: boolean
+  readonly sh1106Images: ReadonlySet<string>
+  readonly oledSize: null | { readonly width: string; readonly height: string }
+  readonly oledImages: ReadonlySet<string>
   readonly outputPins: readonly string[]
   readonly variables: readonly string[]
   readonly typedVariables: readonly { readonly type: string; readonly name: string; readonly value: string }[]
@@ -268,6 +277,25 @@ export interface ArduinoProgram {
     readonly ss: string
     readonly reset: string
   }
+}
+
+const OLED_IMAGE_NAMES = ['HEART', 'STAR', 'CHECK', 'CROSS', 'HAPPY', 'SAD', 'WARNING', 'INFO', 'BULB',
+  'THERMOMETER', 'BATTERY', 'WIFI'] as const
+const oledImageSize = (image: string): 16 | 32 => image.endsWith('_16') ? 16 : 32
+const isSupportedOledImage = (image: string): boolean =>
+  (image.endsWith('_16') || image.endsWith('_32')) &&
+  (OLED_IMAGE_NAMES as readonly string[]).includes(image.slice(0, -3))
+const resolveOledImage = (image: string, selectedSize: string): {readonly name: string; readonly scale: '1' | '2'} => {
+  const legacyName = ['HEART', 'STAR', 'CHECK'].includes(image) && ['1', '2'].includes(selectedSize) ?
+    `${image}_16` : image
+  if (isSupportedOledImage(legacyName) && ['1', '2'].includes(selectedSize)) {
+    return {name: legacyName, scale: selectedSize as '1' | '2'}
+  }
+  if (!(OLED_IMAGE_NAMES as readonly string[]).includes(image)) throw new Error(`Unsupported OLED image: ${image}`)
+  if (selectedSize === '16') return {name: `${image}_16`, scale: '1'}
+  if (selectedSize === '32') return {name: `${image}_32`, scale: '1'}
+  if (selectedSize === '64') return {name: `${image}_32`, scale: '2'}
+  throw new Error(`Unsupported OLED image size: ${selectedSize}`)
 }
 
 const getBoard = (boardId: string): ArduinoBoardDefinition => {
@@ -669,6 +697,120 @@ const generateStack = (
       case 'sarduActuators_setDisplayCursorStyle':
         operations.push({type: 'custom-code', source: `${getField(block, 'VISIBILITY') === 'SHOW' ? 'sarduEduDisplay->cursor();' : 'sarduEduDisplay->noCursor();'}\n${getField(block, 'BLINK') === 'BLINK' ? 'sarduEduDisplay->blink();' : 'sarduEduDisplay->noBlink();'}`})
         break
+      case 'sarduActuators_initializeOled': {
+        const format = getField(block, 'FORMAT')
+        const address = getField(block, 'ADDRESS')
+        if (!['128x64', '128x32'].includes(format)) throw new Error(`Unsupported OLED format: ${format}`)
+        if (!['0x3C', '0x3D'].includes(address)) throw new Error(`Unsupported OLED address: ${address}`)
+        operations.push({type: 'custom-code', source: `oled.begin(SSD1306_SWITCHCAPVCC, ${address});\noled.setTextSize(1);`})
+        break
+      }
+      case 'sarduActuators_initializeOledCustom': {
+        const address = getField(block, 'ADDRESS')
+        if (!['0x3C', '0x3D'].includes(address)) throw new Error(`Unsupported OLED address: ${address}`)
+        operations.push({type: 'custom-code', source: `oled.begin(SSD1306_SWITCHCAPVCC, ${address});\noled.setTextSize(1);`})
+        break
+      }
+      case 'sarduActuators_drawOledLine':
+        operations.push({type: 'custom-code', source: `oled.drawLine(${getExpression(blocks, block, 'X0', variables)}, ${getExpression(blocks, block, 'Y0', variables)}, ${getExpression(blocks, block, 'X1', variables)}, ${getExpression(blocks, block, 'Y1', variables)}, SSD1306_${getField(block, 'COLOR')});`})
+        break
+      case 'sarduActuators_drawOledRect':
+      case 'sarduActuators_fillOledRect': {
+        const method = block.opcode.includes('fill') ? 'fillRect' : 'drawRect'
+        operations.push({type: 'custom-code', source: `oled.${method}(${getExpression(blocks, block, 'X', variables)}, ${getExpression(blocks, block, 'Y', variables)}, ${getExpression(blocks, block, 'WIDTH', variables)}, ${getExpression(blocks, block, 'HEIGHT', variables)}, SSD1306_${getField(block, 'COLOR')});`})
+        break
+      }
+      case 'sarduActuators_drawOledCircle':
+      case 'sarduActuators_fillOledCircle': {
+        const method = block.opcode.includes('fill') ? 'fillCircle' : 'drawCircle'
+        operations.push({type: 'custom-code', source: `oled.${method}(${getExpression(blocks, block, 'X', variables)}, ${getExpression(blocks, block, 'Y', variables)}, ${getExpression(blocks, block, 'RADIUS', variables)}, SSD1306_${getField(block, 'COLOR')});`})
+        break
+      }
+      case 'sarduActuators_drawOledRoundRect':
+      case 'sarduActuators_fillOledRoundRect': {
+        const method = block.opcode.includes('fill') ? 'fillRoundRect' : 'drawRoundRect'
+        operations.push({type: 'custom-code', source: `oled.${method}(${getExpression(blocks, block, 'X', variables)}, ${getExpression(blocks, block, 'Y', variables)}, ${getExpression(blocks, block, 'WIDTH', variables)}, ${getExpression(blocks, block, 'HEIGHT', variables)}, ${getExpression(blocks, block, 'RADIUS', variables)}, SSD1306_${getField(block, 'COLOR')});`})
+        break
+      }
+      case 'sarduActuators_drawOledTriangle':
+      case 'sarduActuators_fillOledTriangle': {
+        const method = block.opcode.includes('fill') ? 'fillTriangle' : 'drawTriangle'
+        operations.push({type: 'custom-code', source: `oled.${method}(${getExpression(blocks, block, 'X0', variables)}, ${getExpression(blocks, block, 'Y0', variables)}, ${getExpression(blocks, block, 'X1', variables)}, ${getExpression(blocks, block, 'Y1', variables)}, ${getExpression(blocks, block, 'X2', variables)}, ${getExpression(blocks, block, 'Y2', variables)}, SSD1306_${getField(block, 'COLOR')});`})
+        break
+      }
+      case 'sarduActuators_setOledText':
+        operations.push({type: 'custom-code', source: `oled.setTextSize(${getField(block, 'SIZE')});\noled.setTextColor(SSD1306_${getField(block, 'COLOR')}, SSD1306_${getField(block, 'BACKGROUND')});`})
+        break
+      case 'sarduActuators_setOledCursor':
+        operations.push({type: 'custom-code', source: `oled.setCursor(${getExpression(blocks, block, 'X', variables)}, ${getExpression(blocks, block, 'Y', variables)});`})
+        break
+      case 'sarduActuators_printOled':
+        operations.push({type: 'custom-code', source: `oled.${getField(block, 'ENDING') === 'NEWLINE' ? 'println' : 'print'}(${getStringExpression(blocks, block, 'TEXT', variables)});`})
+        break
+      case 'sarduActuators_drawOledImage': {
+        const image = resolveOledImage(getField(block, 'IMAGE'), getField(block, 'SCALE'))
+        operations.push({type: 'custom-code', source: `sarduEduDrawOledImage(SARDU_EDU_OLED_${image.name}, ${oledImageSize(image.name)}, ${image.scale});`})
+        break
+      }
+      case 'sarduActuators_clearOled':
+        operations.push({type: 'custom-code', source: 'oled.clearDisplay();'})
+        break
+      case 'sarduActuators_showOled':
+        operations.push({type: 'custom-code', source: 'oled.display();'})
+        break
+      case 'sarduActuators_initializeSh1106': {
+        const address = getField(block, 'ADDRESS')
+        if (!['0x3C', '0x3D'].includes(address)) throw new Error(`Unsupported SH1106 address: ${address}`)
+        operations.push({type: 'custom-code', source: `sh1106.begin(${address}, true);\nsh1106.clearDisplay();\nsh1106.setTextSize(1);`})
+        break
+      }
+      case 'sarduActuators_drawSh1106Line':
+        operations.push({type: 'custom-code', source: `sh1106.drawLine(${getExpression(blocks, block, 'X0', variables)}, ${getExpression(blocks, block, 'Y0', variables)}, ${getExpression(blocks, block, 'X1', variables)}, ${getExpression(blocks, block, 'Y1', variables)}, SH110X_${getField(block, 'COLOR')});`})
+        break
+      case 'sarduActuators_drawSh1106Rect':
+      case 'sarduActuators_fillSh1106Rect': {
+        const method = block.opcode.includes('fill') ? 'fillRect' : 'drawRect'
+        operations.push({type: 'custom-code', source: `sh1106.${method}(${getExpression(blocks, block, 'X', variables)}, ${getExpression(blocks, block, 'Y', variables)}, ${getExpression(blocks, block, 'WIDTH', variables)}, ${getExpression(blocks, block, 'HEIGHT', variables)}, SH110X_${getField(block, 'COLOR')});`})
+        break
+      }
+      case 'sarduActuators_drawSh1106Circle':
+      case 'sarduActuators_fillSh1106Circle': {
+        const method = block.opcode.includes('fill') ? 'fillCircle' : 'drawCircle'
+        operations.push({type: 'custom-code', source: `sh1106.${method}(${getExpression(blocks, block, 'X', variables)}, ${getExpression(blocks, block, 'Y', variables)}, ${getExpression(blocks, block, 'RADIUS', variables)}, SH110X_${getField(block, 'COLOR')});`})
+        break
+      }
+      case 'sarduActuators_drawSh1106RoundRect':
+      case 'sarduActuators_fillSh1106RoundRect': {
+        const method = block.opcode.includes('fill') ? 'fillRoundRect' : 'drawRoundRect'
+        operations.push({type: 'custom-code', source: `sh1106.${method}(${getExpression(blocks, block, 'X', variables)}, ${getExpression(blocks, block, 'Y', variables)}, ${getExpression(blocks, block, 'WIDTH', variables)}, ${getExpression(blocks, block, 'HEIGHT', variables)}, ${getExpression(blocks, block, 'RADIUS', variables)}, SH110X_${getField(block, 'COLOR')});`})
+        break
+      }
+      case 'sarduActuators_drawSh1106Triangle':
+      case 'sarduActuators_fillSh1106Triangle': {
+        const method = block.opcode.includes('fill') ? 'fillTriangle' : 'drawTriangle'
+        operations.push({type: 'custom-code', source: `sh1106.${method}(${getExpression(blocks, block, 'X0', variables)}, ${getExpression(blocks, block, 'Y0', variables)}, ${getExpression(blocks, block, 'X1', variables)}, ${getExpression(blocks, block, 'Y1', variables)}, ${getExpression(blocks, block, 'X2', variables)}, ${getExpression(blocks, block, 'Y2', variables)}, SH110X_${getField(block, 'COLOR')});`})
+        break
+      }
+      case 'sarduActuators_setSh1106Text':
+        operations.push({type: 'custom-code', source: `sh1106.setTextSize(${getField(block, 'SIZE')});\nsh1106.setTextColor(SH110X_${getField(block, 'COLOR')}, SH110X_${getField(block, 'BACKGROUND')});`})
+        break
+      case 'sarduActuators_setSh1106Cursor':
+        operations.push({type: 'custom-code', source: `sh1106.setCursor(${getExpression(blocks, block, 'X', variables)}, ${getExpression(blocks, block, 'Y', variables)});`})
+        break
+      case 'sarduActuators_printSh1106':
+        operations.push({type: 'custom-code', source: `sh1106.${getField(block, 'ENDING') === 'NEWLINE' ? 'println' : 'print'}(${getStringExpression(blocks, block, 'TEXT', variables)});`})
+        break
+      case 'sarduActuators_drawSh1106Image': {
+        const image = resolveOledImage(getField(block, 'IMAGE'), getField(block, 'SCALE'))
+        operations.push({type: 'custom-code', source: `sarduEduDrawSh1106Image(SARDU_EDU_SH1106_${image.name}, ${oledImageSize(image.name)}, ${image.scale});`})
+        break
+      }
+      case 'sarduActuators_clearSh1106':
+        operations.push({type: 'custom-code', source: 'sh1106.clearDisplay();'})
+        break
+      case 'sarduActuators_showSh1106':
+        operations.push({type: 'custom-code', source: 'sh1106.display();'})
+        break
       case 'sarduActuators_setServoAngle':
         operations.push({
           type: 'servo-write',
@@ -920,6 +1062,39 @@ export const compileArduinoProgram = ({ boardId, targets }: ArduinoSketchRequest
   if (displayBlocks.length > 0 && displayInitializers.length === 0) {
     throw new Error('Initialize the I2C display before using its operations')
   }
+  const oledBlocks = reachableBlocks.filter(block => block.opcode.startsWith('sarduActuators_') &&
+    block.opcode.toLowerCase().includes('oled'))
+  const oledInitializers = oledBlocks.filter(block =>
+    block.opcode === 'sarduActuators_initializeOled' || block.opcode === 'sarduActuators_initializeOledCustom')
+  if (oledBlocks.length > 0 && oledInitializers.length === 0) {
+    throw new Error('Initialize the OLED before using its operations')
+  }
+  const oledSizes = targets.flatMap(({blocks}) => Object.values(blocks).flatMap(block => {
+    if (!block || !oledInitializers.includes(block)) return []
+    if (block.opcode === 'sarduActuators_initializeOled') {
+      const format = getField(block, 'FORMAT')
+      if (!['128x64', '128x32'].includes(format)) throw new Error(`Unsupported OLED format: ${format}`)
+      const [width, height] = format.split('x')
+      return [{width, height}]
+    }
+    const width = numberLiteral(getLiteralInput(blocks, block, 'WIDTH'), block.id)
+    const height = numberLiteral(getLiteralInput(blocks, block, 'HEIGHT'), block.id)
+    if (!Number.isSafeInteger(Number(width)) || Number(width) <= 0 ||
+      !Number.isSafeInteger(Number(height)) || Number(height) <= 0) {
+      throw new Error(`OLED dimensions on block ${block.id} must be positive integers`)
+    }
+    return [{width, height}]
+  }))
+  if (new Set(oledSizes.map(size => `${size.width}x${size.height}`)).size > 1) {
+    throw new Error('OLED has conflicting dimensions')
+  }
+  const oledSize = oledSizes[0] || null
+  const sh1106Blocks = reachableBlocks.filter(block => block.opcode.startsWith('sarduActuators_') &&
+    block.opcode.toLowerCase().includes('sh1106'))
+  if (sh1106Blocks.length > 0 && !sh1106Blocks.some(block =>
+    block.opcode === 'sarduActuators_initializeSh1106')) {
+    throw new Error('Initialize the SH1106 OLED before using its operations')
+  }
   const pn532Blocks = reachableBlocks.filter(block =>
     block.opcode.startsWith('sarduSensors_pn532') || block.opcode.startsWith('sarduSensors_rfidConfigurePn532') ||
     (getRfidOperation(block.opcode) && block.fields.READER?.value !== 'RC522'))
@@ -969,6 +1144,13 @@ export const compileArduinoProgram = ({ boardId, targets }: ArduinoSketchRequest
     usesVl53l0x: targets.some(({blocks}) => Object.values(blocks).some(block => block?.opcode === 'sarduSensors_laserDistance')),
     neoPixelPins: Array.from(neoPixelPins).sort((left, right) => left.localeCompare(right, undefined, {numeric: true})),
     usesDisplay: displayBlocks.length > 0,
+    usesOled: oledBlocks.length > 0,
+    usesSh1106: sh1106Blocks.length > 0,
+    sh1106Images: new Set(sh1106Blocks.filter(block => block.opcode === 'sarduActuators_drawSh1106Image')
+      .map(block => resolveOledImage(getField(block, 'IMAGE'), getField(block, 'SCALE')).name)),
+    oledSize,
+    oledImages: new Set(oledBlocks.filter(block => block.opcode === 'sarduActuators_drawOledImage')
+      .map(block => resolveOledImage(getField(block, 'IMAGE'), getField(block, 'SCALE')).name)),
     outputPins: Array.from(outputPins).sort((left, right) => left.localeCompare(right, undefined, { numeric: true })),
     variables: Array.from(variables).sort(),
     typedVariables: Array.from(typedVariables.values()).sort((left, right) => left.name.localeCompare(right.name)),
@@ -1175,6 +1357,138 @@ const rc522WriteHelper = `bool rc522Scrivi(int block, const String &dataText) {
     rc522->MIFARE_Write(block, data, 16) == MFRC522::STATUS_OK;
 }`
 
+const legacyOledImageData: Readonly<Record<string, string>> = {
+  HEART: '0x00,0x00,0x1C,0x38,0x3E,0x7C,0x7F,0xFE,0x7F,0xFE,0x7F,0xFE,0x3F,0xFC,0x1F,0xF8,0x0F,0xF0,0x07,0xE0,0x03,0xC0,0x01,0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00',
+  CHECK: '0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x06,0x00,0x0E,0x00,0x0C,0x00,0x18,0x00,0x30,0x30,0x60,0x38,0xE0,0x1C,0xC0,0x0F,0x80,0x07,0x00,0x00,0x00,0x00,0x00,0x00,0x00',
+  STAR: '0x00,0x00,0x01,0x80,0x01,0x80,0x03,0xC0,0x7F,0xFE,0x3F,0xFC,0x1F,0xF8,0x0F,0xF0,0x1F,0xF8,0x1B,0xD8,0x31,0x8C,0x60,0x06,0x40,0x02,0x00,0x00,0x00,0x00,0x00,0x00',
+}
+
+type OledImage = {readonly size: 16 | 32; readonly data: string}
+
+const expandOledImage = (data: string): string => {
+  const source = data.split(',').map(value => parseInt(value, 16))
+  const output: number[] = []
+  for (let y = 0; y < 16; y++) {
+    const row: number[] = []
+    for (let x = 0; x < 16; x++) {
+      const set = source[y * 2 + Math.floor(x / 8)] & (0x80 >> (x % 8))
+      if (set) row.push(x * 2, x * 2 + 1)
+    }
+    for (let repeat = 0; repeat < 2; repeat++) {
+      for (let byte = 0; byte < 4; byte++) {
+        output.push(row.reduce((value, x) => x >= byte * 8 && x < (byte + 1) * 8 ?
+          value | (0x80 >> (x % 8)) : value, 0))
+      }
+    }
+  }
+  return output.map(value => `0x${value.toString(16).padStart(2, '0').toUpperCase()}`).join(',')
+}
+
+const compactOledImageData: Readonly<Record<string, string>> = {
+  HEART: legacyOledImageData.HEART,
+  STAR: legacyOledImageData.STAR,
+  CHECK: legacyOledImageData.CHECK,
+  CROSS: '0xC0,0x03,0xE0,0x07,0x70,0x0E,0x38,0x1C,0x1C,0x38,0x0E,0x70,0x07,0xE0,0x03,0xC0,0x03,0xC0,0x07,0xE0,0x0E,0x70,0x1C,0x38,0x38,0x1C,0x70,0x0E,0xE0,0x07,0xC0,0x03',
+  HAPPY: '0x0F,0xF0,0x30,0x0C,0x40,0x02,0x86,0x61,0x86,0x61,0x80,0x01,0x80,0x01,0x84,0x21,0x82,0x41,0x41,0x82,0x30,0x0C,0x0F,0xF0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00',
+  SAD: '0x0F,0xF0,0x30,0x0C,0x40,0x02,0x86,0x61,0x86,0x61,0x80,0x01,0x80,0x01,0x81,0x81,0x82,0x41,0x44,0x22,0x30,0x0C,0x0F,0xF0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00',
+  WARNING: '0x01,0x80,0x03,0xC0,0x07,0xE0,0x0F,0xF0,0x1F,0xF8,0x3D,0xBC,0x79,0x9E,0xF9,0x9F,0xF9,0x9F,0xF9,0x9F,0xF9,0x9F,0xF8,0x1F,0xFF,0xFF,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00',
+  INFO: '0x0F,0xF0,0x30,0x0C,0x40,0x02,0x81,0x81,0x81,0x81,0x80,0x01,0x81,0x81,0x81,0x81,0x81,0x81,0x41,0x82,0x30,0x0C,0x0F,0xF0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00',
+  BULB: '0x07,0xE0,0x18,0x18,0x20,0x04,0x40,0x02,0x40,0x02,0x20,0x04,0x18,0x18,0x07,0xE0,0x03,0xC0,0x07,0xE0,0x03,0xC0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00',
+  THERMOMETER: '0x03,0xC0,0x06,0x60,0x06,0x60,0x06,0x60,0x06,0x60,0x06,0x60,0x06,0x60,0x0C,0x30,0x19,0x98,0x1F,0xF8,0x0F,0xF0,0x03,0xC0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00',
+  BATTERY: '0x00,0x00,0x0F,0xF0,0x18,0x18,0x3F,0xFC,0x30,0x0C,0x33,0xCC,0x33,0xCC,0x33,0xCC,0x33,0xCC,0x30,0x0C,0x3F,0xFC,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00',
+  WIFI: '0x00,0x00,0x3F,0xFC,0x0F,0xF0,0x03,0xC0,0x27,0xE4,0x1F,0xF8,0x07,0xE0,0x03,0xC0,0x01,0x80,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00'
+}
+
+const oledImageData: Readonly<Record<string, OledImage>> = Object.fromEntries(Object.entries(compactOledImageData)
+  .flatMap(([name, data]) => [[`${name}_16`, {size: 16 as const, data}],
+    [`${name}_32`, {size: 32 as const, data: expandOledImage(data)}]]))
+
+const oledLiveHelpers = `Adafruit_SSD1306 *sarduEduOled = nullptr;
+
+bool sarduEduInitializeOled(int width, int height, uint8_t address) {
+  delete sarduEduOled;
+  sarduEduOled = new Adafruit_SSD1306(width, height, &Wire, -1);
+  if (!sarduEduOled || !sarduEduOled->begin(SSD1306_SWITCHCAPVCC, address)) {
+    delete sarduEduOled;
+    sarduEduOled = nullptr;
+    return false;
+  }
+  sarduEduOled->clearDisplay();
+  sarduEduOled->setTextSize(1);
+  return true;
+}`
+
+const oledImageHelper = `void sarduEduDrawOledImage(const uint8_t *image, uint8_t size, uint8_t scale) {
+  const int16_t startX = oled.getCursorX();
+  const int16_t startY = oled.getCursorY();
+  scale = constrain(scale, 1, 2);
+  if (scale == 1) {
+    oled.drawBitmap(startX, startY, image, size, size, SSD1306_WHITE);
+    return;
+  }
+  for (uint8_t y = 0; y < size; ++y) {
+    for (uint8_t x = 0; x < size; ++x) {
+      if (pgm_read_byte(image + y * (size / 8) + x / 8) & (0x80 >> (x & 7))) {
+        oled.fillRect(startX + x * scale, startY + y * scale, scale, scale, SSD1306_WHITE);
+      }
+    }
+  }
+}`
+
+const sh1106ImageHelper = `void sarduEduDrawSh1106Image(const uint8_t *image, uint8_t size, uint8_t scale) {
+  const int16_t startX = sh1106.getCursorX();
+  const int16_t startY = sh1106.getCursorY();
+  scale = constrain(scale, 1, 2);
+  if (scale == 1) {
+    sh1106.drawBitmap(startX, startY, image, size, size, SH110X_WHITE);
+    return;
+  }
+  for (uint8_t y = 0; y < size; ++y) {
+    for (uint8_t x = 0; x < size; ++x) {
+      if (pgm_read_byte(image + y * (size / 8) + x / 8) & (0x80 >> (x & 7))) {
+        sh1106.fillRect(startX + x * scale, startY + y * scale, scale, scale, SH110X_WHITE);
+      }
+    }
+  }
+}`
+
+const oledLiveImageHelper = `void sarduEduDrawOledImage(const uint8_t *image, uint8_t size, uint8_t scale) {
+  const int16_t startX = sarduEduOled->getCursorX();
+  const int16_t startY = sarduEduOled->getCursorY();
+  scale = constrain(scale, 1, 2);
+  if (scale == 1) {
+    sarduEduOled->drawBitmap(startX, startY, image, size, size, SSD1306_WHITE);
+    return;
+  }
+  for (uint8_t y = 0; y < size; ++y) {
+    for (uint8_t x = 0; x < size; ++x) {
+      if (pgm_read_byte(image + y * (size / 8) + x / 8) & (0x80 >> (x & 7))) {
+        sarduEduOled->fillRect(startX + x * scale, startY + y * scale, scale, scale, SSD1306_WHITE);
+      }
+    }
+  }
+}`
+
+const sh1106LiveHelpers = `Adafruit_SH1106G sarduEduSh1106(128, 64, &Wire, -1);
+bool sarduEduSh1106Ready = false;
+
+void sarduEduDrawSh1106LiveImage(const uint8_t *image, uint8_t size, uint8_t scale) {
+  const int16_t startX = sarduEduSh1106.getCursorX();
+  const int16_t startY = sarduEduSh1106.getCursorY();
+  scale = constrain(scale, 1, 2);
+  if (scale == 1) {
+    sarduEduSh1106.drawBitmap(startX, startY, image, size, size, SH110X_WHITE);
+    return;
+  }
+  for (uint8_t y = 0; y < size; ++y) {
+    for (uint8_t x = 0; x < size; ++x) {
+      if (pgm_read_byte(image + y * (size / 8) + x / 8) & (0x80 >> (x & 7))) {
+        sarduEduSh1106.fillRect(startX + x * scale, startY + y * scale, scale, scale, SH110X_WHITE);
+      }
+    }
+  }
+}`
+
 const operationLines = (operation: ArduinoOperation): string[] => {
   if (operation.type === 'digital-write') {
     return [`digitalWrite(${operation.pin}, ${operation.level});`]
@@ -1233,6 +1547,8 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
     pn532Found: 'PN532 reader found',
     pn532NotFound: 'Error: PN532 reader not found',
   }
+  const generatedByLabel = request.messages?.generatedBy || 'Generated by'
+  const boardLabel = request.messages?.board || 'Board'
   const pinModes = program.outputPins.map((pin) => `pinMode(${pin}, OUTPUT);`)
   const declarations = program.variables.map((variable) => `double ${variable} = 0;`)
   const typedDeclarations = program.typedVariables.map(({ type, name, value }) => `${type} ${name} = ${value};`)
@@ -1359,8 +1675,8 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
   )
 
   return [
-    '// Generated by SARDU Edu - davide@sardu.pro',
-    `// Board: ${program.boardName}`,
+    `// ${generatedByLabel} SARDU Edu - davide@sardu.pro`,
+    `// ${boardLabel}: ${program.boardName}`,
     '',
     ...(program.dhtSensors.length ? ['#include <DHT.h>', ''] : []),
     ...(program.servoPins.length ? ['#include <Servo.h>', ''] : []),
@@ -1368,6 +1684,8 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
     ...(program.usesVl53l0x ? ['#include <Wire.h>', '#include <VL53L0X.h>', '', 'VL53L0X vl53l0x;', ''] : []),
     ...(program.neoPixelPins.length ? ['#include <Adafruit_NeoPixel.h>', ''] : []),
     ...(program.usesDisplay ? ['#include <Wire.h>', '#include <LiquidCrystal_PCF8574.h>', ''] : []),
+    ...(program.usesOled ? ['#include <Arduino.h>', '#include <Wire.h>', '#include <Adafruit_GFX.h>', '#include <Adafruit_SSD1306.h>', ''] : []),
+    ...(program.usesSh1106 ? ['#include <Arduino.h>', '#include <Wire.h>', '#include <Adafruit_GFX.h>', '#include <Adafruit_SH110X.h>', ''] : []),
     ...(program.usesOtto ? ['#include <Otto.h>', '', 'Otto Otto;', ''] : []),
     ...(program.usesWifi ? ['#include <WiFi.h>', ''] : []),
     ...(program.usesPn532I2c ? ['#include <Wire.h>'] : []),
@@ -1391,6 +1709,15 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
     ...(program.rc522Operations.has('read') ? ['', offlineRc522Helper(rc522ReadHelper)] : []),
     ...(program.rc522Operations.has('write') ? ['', offlineRc522Helper(rc522WriteHelper)] : []),
     ...(program.usesRfid ? [''] : []),
+    ...Array.from(program.oledImages).sort().map(name =>
+      `const uint8_t SARDU_EDU_OLED_${name}[] PROGMEM = {${oledImageData[name].data}};`),
+    ...(program.oledImages.size ? [''] : []),
+    ...(program.oledSize ? [`Adafruit_SSD1306 oled(${program.oledSize.width}, ${program.oledSize.height}, &Wire);`, ''] : []),
+    ...(program.usesSh1106 ? ['Adafruit_SH1106G sh1106(128, 64, &Wire, -1);', ''] : []),
+    ...Array.from(program.sh1106Images).sort().map(name =>
+      `const uint8_t SARDU_EDU_SH1106_${name}[] PROGMEM = {${oledImageData[name].data}};`),
+    ...(program.sh1106Images.size ? ['', sh1106ImageHelper, ''] : []),
+    ...(program.oledImages.size ? [oledImageHelper, ''] : []),
     ...dhtDeclarations,
     ...(dhtDeclarations.length ? [''] : []),
     ...servoDeclarations,
@@ -1424,6 +1751,11 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
   ].join('\n')
 }
 
+const oledLiveImageDeclarations = Object.entries(oledImageData).map(([name, image]) =>
+  `const uint8_t SARDU_EDU_OLED_${name}[] PROGMEM = {${image.data}};`).join('\n')
+const oledLiveImageCases = (functionName: string): string => Object.entries(oledImageData).map(([name, image], index) =>
+  `${index ? 'else ' : ''}if (image=="${name}") ${functionName}(SARDU_EDU_OLED_${name}, ${image.size}, scale);`).join('\n      ')
+
 export const generateSarduLiveFirmware = (): string => `// SARDU Edu Live firmware - davide@sardu.pro
 // Original serial protocol implementation for SARDU Edu boards.
 
@@ -1436,6 +1768,9 @@ export const generateSarduLiveFirmware = (): string => `// SARDU Edu Live firmwa
 #include <VL53L0X.h>
 #include <Adafruit_NeoPixel.h>
 #include <LiquidCrystal_PCF8574.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <Adafruit_SH110X.h>
 #include <SPI.h>
 #include <Adafruit_PN532.h>
 #include <MFRC522.h>
@@ -1477,6 +1812,14 @@ ${rc522AuthenticateHelper}
 ${rc522ReadHelper}
 
 ${rc522WriteHelper}
+
+${oledLiveImageDeclarations}
+
+${oledLiveHelpers}
+
+${oledLiveImageHelper}
+
+${sh1106LiveHelpers}
 
 const unsigned long SARDU_BAUD_RATE = 115200;
 #if !defined(ARDUINO_ARCH_ESP32)
@@ -1658,6 +2001,86 @@ void loop() {
     } else {
       Serial.println(0);
     }
+  } else if (command == 'E') {
+    while (Serial.peek() == ' ') Serial.read(); const char action = Serial.read();
+    if (action == 'I') {
+      const int width = Serial.parseInt(); const int height = Serial.parseInt(); const int address = Serial.parseInt();
+      Serial.println(sarduEduInitializeOled(width, height, address) ? 1 : 0);
+    } else if (!sarduEduOled) {
+      Serial.println(0);
+    } else if (action == 'L') {
+      sarduEduOled->drawLine(Serial.parseInt(), Serial.parseInt(), Serial.parseInt(), Serial.parseInt(), Serial.parseInt()); Serial.println(1);
+    } else if (action == 'R' || action == 'F') {
+      const int x=Serial.parseInt(), y=Serial.parseInt(), width=Serial.parseInt(), height=Serial.parseInt();
+      const int color=Serial.parseInt();
+      if (action=='R') sarduEduOled->drawRect(x,y,width,height,color); else sarduEduOled->fillRect(x,y,width,height,color);
+      Serial.println(1);
+    } else if (action == 'J' || action == 'K') {
+      const int x=Serial.parseInt(), y=Serial.parseInt(), width=Serial.parseInt(), height=Serial.parseInt();
+      const int radius=Serial.parseInt(), color=Serial.parseInt();
+      if (action=='J') sarduEduOled->drawRoundRect(x,y,width,height,radius,color); else sarduEduOled->fillRoundRect(x,y,width,height,radius,color);
+      Serial.println(1);
+    } else if (action == 'C' || action == 'D') {
+      const int x=Serial.parseInt(), y=Serial.parseInt(), radius=Serial.parseInt(), color=Serial.parseInt();
+      if (action=='C') sarduEduOled->drawCircle(x,y,radius,color); else sarduEduOled->fillCircle(x,y,radius,color); Serial.println(1);
+    } else if (action == 'G' || action == 'H') {
+      const int x0=Serial.parseInt(), y0=Serial.parseInt(), x1=Serial.parseInt(), y1=Serial.parseInt();
+      const int x2=Serial.parseInt(), y2=Serial.parseInt(), color=Serial.parseInt();
+      if (action=='G') sarduEduOled->drawTriangle(x0,y0,x1,y1,x2,y2,color); else sarduEduOled->fillTriangle(x0,y0,x1,y1,x2,y2,color); Serial.println(1);
+    } else if (action == 'S') {
+      sarduEduOled->setTextSize(Serial.parseInt()); sarduEduOled->setTextColor(Serial.parseInt(), Serial.parseInt()); Serial.println(1);
+    } else if (action == 'P') {
+      sarduEduOled->setCursor(Serial.parseInt(), Serial.parseInt()); Serial.println(1);
+    } else if (action == 'T') {
+      while (Serial.peek() == ' ') Serial.read(); const String text=sarduEduDisplayText(Serial.readStringUntil(' '));
+      if (Serial.parseInt()) sarduEduOled->println(text); else sarduEduOled->print(text); Serial.println(1);
+    } else if (action == 'B') {
+      while (Serial.peek() == ' ') Serial.read(); const String image=Serial.readStringUntil(' '); const int scale=Serial.parseInt();
+      ${oledLiveImageCases('sarduEduDrawOledImage')}
+      else { Serial.println(0); return; }
+      Serial.println(1);
+    } else if (action == 'X') { sarduEduOled->clearDisplay(); Serial.println(1);
+    } else if (action == 'U') { sarduEduOled->display(); Serial.println(1);
+    } else Serial.println(0);
+  } else if (command == 'X') {
+    while (Serial.peek() == ' ') Serial.read(); const char action = Serial.read();
+    if (action == 'I') {
+      sarduEduSh1106Ready = sarduEduSh1106.begin(Serial.parseInt(), true);
+      if (sarduEduSh1106Ready) { sarduEduSh1106.clearDisplay(); sarduEduSh1106.setTextSize(1); }
+      Serial.println(sarduEduSh1106Ready ? 1 : 0);
+    } else if (!sarduEduSh1106Ready) {
+      Serial.println(0);
+    } else if (action == 'L') {
+      sarduEduSh1106.drawLine(Serial.parseInt(), Serial.parseInt(), Serial.parseInt(), Serial.parseInt(), Serial.parseInt()); Serial.println(1);
+    } else if (action == 'R' || action == 'F') {
+      const int x=Serial.parseInt(), y=Serial.parseInt(), width=Serial.parseInt(), height=Serial.parseInt(), color=Serial.parseInt();
+      if (action=='R') sarduEduSh1106.drawRect(x,y,width,height,color); else sarduEduSh1106.fillRect(x,y,width,height,color); Serial.println(1);
+    } else if (action == 'J' || action == 'K') {
+      const int x=Serial.parseInt(), y=Serial.parseInt(), width=Serial.parseInt(), height=Serial.parseInt();
+      const int radius=Serial.parseInt(), color=Serial.parseInt();
+      if (action=='J') sarduEduSh1106.drawRoundRect(x,y,width,height,radius,color); else sarduEduSh1106.fillRoundRect(x,y,width,height,radius,color); Serial.println(1);
+    } else if (action == 'C' || action == 'D') {
+      const int x=Serial.parseInt(), y=Serial.parseInt(), radius=Serial.parseInt(), color=Serial.parseInt();
+      if (action=='C') sarduEduSh1106.drawCircle(x,y,radius,color); else sarduEduSh1106.fillCircle(x,y,radius,color); Serial.println(1);
+    } else if (action == 'G' || action == 'H') {
+      const int x0=Serial.parseInt(), y0=Serial.parseInt(), x1=Serial.parseInt(), y1=Serial.parseInt();
+      const int x2=Serial.parseInt(), y2=Serial.parseInt(), color=Serial.parseInt();
+      if (action=='G') sarduEduSh1106.drawTriangle(x0,y0,x1,y1,x2,y2,color); else sarduEduSh1106.fillTriangle(x0,y0,x1,y1,x2,y2,color); Serial.println(1);
+    } else if (action == 'S') {
+      sarduEduSh1106.setTextSize(Serial.parseInt()); sarduEduSh1106.setTextColor(Serial.parseInt(), Serial.parseInt()); Serial.println(1);
+    } else if (action == 'P') {
+      sarduEduSh1106.setCursor(Serial.parseInt(), Serial.parseInt()); Serial.println(1);
+    } else if (action == 'T') {
+      while (Serial.peek() == ' ') Serial.read(); const String text=sarduEduDisplayText(Serial.readStringUntil(' '));
+      if (Serial.parseInt()) sarduEduSh1106.println(text); else sarduEduSh1106.print(text); Serial.println(1);
+    } else if (action == 'B') {
+      while (Serial.peek() == ' ') Serial.read(); const String image=Serial.readStringUntil(' '); const int scale=Serial.parseInt();
+      ${oledLiveImageCases('sarduEduDrawSh1106LiveImage')}
+      else { Serial.println(0); return; }
+      Serial.println(1);
+    } else if (action == 'X') { sarduEduSh1106.clearDisplay(); Serial.println(1);
+    } else if (action == 'U') { sarduEduSh1106.display(); Serial.println(1);
+    } else Serial.println(0);
   } else if (command == 'F') {
     while (Serial.peek() == ' ') Serial.read(); const String reader = Serial.readStringUntil(' ');
     const String bus = Serial.readStringUntil(' ');
@@ -1686,7 +2109,7 @@ void loop() {
     }
     else Serial.println(0);
   } else if (command == 'P') {
-    Serial.println("SARDU-LIVE 6");
+    Serial.println("SARDU-LIVE 8");
   } else if (command == 'M') {
     Serial.println(millis());
   } else if (command == 'U') {

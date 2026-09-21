@@ -51,6 +51,16 @@ describe('Arduino definitions', () => {
       requiredCapabilities: ['i2c'],
       modes: ['standalone', 'realtime'],
     })
+    expect(ARDUINO_HARDWARE_DEFINITIONS.components.get('oled-ssd1306')).toMatchObject({
+      requiredCapabilities: ['i2c'],
+      modes: ['standalone', 'realtime'],
+    })
+    expect(ARDUINO_HARDWARE_DEFINITIONS.components.get('oled-sh1106')).toMatchObject({
+      name: 'OLED SH1106 1.3" I2C',
+      boardIds: expect.arrayContaining(['arduino-uno', 'arduino-nano', 'esp32-dev-module']),
+      requiredCapabilities: ['i2c'],
+      modes: ['standalone', 'realtime'],
+    })
   })
 
   test('declares Uno and Nano pins and communication buses', () => {
@@ -293,7 +303,18 @@ describe('generateArduinoSketch', () => {
     expect(firmware).toContain('digitalWrite(pin, level ? HIGH : LOW);')
     expect(firmware).toContain('#include <LiquidCrystal_PCF8574.h>')
     expect(firmware).toContain("command == 'Q'")
-    expect(firmware).toContain('SARDU-LIVE 6')
+    expect(firmware).toContain('#include <Adafruit_SSD1306.h>')
+    expect(firmware).toContain("command == 'E'")
+    expect(firmware).toContain('sarduEduOled->drawRoundRect')
+    expect(firmware).toContain('#include <Adafruit_SH110X.h>')
+    expect(firmware).toContain("command == 'X'")
+    expect(firmware).toContain('Adafruit_SH1106G sarduEduSh1106(128, 64, &Wire, -1);')
+    expect(firmware).toContain('sarduEduOled->clearDisplay();\n  sarduEduOled->setTextSize(1);')
+    expect(firmware).toContain('sarduEduSh1106.clearDisplay(); sarduEduSh1106.setTextSize(1);')
+    expect(firmware).toContain('SARDU_EDU_OLED_HEART_16[] PROGMEM')
+    expect(firmware).toContain('SARDU_EDU_OLED_WIFI_32[] PROGMEM')
+    expect(firmware).not.toContain('SARDU_EDU_OLED_ARDUINO')
+    expect(firmware).toContain('SARDU-LIVE 8')
   })
 
   test('generates 1602 I2C display operations with constrained zero-based coordinates', () => {
@@ -344,6 +365,164 @@ describe('generateArduinoSketch', () => {
     expect(() => generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})).toThrow(
       'Custom display I2C pins require an ESP32 board',
     )
+  })
+
+  test('generates OLED support and bitmap data only for connected OLED blocks', () => {
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK: {block: 'initialize'}}}),
+      initialize: block('initialize', 'sarduActuators_initializeOled', {
+        next: 'cursor', fields: {FORMAT: {value: '128x64'}, ADDRESS: {value: '0x3C'}},
+      }),
+      cursor: block('cursor', 'sarduActuators_setOledCursor', {
+        next: 'print', inputs: {X: {block: 'zero'}, Y: {block: 'zero'}},
+      }),
+      zero: block('zero', 'math_number', {fields: {NUM: {value: '0'}}}),
+      print: block('print', 'sarduActuators_printOled', {
+        next: 'image', fields: {ENDING: {value: 'NEWLINE'}}, inputs: {TEXT: {block: 'text'}},
+      }),
+      text: block('text', 'text', {fields: {TEXT: {value: 'Ciao'}}}),
+      image: block('image', 'sarduActuators_drawOledImage', {
+        next: 'largeImage', fields: {IMAGE: {value: 'HEART'}, SCALE: {value: '16'}},
+      }),
+      largeImage: block('largeImage', 'sarduActuators_drawOledImage', {
+        next: 'show', fields: {IMAGE: {value: 'WIFI'}, SCALE: {value: '64'}},
+      }),
+      show: block('show', 'sarduActuators_showOled'),
+      disconnected: block('disconnected', 'sarduActuators_drawOledImage', {
+        topLevel: true, fields: {IMAGE: {value: 'STAR'}, SCALE: {value: '64'}},
+      }),
+    }
+    const source = generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})
+
+    expect(source).toContain('#include <Adafruit_GFX.h>')
+    expect(source).toContain('#include <Adafruit_SSD1306.h>')
+    expect(source).toContain('#include <Arduino.h>')
+    expect(source).toContain('Adafruit_SSD1306 oled(128, 64, &Wire);')
+    expect(source).toContain('oled.begin(SSD1306_SWITCHCAPVCC, 0x3C);')
+    expect(source).toContain('oled.setTextSize(1);')
+    expect(source).not.toContain('new Adafruit_SSD1306')
+    expect(source).not.toContain('delete sarduEduOled')
+    expect(source).not.toContain('sarduEduOled->')
+    expect(source).toContain('oled.setCursor(0, 0);')
+    expect(source).toContain('oled.println("Ciao");')
+    expect(source).toContain('SARDU_EDU_OLED_HEART_16[] PROGMEM')
+    expect(source).not.toContain('SARDU_EDU_OLED_STAR_16[] PROGMEM')
+    expect(source).toContain('sarduEduDrawOledImage(SARDU_EDU_OLED_HEART_16, 16, 1);')
+    expect(source).toContain('SARDU_EDU_OLED_WIFI_32[] PROGMEM')
+    expect(source).toContain('sarduEduDrawOledImage(SARDU_EDU_OLED_WIFI_32, 32, 2);')
+    expect(source).toContain('getCursorX()')
+    expect(source).toContain('oled.display();')
+  })
+
+  test('does not generate OLED code when OLED blocks are disconnected', () => {
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true}),
+      disconnected: block('disconnected', 'sarduActuators_initializeOled', {
+        topLevel: true, fields: {FORMAT: {value: '128x32'}, ADDRESS: {value: '0x3D'}},
+      }),
+    }
+    const source = generateArduinoSketch({boardId: 'arduino-nano', targets: [{blocks}]})
+    expect(source).not.toContain('Adafruit_SSD1306')
+    expect(source).not.toContain('Adafruit_SSD1306')
+  })
+
+  test('generates only the verified SH1106 128x64 sketch structure', () => {
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK: {block: 'initialize'}}}),
+      initialize: block('initialize', 'sarduActuators_initializeSh1106', {
+        next: 'cursor', fields: {ADDRESS: {value: '0x3C'}},
+      }),
+      cursor: block('cursor', 'sarduActuators_setSh1106Cursor', {
+        next: 'print', inputs: {X: {block: 'zero'}, Y: {block: 'zero'}},
+      }),
+      zero: block('zero', 'math_number', {fields: {NUM: {value: '0'}}}),
+      print: block('print', 'sarduActuators_printSh1106', {
+        next: 'show', fields: {ENDING: {value: 'NEWLINE'}}, inputs: {TEXT: {block: 'text'}},
+      }),
+      text: block('text', 'text', {fields: {TEXT: {value: 'Ciao'}}}),
+      show: block('show', 'sarduActuators_showSh1106'),
+    }
+    const source = generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})
+
+    expect(source).toContain('#include <Adafruit_SH110X.h>')
+    expect(source).toContain('Adafruit_SH1106G sh1106(128, 64, &Wire, -1);')
+    expect(source).toContain('sh1106.begin(0x3C, true);')
+    expect(source).toContain('sh1106.begin(0x3C, true);\n  sh1106.clearDisplay();')
+    expect(source).toContain('sh1106.setTextSize(1);')
+    expect(source).toContain('sh1106.setCursor(0, 0);')
+    expect(source).toContain('sh1106.println("Ciao");')
+    expect(source).toContain('sh1106.display();')
+    expect(source).not.toContain('Adafruit_SSD1306')
+    expect(source).not.toContain('new Adafruit_SH1106G')
+  })
+
+  test('localizes the generated sketch header', () => {
+    const blocks = {program: block('program', 'sarduBoard_program', {topLevel: true})}
+    const source = generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}], messages: {
+      pn532Found: 'Lettore PN532 trovato',
+      pn532NotFound: 'Errore: lettore PN532 non trovato',
+      generatedBy: 'Generato da',
+      board: 'Scheda',
+    }})
+    expect(source).toContain('// Generato da SARDU Edu - davide@sardu.pro')
+    expect(source).toContain('// Scheda: Arduino Uno')
+  })
+
+  test('does not generate SH1106 code when its blocks are disconnected', () => {
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true}),
+      disconnected: block('disconnected', 'sarduActuators_initializeSh1106', {
+        topLevel: true, fields: {ADDRESS: {value: '0x3D'}},
+      }),
+    }
+    const source = generateArduinoSketch({boardId: 'arduino-nano', targets: [{blocks}]})
+    expect(source).not.toContain('Adafruit_SH110X')
+    expect(source).not.toContain('sh1106')
+  })
+
+  test('generates every OLED drawing primitive and manual dimensions', () => {
+    const numberInput = (name: string) => ({[name]: {block: 'number'}})
+    const shapeInputs = {X: {block: 'number'}, Y: {block: 'number'}, WIDTH: {block: 'number'},
+      HEIGHT: {block: 'number'}, RADIUS: {block: 'number'}}
+    const triangleInputs = {X0: {block: 'number'}, Y0: {block: 'number'}, X1: {block: 'number'},
+      Y1: {block: 'number'}, X2: {block: 'number'}, Y2: {block: 'number'}}
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK: {block: 'initialize'}}}),
+      initialize: block('initialize', 'sarduActuators_initializeOledCustom', {next: 'line',
+        fields: {ADDRESS: {value: '0x3D'}}, inputs: {WIDTH: {block: 'width'}, HEIGHT: {block: 'height'}}}),
+      width: block('width', 'math_number', {fields: {NUM: {value: '128'}}}),
+      height: block('height', 'math_number', {fields: {NUM: {value: '32'}}}),
+      number: block('number', 'math_number', {fields: {NUM: {value: '4'}}}),
+      line: block('line', 'sarduActuators_drawOledLine', {next: 'rect', fields: {COLOR: {value: 'WHITE'}},
+        inputs: {X0: {block: 'number'}, Y0: {block: 'number'}, X1: {block: 'number'}, Y1: {block: 'number'}}}),
+      rect: block('rect', 'sarduActuators_drawOledRect', {next: 'fillRect', fields: {COLOR: {value: 'WHITE'}}, inputs: shapeInputs}),
+      fillRect: block('fillRect', 'sarduActuators_fillOledRect', {next: 'circle', fields: {COLOR: {value: 'BLACK'}}, inputs: shapeInputs}),
+      circle: block('circle', 'sarduActuators_drawOledCircle', {next: 'fillCircle', fields: {COLOR: {value: 'WHITE'}}, inputs: {...numberInput('X'), ...numberInput('Y'), ...numberInput('RADIUS')}}),
+      fillCircle: block('fillCircle', 'sarduActuators_fillOledCircle', {next: 'roundRect', fields: {COLOR: {value: 'BLACK'}}, inputs: {...numberInput('X'), ...numberInput('Y'), ...numberInput('RADIUS')}}),
+      roundRect: block('roundRect', 'sarduActuators_drawOledRoundRect', {next: 'fillRoundRect', fields: {COLOR: {value: 'WHITE'}}, inputs: shapeInputs}),
+      fillRoundRect: block('fillRoundRect', 'sarduActuators_fillOledRoundRect', {next: 'triangle', fields: {COLOR: {value: 'BLACK'}}, inputs: shapeInputs}),
+      triangle: block('triangle', 'sarduActuators_drawOledTriangle', {next: 'fillTriangle', fields: {COLOR: {value: 'WHITE'}}, inputs: triangleInputs}),
+      fillTriangle: block('fillTriangle', 'sarduActuators_fillOledTriangle', {next: 'textStyle', fields: {COLOR: {value: 'BLACK'}}, inputs: triangleInputs}),
+      textStyle: block('textStyle', 'sarduActuators_setOledText', {next: 'clear', fields: {
+        SIZE: {value: '2'}, COLOR: {value: 'WHITE'}, BACKGROUND: {value: 'BLACK'},
+      }}),
+      clear: block('clear', 'sarduActuators_clearOled'),
+    }
+    const source = generateArduinoSketch({boardId: 'arduino-nano', targets: [{blocks}]})
+    expect(source).toContain('Adafruit_SSD1306 oled(128, 32, &Wire);')
+    expect(source).toContain('oled.begin(SSD1306_SWITCHCAPVCC, 0x3D);')
+    expect(source).toContain('drawLine(4, 4, 4, 4, SSD1306_WHITE)')
+    expect(source).toContain('drawRect(4, 4, 4, 4, SSD1306_WHITE)')
+    expect(source).toContain('fillRect(4, 4, 4, 4, SSD1306_BLACK)')
+    expect(source).toContain('drawCircle(4, 4, 4, SSD1306_WHITE)')
+    expect(source).toContain('fillCircle(4, 4, 4, SSD1306_BLACK)')
+    expect(source).toContain('drawRoundRect(4, 4, 4, 4, 4, SSD1306_WHITE)')
+    expect(source).toContain('fillRoundRect(4, 4, 4, 4, 4, SSD1306_BLACK)')
+    expect(source).toContain('drawTriangle(4, 4, 4, 4, 4, 4, SSD1306_WHITE)')
+    expect(source).toContain('fillTriangle(4, 4, 4, 4, 4, 4, SSD1306_BLACK)')
+    expect(source).toContain('setTextSize(2)')
+    expect(source).toContain('setTextColor(SSD1306_WHITE, SSD1306_BLACK)')
+    expect(source).toContain('clearDisplay()')
   })
 
   test('generates child-friendly Scratch control flow with board timers', () => {

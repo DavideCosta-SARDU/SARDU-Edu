@@ -18,7 +18,7 @@ class Scratch3SarduWifi {
             selection?.mode !== 'standalone';
         return {
             id: 'sarduWifi',
-            name: message('sarduWifi.category', 'ESP32 · Wi-Fi', 'Name of the ESP32 Wi-Fi blocks category'),
+            name: message('sarduWifi.category', 'ESP32 - Wi-Fi', 'Name of the ESP32 Wi-Fi blocks category'),
             color1: '#00695C',
             color2: '#00574C',
             color3: '#00443B',

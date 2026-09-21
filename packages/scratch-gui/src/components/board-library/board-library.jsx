@@ -131,6 +131,15 @@ const DISCOVERY_TIMEOUT_LABELS = {
     }
 };
 
+export const canSelectBoard = (selectedBoardId, nextBoardId) =>
+    !selectedBoardId || selectedBoardId === nextBoardId;
+
+export const removeSelectedBoard = (vm, confirmRemoval) => {
+    if (vm.clearSarduEduHardwareSelection()) return true;
+    if (!confirmRemoval()) return false;
+    return vm.clearSarduEduHardwareSelection(true);
+};
+
 const BoardLibrary = ({onRequestClose, vm}) => {
     const intl = useIntl();
     const selection = vm.getSarduEduProjectData()?.hardwareSelection;
@@ -139,14 +148,15 @@ const BoardLibrary = ({onRequestClose, vm}) => {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [discoveryTimeout, setDiscoveryTimeout] = useState(getBoardDiscoveryTimeout);
     const handleRemove = () => {
-        if (!vm.clearSarduEduHardwareSelection() && (!window.confirm(intl.formatMessage({
+        if (!removeSelectedBoard(vm, () => window.confirm(intl.formatMessage({
             id: 'gui.sardu.removeBoardWithCode',
             defaultMessage: 'The board program contains blocks. Remove the board and permanently delete that code?',
             description: 'Confirmation before removing a board program which contains blocks'
-        })) || !vm.clearSarduEduHardwareSelection(true))) return;
+        })))) return;
         setSelectedBoardName(null);
     };
     const handleSelect = (item, wifiEnabled = selection?.boardId === item.boardId && selection?.wifiEnabled) => {
+        if (!canSelectBoard(selection?.boardId, item.boardId)) return;
         vm.setSarduEduHardwareSelection({
             boardId: item.boardId,
             boardName: item.name,
@@ -177,6 +187,8 @@ const BoardLibrary = ({onRequestClose, vm}) => {
     };
     const boardItems = BOARD_ITEMS.map(item => ({
         ...item,
+        disabled: !canSelectBoard(selection?.boardId, item.boardId),
+        showDisabledLabel: false,
         description: <div>
             {item.description}
             {item.wifiCapable ? (
@@ -225,7 +237,7 @@ const BoardLibrary = ({onRequestClose, vm}) => {
                         type="button"
                         onClick={() => setSettingsOpen(open => !open)}
                     >
-                        ⚙
+                        ...
                     </button>
                     {settingsOpen ? (
                         <div className={styles.settingsPanel}>
@@ -252,7 +264,7 @@ const BoardLibrary = ({onRequestClose, vm}) => {
                                 >
                                     {BOARD_DISCOVERY_TIMEOUTS.map(timeout => (
                                         <option key={timeout} value={timeout}>
-                                            {`${timeout} ms — ${intl.formatMessage(DISCOVERY_TIMEOUT_LABELS[timeout])}`}
+                                            {`${timeout} ms - ${intl.formatMessage(DISCOVERY_TIMEOUT_LABELS[timeout])}`}
                                         </option>
                                     ))}
                                 </select>

@@ -51,7 +51,7 @@ class SarduSerialTransport {
             this._diagnose('handshake-sent');
             const response = await this._readLine(HANDSHAKE_TIMEOUT);
             this._diagnose('handshake-response', response || '(empty)');
-            if (response !== 'SARDU-LIVE 6') {
+            if (response !== 'SARDU-LIVE 8') {
                 throw new Error('The connected board is not running SARDU Edu Live firmware');
             }
             this._diagnose('connected');
@@ -116,6 +116,24 @@ class SarduSerialTransport {
                 .map(value => value.toString(16).padStart(2, '0')).join('').toUpperCase()] :
             values.map(value => protocolPin(String(value)));
         return this._readNumber(`Q ${action} ${encodedValues.join(' ')}`.trim());
+    }
+
+    runOled (action, ...values) {
+        const encodedValues = action === 'T' ? [
+            Array.from(new TextEncoder().encode(String(values[0])))
+                .map(value => value.toString(16).padStart(2, '0')).join('').toUpperCase() || '-',
+            values[1]
+        ] : values.map(value => String(value).startsWith('0x') ? Number(value) : value);
+        return this._readNumber(`E ${action} ${encodedValues.join(' ')}`.trim());
+    }
+
+    runSh1106 (action, ...values) {
+        const encodedValues = action === 'T' ? [
+            Array.from(new TextEncoder().encode(String(values[0])))
+                .map(value => value.toString(16).padStart(2, '0')).join('').toUpperCase() || '-',
+            values[1]
+        ] : values.map(value => String(value).startsWith('0x') ? Number(value) : value);
+        return this._readNumber(`X ${action} ${encodedValues.join(' ')}`.trim());
     }
 
     readDigital (pin) { return this._readNumber(`V ${protocolPin(pin)}`); }

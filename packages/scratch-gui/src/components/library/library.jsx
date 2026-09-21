@@ -17,6 +17,8 @@ import Spinner from '../spinner/spinner.jsx';
 import {CATEGORIES} from '../../../src/lib/libraries/decks/index.jsx';
 
 import styles from './library.css';
+
+export const HARDWARE_REMOVE_LABEL = 'X';
 import {ModalFocusContext} from '../../contexts/modal-focus-context.jsx';
 
 const messages = defineMessages({
@@ -312,6 +314,7 @@ class LibraryComponent extends React.Component {
             key={key}
             name={data.name}
             showPlayButton={this.props.showPlayButton}
+            showDisabledLabel={data.showDisabledLabel}
             onMouseEnter={this.handleMouseEnter}
             onMouseLeave={this.handleMouseLeave}
             onSelect={this.handleSelect}
@@ -332,7 +335,7 @@ class LibraryComponent extends React.Component {
                         this.props.onItemRemove(data);
                     }}
                 >
-                    ×
+                    {HARDWARE_REMOVE_LABEL}
                 </button>
             </div>
         );

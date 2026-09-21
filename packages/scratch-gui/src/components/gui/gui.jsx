@@ -272,7 +272,9 @@ const GUIComponent = props => {
     }, [hardwareSelection, vm]);
 
     useEffect(() => {
-        if (!hardwareSelection?.componentIds?.some(id => ['servo', 'buzzer', 'led', 'neopixel', 'lcd-i2c'].includes(id)) ||
+        if (!hardwareSelection?.componentIds?.some(id => [
+            'servo', 'buzzer', 'led', 'neopixel', 'lcd-i2c', 'oled-ssd1306', 'oled-sh1106'
+        ].includes(id)) ||
             vm.extensionManager.isExtensionLoaded('sarduActuators')) return;
         void vm.extensionManager.loadExtensionURL('sarduActuators');
     }, [hardwareSelection, vm]);
@@ -685,7 +687,7 @@ const GUIComponent = props => {
                                                     {sarduStatusHistory.map((status, index) => (
                                                         <div key={`${status.time}-${index}`}>
                                                             <time>{new Date(status.time).toLocaleTimeString(intl.locale)}</time>
-                                                            {' — '}{status.message}
+                                                            {' - '}{status.message}
                                                         </div>
                                                     ))}
                                                 </div>
