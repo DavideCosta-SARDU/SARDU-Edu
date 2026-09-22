@@ -20,6 +20,28 @@ test('SARDU sensors exposes selected DHT and HC-SR04 blocks in Live mode', t => 
     t.end();
 });
 
+test('SARDU sensors exposes both button wiring modes and reads them in Live mode', async t => {
+    const calls = [];
+    const extension = new SarduSensors({
+        sarduEdu: {hardwareSelection: {componentIds: ['button'], digitalOutputPins: ['2', '3'], mode: 'realtime'}},
+        sarduEduLiveTransport: {
+            connected: true,
+            readButton: (pin, pullup) => {
+                calls.push([pin, pullup]);
+                return Promise.resolve(pin === '3' ? 1 : 0);
+            }
+        }
+    });
+    const blocks = Object.fromEntries(extension.getInfo().blocks.map(block => [block.opcode, block]));
+
+    t.equal(blocks.configureButton.hideFromPalette, false);
+    t.equal(blocks.buttonPressedLow.blockType, 'Boolean');
+    t.equal(blocks.buttonPressedHigh.blockType, 'Boolean');
+    t.equal(await extension.buttonPressedLow({PIN: '2'}), true);
+    t.equal(await extension.buttonPressedHigh({PIN: '3'}), true);
+    t.same(calls, [['2', true], ['3', false]]);
+});
+
 test('SARDU sensors exposes RFID standard and advanced blocks with hexadecimal defaults', t => {
     const extension = new SarduSensors({sarduEdu: {hardwareSelection: {
         componentIds: ['pn532', 'rc522'], digitalOutputPins: ['2', '3', '10', '11', '12', '13'],

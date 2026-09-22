@@ -1,20 +1,20 @@
-# SARDU Edu
+# SARDU-Block
 
-SARDU Edu è un ambiente educativo di programmazione a blocchi basato sul repository open source ufficiale
+SARDU-Block è l'ambiente educativo di programmazione a blocchi del progetto SARDU Edu, basato sul repository open source ufficiale
 [Scratch Editor](https://github.com/scratchfoundation/scratch-editor).
 
 Il progetto conserva inizialmente l'interfaccia e il comportamento dell'editor originale. La sua evoluzione è orientata
 all'integrazione hardware modulare, iniziando da Arduino Uno e Arduino Nano, senza sostituire o ricostruire l'editor a
 blocchi.
 
-SARDU Edu è un progetto indipendente e non è affiliato né approvato dalla Scratch Foundation.
+SARDU-Block e SARDU Edu sono progetti indipendenti e non sono affiliati né approvati dalla Scratch Foundation.
 
 ## Stato del progetto
 
-La Milestone 1 prepara la base SARDU Edu:
+La Milestone 1 prepara la base SARDU-Block:
 
 - codice derivato dall'attuale monorepo ufficiale `scratch-editor`;
-- branding essenziale SARDU Edu;
+- branding essenziale SARDU-Block;
 - esecuzione locale;
 - build web statica;
 - pubblicazione stable su GitHub Pages tramite workflow controllato;
@@ -78,7 +78,7 @@ La procedura prevista per mantenere separati upstream e personalizzazioni SARDU 
 
 ## Licenza e attribuzioni
 
-SARDU Edu è distribuito secondo la GNU Affero General Public License v3.0 (`AGPL-3.0-only`). Consultare
+SARDU-Block è distribuito secondo la GNU Affero General Public License v3.0 (`AGPL-3.0-only`). Consultare
 [`LICENSE`](LICENSE), [`NOTICE`](NOTICE) e [`TRADEMARK`](TRADEMARK).
 
-Modifiche SARDU Edu: Davide Costa <davide@sardu.pro>.
+Modifiche SARDU-Block: Davide Costa <davide@sardu.pro>.

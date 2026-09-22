@@ -1,4 +1,4 @@
-import config from '../../../../sardu-edu.config.json';
-import logo from './sardu-edu-logo.svg';
+import config from '../../../../sardu-block.config.json';
+import logo from './sardu-block-logo.svg';
 
 export {config, logo};

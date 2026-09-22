@@ -13,7 +13,7 @@ import PreferenceMenu from './preference-menu.jsx';
 import {
     DEFAULT_MODE,
     HIGH_CONTRAST_MODE,
-    SARDU_EDU_MODE,
+    SARDU_BLOCK_MODE,
     colorModeMap
 } from '../../lib/settings/color-mode/index.js';
 import {themeMap} from '../../lib/settings/theme/index.js';
@@ -34,7 +34,7 @@ const settingsMenuAriaMessage = defineMessage({
     description: 'accessibility label for settings menu'
 });
 
-const enabledColorModes = [SARDU_EDU_MODE, DEFAULT_MODE, HIGH_CONTRAST_MODE];
+const enabledColorModes = [SARDU_BLOCK_MODE, DEFAULT_MODE, HIGH_CONTRAST_MODE];
 
 const SettingsMenu = ({
     canChangeLanguage,

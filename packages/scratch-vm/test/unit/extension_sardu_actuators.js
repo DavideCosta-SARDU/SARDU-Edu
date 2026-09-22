@@ -24,7 +24,7 @@ test('SARDU actuators exposes an independent servo block for a selected servo', 
     t.end();
 });
 
-test('SARDU Edu actuators exposes the I2C display blocks and ESP32 custom pins', t => {
+test('SARDU-Block actuators exposes the I2C display blocks and ESP32 custom pins', t => {
     const extension = new SarduActuators({sarduEdu: {hardwareSelection: {
         boardId: 'esp32-dev-module',
         componentIds: ['lcd-i2c'],
@@ -47,7 +47,7 @@ test('SARDU Edu actuators exposes the I2C display blocks and ESP32 custom pins',
     t.end();
 });
 
-test('SARDU Edu actuators hides custom display pins on Arduino Uno', t => {
+test('SARDU-Block actuators hides custom display pins on Arduino Uno', t => {
     const extension = new SarduActuators({sarduEdu: {hardwareSelection: {
         boardId: 'arduino-uno', componentIds: ['lcd-i2c'], mode: 'standalone'
     }}});
@@ -56,7 +56,7 @@ test('SARDU Edu actuators hides custom display pins on Arduino Uno', t => {
     t.end();
 });
 
-test('SARDU Edu actuators exposes all OLED blocks and address labels', t => {
+test('SARDU-Block actuators exposes all OLED blocks and address labels', t => {
     const extension = new SarduActuators({sarduEdu: {hardwareSelection: {
         boardId: 'arduino-uno', componentIds: ['oled-ssd1306'], mode: 'standalone'
     }}});
@@ -87,7 +87,7 @@ test('SARDU Edu actuators exposes all OLED blocks and address labels', t => {
     t.end();
 });
 
-test('SARDU Edu actuators exposes all SH1106 blocks only when selected', t => {
+test('SARDU-Block actuators exposes all SH1106 blocks only when selected', t => {
     const extension = new SarduActuators({sarduEdu: {hardwareSelection: {
         boardId: 'arduino-uno', componentIds: ['oled-sh1106'], mode: 'standalone'
     }}});
@@ -109,7 +109,7 @@ test('SARDU Edu actuators exposes all SH1106 blocks only when selected', t => {
     t.end();
 });
 
-test('SARDU Edu OLED image sizes map to compact and detailed Live bitmaps', t => {
+test('SARDU-Block OLED image sizes map to compact and detailed Live bitmaps', t => {
     const calls = [];
     const transport = {
         connected: true,

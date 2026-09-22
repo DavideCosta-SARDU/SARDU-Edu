@@ -155,6 +155,7 @@ export const ARDUINO_COMPONENTS: readonly ComponentDefinition[] = [
     requiredCapabilities: ['digital-io'], modes: ['standalone', 'realtime'],
   },
   {id: 'touch', name: 'Touch sensor', version: '1', boardIds: ['arduino-uno', 'arduino-nano'], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['digital-io'], modes: ['standalone', 'realtime']},
+  {id: 'button', name: 'Push button', version: '1', boardIds: ['arduino-uno', 'arduino-nano', ...esp32BoardIds], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['digital-io'], modes: ['standalone', 'realtime']},
   {id: 'sound-sensor', name: 'Sound sensor', version: '1', boardIds: ['arduino-uno', 'arduino-nano'], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['analog-input'], modes: ['standalone', 'realtime']},
   {id: 'photoresistor', name: 'Photoresistor', version: '1', boardIds: ['arduino-uno', 'arduino-nano'], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['analog-input'], modes: ['standalone', 'realtime']},
   {id: 'buzzer', name: 'Buzzer', version: '1', boardIds: ['arduino-uno', 'arduino-nano'], backendIds: [ARDUINO_BACKEND.id], requiredCapabilities: ['digital-io'], modes: ['standalone', 'realtime']},
@@ -244,6 +245,7 @@ export interface ArduinoProgram {
   readonly oledSize: null | { readonly width: string; readonly height: string }
   readonly oledImages: ReadonlySet<string>
   readonly outputPins: readonly string[]
+  readonly buttonPinModes: readonly {readonly pin: string; readonly mode: 'INPUT_PULLUP' | 'INPUT'}[]
   readonly variables: readonly string[]
   readonly typedVariables: readonly { readonly type: string; readonly name: string; readonly value: string }[]
   readonly interrupts: readonly { readonly pin: string; readonly mode: string; readonly body: readonly ArduinoOperation[] }[]
@@ -432,6 +434,8 @@ const getExpression = (
       return getField(inputBlock, 'FORMAT') === 'percent' ? `(((1023 - ${value}) * 100L) / 1023)` : value
     }
     case 'sarduSensors_touch': return `(digitalRead(${getField(inputBlock, 'PIN')}) == HIGH)`
+    case 'sarduSensors_buttonPressedLow': return `(digitalRead(${getField(inputBlock, 'PIN')}) == LOW)`
+    case 'sarduSensors_buttonPressedHigh': return `(digitalRead(${getField(inputBlock, 'PIN')}) == HIGH)`
     case 'sarduSensors_rfidTagPresent': return `${legacyRfidReader(inputBlock)}CercaTag()`
     case 'sarduSensors_pn532TagPresent': return 'pn532CercaTag()'
     case 'sarduSensors_pn532Uid': return 'pn532Uid()'
@@ -811,6 +815,8 @@ const generateStack = (
       case 'sarduActuators_showSh1106':
         operations.push({type: 'custom-code', source: 'sh1106.display();'})
         break
+      case 'sarduSensors_configureButton':
+        break
       case 'sarduActuators_setServoAngle':
         operations.push({
           type: 'servo-write',
@@ -1055,6 +1061,26 @@ export const compileArduinoProgram = ({ boardId, targets }: ArduinoSketchRequest
   }))
 
   const reachableBlocks = getReachableArduinoBlocks(targets)
+  const buttonConfigurations = new Set(reachableBlocks
+    .filter(block => block.opcode === 'sarduSensors_configureButton').map(block => getField(block, 'PIN')))
+  const buttonPinModes = new Map<string, 'INPUT_PULLUP' | 'INPUT'>()
+  reachableBlocks.filter(block => ['sarduSensors_buttonPressedLow', 'sarduSensors_buttonPressedHigh']
+    .includes(block.opcode)).forEach(block => {
+    const pin = getField(block, 'PIN')
+    if (!buttonConfigurations.has(pin)) throw new Error(`Configure the button on pin ${pin} before reading it`)
+    if (!board.pins.some(candidate => candidate.id === pin && candidate.capabilities.includes('digital-input'))) {
+      throw new Error(`Pin ${pin} does not support a button input on ${board.name}`)
+    }
+    const mode = block.opcode === 'sarduSensors_buttonPressedLow' ? 'INPUT_PULLUP' : 'INPUT'
+    const previousMode = buttonPinModes.get(pin)
+    if (previousMode && previousMode !== mode) {
+      throw new Error(`Button pin ${pin} cannot use both INPUT_PULLUP and INPUT`)
+    }
+    buttonPinModes.set(pin, mode)
+  })
+  buttonConfigurations.forEach(pin => {
+    if (!buttonPinModes.has(pin)) throw new Error(`Choose LOW or HIGH for the button on pin ${pin}`)
+  })
   const displayBlocks = reachableBlocks.filter(block => block.opcode.startsWith('sarduActuators_') &&
     block.opcode.toLowerCase().includes('display'))
   const displayInitializers = displayBlocks.filter(block =>
@@ -1152,6 +1178,8 @@ export const compileArduinoProgram = ({ boardId, targets }: ArduinoSketchRequest
     oledImages: new Set(oledBlocks.filter(block => block.opcode === 'sarduActuators_drawOledImage')
       .map(block => resolveOledImage(getField(block, 'IMAGE'), getField(block, 'SCALE')).name)),
     outputPins: Array.from(outputPins).sort((left, right) => left.localeCompare(right, undefined, { numeric: true })),
+    buttonPinModes: Array.from(buttonPinModes, ([pin, mode]) => ({pin, mode}))
+      .sort((left, right) => left.pin.localeCompare(right.pin, undefined, {numeric: true})),
     variables: Array.from(variables).sort(),
     typedVariables: Array.from(typedVariables.values()).sort((left, right) => left.name.localeCompare(right.name)),
     interrupts: interrupts.sort((left, right) => left.pin.localeCompare(right.pin, undefined, { numeric: true })),
@@ -1527,6 +1555,11 @@ const operationLines = (operation: ArduinoOperation): string[] => {
   ]
 }
 
+const useSarduBlockGeneratedIdentifiers = (source: string): string => source
+  .replaceAll('sarduEdu', 'sarduBlock')
+  .replaceAll('SARDU_EDU', 'SARDU_BLOCK')
+  .replaceAll('SARDU_BAUD_RATE', 'SARDU_BLOCK_BAUD_RATE')
+
 export const generateArduinoSketch = (request: ArduinoSketchRequest): string => {
   const program = compileArduinoProgram(request)
   const pn532NeedsPresent = program.pn532Operations.size > 0
@@ -1550,6 +1583,7 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
   const generatedByLabel = request.messages?.generatedBy || 'Generated by'
   const boardLabel = request.messages?.board || 'Board'
   const pinModes = program.outputPins.map((pin) => `pinMode(${pin}, OUTPUT);`)
+  const buttonPinModes = program.buttonPinModes.map(({pin, mode}) => `pinMode(${pin}, ${mode});`)
   const declarations = program.variables.map((variable) => `double ${variable} = 0;`)
   const typedDeclarations = program.typedVariables.map(({ type, name, value }) => `${type} ${name} = ${value};`)
   const dhtDeclarations = program.dhtSensors.map(({ model, pin }) =>
@@ -1674,8 +1708,8 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
     `  ${rc522NeedsAuthenticate ? 'rc522AuthenticatedBlock = -1; ' : ''}return true;`,
   )
 
-  return [
-    `// ${generatedByLabel} SARDU Edu - davide@sardu.pro`,
+  return useSarduBlockGeneratedIdentifiers([
+    `// ${generatedByLabel} SARDU-Block - davide@sardu.pro`,
     `// ${boardLabel}: ${program.boardName}`,
     '',
     ...(program.dhtSensors.length ? ['#include <DHT.h>', ''] : []),
@@ -1735,7 +1769,7 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
     ...(touchDeclarations.length ? [''] : []),
     ...interruptFunctions,
     'void setup() {',
-    indent([...pinModes, ...dhtInitializers, ...servoInitializers,
+    indent([...pinModes, ...buttonPinModes, ...dhtInitializers, ...servoInitializers,
       ...(program.usesVl53l0x ? ['Wire.begin();', 'vl53l0x.setTimeout(500);', 'vl53l0x.init();'] : []),
       ...interruptInitializers, ...touchInitializers,
       ...setupSerialInitializers.flatMap(operationLines),
@@ -1748,7 +1782,7 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
     indent([...program.loop.flatMap(operationLines), ...touchLoops]),
     '}',
     '',
-  ].join('\n')
+  ].join('\n'))
 }
 
 const oledLiveImageDeclarations = Object.entries(oledImageData).map(([name, image]) =>
@@ -1756,8 +1790,8 @@ const oledLiveImageDeclarations = Object.entries(oledImageData).map(([name, imag
 const oledLiveImageCases = (functionName: string): string => Object.entries(oledImageData).map(([name, image], index) =>
   `${index ? 'else ' : ''}if (image=="${name}") ${functionName}(SARDU_EDU_OLED_${name}, ${image.size}, scale);`).join('\n      ')
 
-export const generateSarduLiveFirmware = (): string => `// SARDU Edu Live firmware - davide@sardu.pro
-// Original serial protocol implementation for SARDU Edu boards.
+export const generateSarduBlockLiveFirmware = (): string => useSarduBlockGeneratedIdentifiers(`// SARDU-Block Live firmware - davide@sardu.pro
+// Original serial protocol implementation for SARDU-Block boards.
 
 #include <DHT.h>
 #if !defined(ARDUINO_ARCH_ESP32)
@@ -1916,6 +1950,9 @@ void loop() {
     Serial.println(value);
   } else if (command == 'V') {
     const int pin = Serial.parseInt(); pinMode(pin, INPUT); Serial.println(digitalRead(pin));
+  } else if (command == 'K') {
+    const int pin = Serial.parseInt(); const int pullup = Serial.parseInt();
+    pinMode(pin, pullup ? INPUT_PULLUP : INPUT); Serial.println(digitalRead(pin));
   } else if (command == 'A') {
     Serial.println(analogRead(Serial.parseInt()));
   } else if (command == 'T') {
@@ -2109,7 +2146,7 @@ void loop() {
     }
     else Serial.println(0);
   } else if (command == 'P') {
-    Serial.println("SARDU-LIVE 8");
+    Serial.println("SARDU-BLOCK-LIVE 10");
   } else if (command == 'M') {
     Serial.println(millis());
   } else if (command == 'U') {
@@ -2117,4 +2154,7 @@ void loop() {
   }
   while (Serial.available()) Serial.read();
 }
-`
+`)
+
+// Historical API alias retained for integrations using the pre-SARDU-Block package contract.
+export const generateSarduLiveFirmware = generateSarduBlockLiveFirmware

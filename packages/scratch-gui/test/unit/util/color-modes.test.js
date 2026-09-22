@@ -4,7 +4,7 @@ import {
     DEFAULT_MODE,
     getColorsForMode,
     HIGH_CONTRAST_MODE,
-    SARDU_EDU_MODE
+    SARDU_BLOCK_MODE
 } from '../../../src/lib/settings/color-mode';
 import {
     injectExtensionBlockIcons,
@@ -35,8 +35,8 @@ describe('color modes', () => {
             expect(colors.motion.colourSecondary).toEqual('#222222');
         });
 
-        test('provides SARDU Edu workspace colors without replacing category colors', () => {
-            const colors = getColorsForMode(SARDU_EDU_MODE);
+        test('provides SARDU-Block workspace colors without replacing category colors', () => {
+            const colors = getColorsForMode(SARDU_BLOCK_MODE);
 
             expect(colors.toolboxHover).toEqual('#003366');
             expect(colors.scrollbar).toEqual('#CCCC66');
@@ -107,13 +107,13 @@ describe('color modes', () => {
             });
         });
 
-        test('preserves extension icons in SARDU Edu color mode', () => {
+        test('preserves extension icons in SARDU-Block color mode', () => {
             const blockInfoJson = {
                 type: 'pen_block',
                 args0: [{type: 'field_image', src: 'original'}]
             };
 
-            expect(injectExtensionBlockIcons(blockInfoJson, SARDU_EDU_MODE)).toBe(blockInfoJson);
+            expect(injectExtensionBlockIcons(blockInfoJson, SARDU_BLOCK_MODE)).toBe(blockInfoJson);
         });
 
         test('updates extension category based on color mode', () => {
@@ -143,12 +143,18 @@ describe('color modes', () => {
             expect(colorMode).toEqual(HIGH_CONTRAST_MODE);
         });
 
+        test('migrates the historical SARDU Edu color mode', () => {
+            window.document.cookie = 'scratchtheme=sardu-edu';
+
+            expect(detectColorMode()).toEqual(SARDU_BLOCK_MODE);
+        });
+
         test('returns the system color mode when no cookie', () => {
             window.document.cookie = 'scratchtheme=';
 
             const colorMode = detectColorMode();
 
-            expect(colorMode).toEqual(SARDU_EDU_MODE);
+            expect(colorMode).toEqual(SARDU_BLOCK_MODE);
         });
 
         test('persists color mode to cookie', () => {
@@ -162,7 +168,7 @@ describe('color modes', () => {
         test('clears color mode when matching system preferences', () => {
             window.document.cookie = `scratchtheme=${DEFAULT_MODE}`;
 
-            persistColorMode(SARDU_EDU_MODE);
+            persistColorMode(SARDU_BLOCK_MODE);
 
             expect(window.document.cookie).toEqual('scratchtheme=');
         });

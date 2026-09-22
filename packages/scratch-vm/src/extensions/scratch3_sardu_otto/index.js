@@ -23,7 +23,7 @@ class Scratch3SarduOtto {
             GESTURE:{acceptReporters:false,items:['OttoHappy','OttoSuperHappy','OttoSad','OttoSleeping','OttoFart','OttoConfused','OttoLove','OttoAngry','OttoFretful','OttoMagic','OttoWave','OttoVictory','OttoFail']}
         }};
     }
-    _run (action, ...values) { if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return; const transport=this.runtime.sarduEduLiveTransport; if (!transport?.connected) return Promise.reject(new Error('SARDU Edu live transport is not connected for Otto')); return transport.runOtto(action,...values); }
+    _run (action, ...values) { if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return; const transport=this.runtime.sarduEduLiveTransport; if (!transport?.connected) return Promise.reject(new Error('SARDU-Block live transport is not connected for Otto')); return transport.runOtto(action,...values); }
     configure(a){return this._run('I',a.YL,a.YR,a.RL,a.RR,a.BUZZER);} home(){return this._run('H');}
     move(a){return this._run('M',a.MOVE,a.STEPS,a.TIME);} dance(a){return this._run('D',a.DANCE,a.STEPS,a.TIME,a.HEIGHT);}
     sing(a){return this._run('S',['S_connection','S_disconnection','S_buttonPushed','S_mode1','S_mode2','S_mode3','S_surprise','S_OhOoh','S_OhOoh2','S_cuddly','S_sleeping','S_happy','S_superHappy','S_happy_short','S_sad','S_confused','S_fart1','S_fart2','S_fart3'].indexOf(a.SOUND)+1);}

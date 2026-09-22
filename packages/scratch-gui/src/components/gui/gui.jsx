@@ -25,6 +25,7 @@ import Watermark from '../../containers/watermark.jsx';
 import Backpack from '../../containers/backpack.jsx';
 import ExtensionsButton from '../extension-button/extension-button.jsx';
 import HardwareButtons from '../hardware-buttons/hardware-buttons.jsx';
+import {selectionNeedsSarduSensors} from '../../lib/sardu-hardware-extensions';
 import ArduinoCodePanel from '../arduino-code-panel/arduino-code-panel.jsx';
 import RobotLibrary from '../robot-library/robot-library.jsx';
 import WebGlModal from '../../containers/webgl-modal.jsx';
@@ -218,7 +219,7 @@ const GUIComponent = props => {
         vm,
         ...componentProps
     } = omit(props, 'dispatch', 'setPlatform');
-    const initialHardwareSelection = vm.getSarduEduProjectData()?.hardwareSelection || null;
+    const initialHardwareSelection = vm.getSarduBlockProjectData()?.hardwareSelection || null;
     const [hardwareSelection, setHardwareSelection] = useState(initialHardwareSelection);
     const [sarduViewMode, setSarduViewMode] = useState(
         initialHardwareSelection?.mode === 'standalone' ? 'code' : 'combined'
@@ -249,8 +250,8 @@ const GUIComponent = props => {
             if (selection?.mode === 'standalone') setSarduViewMode('code');
             if (selection?.mode === 'realtime') setSarduViewMode('combined');
         };
-        vm.on('SARDU_HARDWARE_CHANGED', handleHardwareChanged);
-        return () => vm.removeListener('SARDU_HARDWARE_CHANGED', handleHardwareChanged);
+        vm.on('SARDU_BLOCK_HARDWARE_CHANGED', handleHardwareChanged);
+        return () => vm.removeListener('SARDU_BLOCK_HARDWARE_CHANGED', handleHardwareChanged);
     }, [vm]);
 
     useEffect(() => {
@@ -264,9 +265,7 @@ const GUIComponent = props => {
     }, [hardwareSelection, sarduViewMode]);
 
     useEffect(() => {
-        if (!hardwareSelection?.componentIds?.some(id => [
-            'dht11-dht22', 'hc-sr04', 'touch', 'sound-sensor', 'photoresistor', 'vl53l0x', 'pn532', 'rc522'
-        ].includes(id)) ||
+        if (!selectionNeedsSarduSensors(hardwareSelection) ||
             vm.extensionManager.isExtensionLoaded('sarduSensors')) return;
         void vm.extensionManager.loadExtensionURL('sarduSensors');
     }, [hardwareSelection, vm]);
@@ -619,7 +618,7 @@ const GUIComponent = props => {
                                         onExtensionButtonClick={onExtensionButtonClick}
                                     />
                                     <HardwareButtons
-                                        hasHardwareSelection={Boolean(vm.getSarduEduProjectData()?.hardwareSelection)}
+                                        hasHardwareSelection={Boolean(vm.getSarduBlockProjectData()?.hardwareSelection)}
                                         onBoardClick={onBoardButtonClick}
                                         onComponentClick={onComponentButtonClick}
                                         onRobotClick={onRobotButtonClick}

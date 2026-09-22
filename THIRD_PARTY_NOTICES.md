@@ -1,6 +1,6 @@
 # Third-party notices
 
-SARDU Edu includes or downloads the following components from their official distributions.
+SARDU-Block includes or downloads the following components from their official distributions.
 
 ## Electron
 

@@ -1,6 +1,7 @@
 const LIVE_BAUD_RATE = 115200;
 const STARTUP_DELAY = 1500;
 const HANDSHAKE_TIMEOUT = 2000;
+const LIVE_FIRMWARE_SIGNATURES = ['SARDU-BLOCK-LIVE 10', 'SARDU-LIVE 9'];
 
 const delay = milliseconds => new Promise(resolve => window.setTimeout(resolve, milliseconds));
 const protocolPin = pin => {
@@ -8,7 +9,7 @@ const protocolPin = pin => {
     return analogMatch ? 14 + Number(analogMatch[1]) : pin;
 };
 
-class SarduSerialTransport {
+class SarduBlockSerialTransport {
     constructor (serial = (typeof navigator === 'undefined' ? null : navigator.serial), onDiagnostic = null) {
         this.serial = serial;
         this.onDiagnostic = onDiagnostic;
@@ -51,8 +52,8 @@ class SarduSerialTransport {
             this._diagnose('handshake-sent');
             const response = await this._readLine(HANDSHAKE_TIMEOUT);
             this._diagnose('handshake-response', response || '(empty)');
-            if (response !== 'SARDU-LIVE 8') {
-                throw new Error('The connected board is not running SARDU Edu Live firmware');
+            if (!LIVE_FIRMWARE_SIGNATURES.includes(response)) {
+                throw new Error('The connected board is not running SARDU-Block Live firmware');
             }
             this._diagnose('connected');
         } catch (error) {
@@ -137,6 +138,7 @@ class SarduSerialTransport {
     }
 
     readDigital (pin) { return this._readNumber(`V ${protocolPin(pin)}`); }
+    readButton (pin, pullup) { return this._readNumber(`K ${protocolPin(pin)} ${pullup ? 1 : 0}`); }
     readAnalog (pin) { return this._readNumber(`A ${protocolPin(pin)}`); }
     playTone (pin, frequency, milliseconds) { return this._readNumber(`T ${protocolPin(pin)} ${frequency} ${milliseconds}`); }
     runOtto (action, ...values) { return this._readNumber(`O ${action} ${values.join(' ')}`); }
@@ -160,7 +162,7 @@ class SarduSerialTransport {
     _readNumber (command) {
         return this._readResponse(command).then(response => {
             const value = Number(response);
-            if (!Number.isFinite(value)) throw new Error(`Invalid SARDU Edu Live response for ${command}`);
+            if (!Number.isFinite(value)) throw new Error(`Invalid SARDU-Block Live response for ${command}`);
             return value;
         });
     }
@@ -202,7 +204,7 @@ class SarduSerialTransport {
             const line = await Promise.race([
                 read(),
                 new Promise((_, reject) => {
-                    timeout = window.setTimeout(() => reject(new Error('SARDU Edu Live handshake timed out')),
+                    timeout = window.setTimeout(() => reject(new Error('SARDU-Block Live handshake timed out')),
                         timeoutMilliseconds);
                 })
             ]);
@@ -224,7 +226,7 @@ class SarduSerialTransport {
         try {
             this.onDiagnostic({stage, ...(detail ? {detail} : {})});
         } catch (error) {
-            console.warn('SarduSerialTransport diagnostic callback failed', error);
+            console.warn('SarduBlockSerialTransport diagnostic callback failed', error);
         }
     }
 }
@@ -232,6 +234,7 @@ class SarduSerialTransport {
 export {
     HANDSHAKE_TIMEOUT,
     LIVE_BAUD_RATE,
+    LIVE_FIRMWARE_SIGNATURES,
     STARTUP_DELAY
 };
-export default SarduSerialTransport;
+export default SarduBlockSerialTransport;

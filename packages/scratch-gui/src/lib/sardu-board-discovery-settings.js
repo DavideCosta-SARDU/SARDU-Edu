@@ -1,12 +1,13 @@
 import {
     ARDUINO_PORT_DISCOVERY_TIMEOUTS,
     DEFAULT_ARDUINO_PORT_DISCOVERY_TIMEOUT
-} from '@sardu-edu/hardware';
+} from '@sardu-block/hardware';
 
 export const BOARD_DISCOVERY_TIMEOUTS = ARDUINO_PORT_DISCOVERY_TIMEOUTS;
 export const DEFAULT_BOARD_DISCOVERY_TIMEOUT = DEFAULT_ARDUINO_PORT_DISCOVERY_TIMEOUT;
 
-const STORAGE_KEY = 'sarduEdu.boardDiscoveryTimeoutMs';
+const STORAGE_KEY = 'sarduBlock.boardDiscoveryTimeoutMs';
+const LEGACY_STORAGE_KEY = 'sarduEdu.boardDiscoveryTimeoutMs';
 
 export const normalizeBoardDiscoveryTimeout = value => {
     const timeout = Number(value);
@@ -16,7 +17,9 @@ export const normalizeBoardDiscoveryTimeout = value => {
 export const getBoardDiscoveryTimeout = () => {
     if (typeof window === 'undefined') return DEFAULT_BOARD_DISCOVERY_TIMEOUT;
     try {
-        return normalizeBoardDiscoveryTimeout(window.localStorage.getItem(STORAGE_KEY));
+        return normalizeBoardDiscoveryTimeout(
+            window.localStorage.getItem(STORAGE_KEY) || window.localStorage.getItem(LEGACY_STORAGE_KEY)
+        );
     } catch (error) {
         return DEFAULT_BOARD_DISCOVERY_TIMEOUT;
     }

@@ -7,8 +7,8 @@ import {
   DEFAULT_ARDUINO_PORT_DISCOVERY_TIMEOUT,
   createArduinoCliInvocation,
   parseHardwareResourceManifest,
-} from '@sardu-edu/hardware'
-import type { ArduinoToolchainLayout, HardwareResourceManifest } from '@sardu-edu/hardware'
+} from '@sardu-block/hardware'
+import type { ArduinoToolchainLayout, HardwareResourceManifest } from '@sardu-block/hardware'
 import { describeArduinoPorts, parseArduinoPorts } from './arduino-ports'
 import type {
   ArduinoCompileRequest,
@@ -54,7 +54,8 @@ export class ArduinoService {
     }
     this.userDataRoot = userDataRoot
     this.portDiagnosticsPath = path.join(
-      process.env.SARDU_LOG_DIR || path.join(userDataRoot, 'logs'),
+      process.env.SARDU_BLOCK_LOG_DIR || process.env.SARDU_EDU_LOG_DIR || process.env.SARDU_LOG_DIR ||
+        path.join(userDataRoot, 'logs'),
       'hardware-porte.txt',
     )
   }
@@ -142,7 +143,7 @@ export class ArduinoService {
         onOutput?.({
           action,
           stream: 'stderr',
-          text: '\nSARDU Edu: nuovo bootloader non rilevato; provo il vecchio bootloader Nano.\n',
+          text: '\nSARDU-Block: nuovo bootloader non rilevato; provo il vecchio bootloader Nano.\n',
         })
         const fallback = createArduinoCliInvocation({
           action,
@@ -165,7 +166,7 @@ export class ArduinoService {
   ): Promise<string> {
     const status = await this.getStatus()
     if (!status.arduinoCliAvailable || !status.arduinoCoreAvailable) {
-      throw new Error('SARDU Edu Arduino resources are incomplete; run the hardware resources batch')
+      throw new Error('SARDU-Block Arduino resources are incomplete; run the hardware resources batch')
     }
     await mkdir(this.layout.downloadsDirectory, { recursive: true })
     const userDirectory = path.dirname(this.layout.librariesDirectory)
@@ -204,7 +205,7 @@ export class ArduinoService {
   private async run(args: readonly string[]): Promise<string> {
     const status = await this.getStatus()
     if (!status.arduinoCliAvailable || !status.arduinoCoreAvailable) {
-      throw new Error('SARDU Edu Arduino resources are incomplete; run the hardware resources batch')
+      throw new Error('SARDU-Block Arduino resources are incomplete; run the hardware resources batch')
     }
     await mkdir(this.layout.downloadsDirectory, { recursive: true })
     const userDirectory = path.dirname(this.layout.librariesDirectory)

@@ -7,7 +7,7 @@ export default defineConfig({
     lib: {
       entry: 'src/index.ts',
       name: 'SarduEduHardware',
-      fileName: 'sardu-edu-hardware',
+      fileName: 'sardu-block-hardware',
     },
   },
   plugins: [

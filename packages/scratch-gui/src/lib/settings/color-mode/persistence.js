@@ -1,24 +1,25 @@
 import cookie from 'cookie';
 
-import {DEFAULT_MODE, HIGH_CONTRAST_MODE, SARDU_EDU_MODE} from '.';
+import {DEFAULT_MODE, HIGH_CONTRAST_MODE, SARDU_BLOCK_MODE} from '.';
 
 const PREFERS_HIGH_CONTRAST_QUERY = '(prefers-contrast: more)';
 // Technically what we are persisting is the color mode, but for historical reasons,
 // we should continue using 'scratchtheme' as the cookie key.
 const COOKIE_KEY = 'scratchtheme';
+const LEGACY_SARDU_EDU_MODE = 'sardu-edu';
 
 // Dark mode isn't enabled yet
-const isValidColorMode = colorMode => [SARDU_EDU_MODE, DEFAULT_MODE, HIGH_CONTRAST_MODE].includes(colorMode);
+const isValidColorMode = colorMode => [SARDU_BLOCK_MODE, DEFAULT_MODE, HIGH_CONTRAST_MODE].includes(colorMode);
 
 const systemPreferencesColorMode = () => {
     if (window.matchMedia && window.matchMedia(PREFERS_HIGH_CONTRAST_QUERY).matches) return HIGH_CONTRAST_MODE;
 
-    return SARDU_EDU_MODE;
+    return SARDU_BLOCK_MODE;
 };
 
 const detectColorMode = () => {
     const obj = cookie.parse(document.cookie) || {};
-    const colorModeCookie = obj.scratchtheme;
+    const colorModeCookie = obj.scratchtheme === LEGACY_SARDU_EDU_MODE ? SARDU_BLOCK_MODE : obj.scratchtheme;
 
     if (isValidColorMode(colorModeCookie)) return colorModeCookie;
 

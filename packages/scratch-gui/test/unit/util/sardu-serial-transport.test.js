@@ -1,9 +1,13 @@
 /* eslint-env jest */
-import SarduSerialTransport from '../../../src/lib/sardu-serial-transport';
+import SarduBlockSerialTransport, {LIVE_FIRMWARE_SIGNATURES} from '../../../src/lib/sardu-serial-transport';
+
+test('accepts current and historical Live firmware signatures', () => {
+    expect(LIVE_FIRMWARE_SIGNATURES).toEqual(['SARDU-BLOCK-LIVE 10', 'SARDU-LIVE 9']);
+});
 
 test('reports unsupported browsers before requesting a port', async () => {
     const diagnostics = [];
-    const transport = new SarduSerialTransport(null, diagnostic => diagnostics.push(diagnostic));
+    const transport = new SarduBlockSerialTransport(null, diagnostic => diagnostics.push(diagnostic));
     expect(transport.supported).toBe(false);
     await expect(transport.connect()).rejects.toThrow('Web Serial is not available in this browser');
     expect(diagnostics).toEqual([
@@ -14,21 +18,21 @@ test('reports unsupported browsers before requesting a port', async () => {
 
 test('reports each Live handshake stage', () => {
     const diagnostics = [];
-    const transport = new SarduSerialTransport({}, diagnostic => diagnostics.push(diagnostic));
+    const transport = new SarduBlockSerialTransport({}, diagnostic => diagnostics.push(diagnostic));
 
     transport._diagnose('handshake-sent');
-    transport._diagnose('handshake-response', 'SARDU-LIVE 8');
+    transport._diagnose('handshake-response', 'SARDU-BLOCK-LIVE 10');
 
     expect(diagnostics).toEqual([
         {stage: 'handshake-sent'},
-        {stage: 'handshake-response', detail: 'SARDU-LIVE 8'}
+        {stage: 'handshake-response', detail: 'SARDU-BLOCK-LIVE 10'}
     ]);
 });
 
-test('encodes digital writes for the SARDU Live firmware', async () => {
+test('encodes digital writes for the SARDU-Block Live firmware', async () => {
     const write = jest.fn(() => Promise.resolve());
     const diagnostics = [];
-    const transport = new SarduSerialTransport({}, diagnostic => diagnostics.push(diagnostic));
+    const transport = new SarduBlockSerialTransport({}, diagnostic => diagnostics.push(diagnostic));
     transport.port = {};
     transport.portOpen = true;
     transport.writer = {write};
@@ -51,7 +55,7 @@ test('encodes digital writes for the SARDU Live firmware', async () => {
 
 test('reads millis and micros from the board protocol', async () => {
     const write = jest.fn(() => Promise.resolve());
-    const transport = new SarduSerialTransport({});
+    const transport = new SarduBlockSerialTransport({});
     transport.port = {};
     transport.portOpen = true;
     transport.writer = {write};
@@ -66,9 +70,24 @@ test('reads millis and micros from the board protocol', async () => {
     expect(write.mock.calls.map(call => decoder.decode(call[0]))).toEqual(['M\n', 'U\n']);
 });
 
+test('encodes both push button input modes', async () => {
+    const write = jest.fn(() => Promise.resolve());
+    const transport = new SarduBlockSerialTransport({});
+    transport.port = {};
+    transport.portOpen = true;
+    transport.writer = {write};
+    transport._readLine = jest.fn().mockResolvedValueOnce('0').mockResolvedValueOnce('1');
+
+    await expect(transport.readButton('2', true)).resolves.toBe(0);
+    await expect(transport.readButton('3', false)).resolves.toBe(1);
+
+    const decoder = new TextDecoder();
+    expect(write.mock.calls.map(call => decoder.decode(call[0]))).toEqual(['K 2 1\n', 'K 3 0\n']);
+});
+
 test('encodes servo, DHT and HC-SR04 Live commands', async () => {
     const write = jest.fn(() => Promise.resolve());
-    const transport = new SarduSerialTransport({});
+    const transport = new SarduBlockSerialTransport({});
     transport.port = {};
     transport.portOpen = true;
     transport.writer = {write};
@@ -90,7 +109,7 @@ test('encodes servo, DHT and HC-SR04 Live commands', async () => {
 
 test('encodes RFID Live commands and preserves hexadecimal responses', async () => {
     const write = jest.fn(() => Promise.resolve());
-    const transport = new SarduSerialTransport({});
+    const transport = new SarduBlockSerialTransport({});
     transport.port = {};
     transport.portOpen = true;
     transport.writer = {write};
@@ -111,7 +130,7 @@ test('encodes RFID Live commands and preserves hexadecimal responses', async () 
 
 test('encodes display Live commands and text without protocol separators', async () => {
     const write = jest.fn(() => Promise.resolve());
-    const transport = new SarduSerialTransport({});
+    const transport = new SarduBlockSerialTransport({});
     transport.port = {};
     transport.portOpen = true;
     transport.writer = {write};
@@ -131,7 +150,7 @@ test('encodes display Live commands and text without protocol separators', async
 
 test('encodes OLED Live commands and text without protocol separators', async () => {
     const write = jest.fn(() => Promise.resolve());
-    const transport = new SarduSerialTransport({});
+    const transport = new SarduBlockSerialTransport({});
     transport.port = {};
     transport.portOpen = true;
     transport.writer = {write};
@@ -151,7 +170,7 @@ test('encodes OLED Live commands and text without protocol separators', async ()
 
 test('encodes SH1106 Live commands and text', async () => {
     const write = jest.fn(() => Promise.resolve());
-    const transport = new SarduSerialTransport({});
+    const transport = new SarduBlockSerialTransport({});
     transport.port = {};
     transport.portOpen = true;
     transport.writer = {write};
@@ -171,7 +190,7 @@ test('clears a selected port even when opening it fails', async () => {
         close,
         open: jest.fn(() => Promise.reject(new Error('open failed')))
     };
-    const transport = new SarduSerialTransport({requestPort: jest.fn(() => Promise.resolve(port))});
+    const transport = new SarduBlockSerialTransport({requestPort: jest.fn(() => Promise.resolve(port))});
 
     await expect(transport.connect()).rejects.toThrow('open failed');
 

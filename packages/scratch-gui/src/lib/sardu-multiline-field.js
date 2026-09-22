@@ -33,13 +33,13 @@ const registerSarduMultilineField = (ScratchBlocks, fieldName) => {
             const backdrop = makeElement('div', styles.backdrop);
             const dialog = makeElement('div', styles.dialog);
             const title = makeElement('div', styles.title,
-                translate('SARDU_CUSTOM_CODE_TITLE', 'Custom Arduino code'));
+                translate('SARDU_BLOCK_CUSTOM_CODE_TITLE', 'Custom Arduino code'));
             const textarea = makeElement('textarea', styles.code);
             const actions = makeElement('div', styles.actions);
             const cancel = makeElement('button', styles.button,
-                translate('SARDU_CUSTOM_CODE_CANCEL', 'Cancel'));
+                translate('SARDU_BLOCK_CUSTOM_CODE_CANCEL', 'Cancel'));
             const save = makeElement('button', `${styles.button} ${styles.primary}`,
-                translate('SARDU_CUSTOM_CODE_SAVE', 'Save'));
+                translate('SARDU_BLOCK_CUSTOM_CODE_SAVE', 'Save'));
 
             textarea.value = this.getValue();
             textarea.spellcheck = false;

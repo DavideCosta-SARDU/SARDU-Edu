@@ -1,6 +1,6 @@
 # Gestione dell'upstream Scratch Editor
 
-SARDU Edu deriva dal repository ufficiale <https://github.com/scratchfoundation/scratch-editor>.
+SARDU-Block, prodotto del progetto educativo SARDU Edu, deriva dal repository ufficiale <https://github.com/scratchfoundation/scratch-editor>.
 
 ## Remote configurati
 
@@ -11,7 +11,7 @@ origin    https://github.com/DavideCosta-SARDU/SARDU-Edu.git
 upstream  https://github.com/scratchfoundation/scratch-editor.git
 ```
 
-`origin` riceve le modifiche SARDU Edu. `upstream` serve esclusivamente a recuperare gli aggiornamenti ufficiali.
+`origin` riceve le modifiche SARDU-Block. `upstream` serve esclusivamente a recuperare gli aggiornamenti ufficiali.
 
 ## Aggiornamento
 
@@ -30,6 +30,6 @@ git switch -c chore/update-upstream-YYYY-MM-DD
 git merge upstream/develop
 ```
 
-Le personalizzazioni di prodotto devono restare concentrate nella configurazione e nelle risorse SARDU Edu. I nomi
+Le personalizzazioni di prodotto devono restare concentrate nella configurazione e nelle risorse SARDU-Block. I nomi
 tecnici dei package `@scratch/*` non vengono rinominati nella Milestone 1, perché identificano i componenti upstream e
 rinominarli renderebbe gli aggiornamenti inutilmente complessi.

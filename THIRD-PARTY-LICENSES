@@ -1,6 +1,6 @@
 THIRD-PARTY SOFTWARE IN SARDU EDU
 
-SARDU Edu includes, incorporates, modifies and/or uses third-party software components. Such components remain subject to the copyright notices and license terms of their respective copyright holders. Nothing in the SARDU Edu license is intended to replace, restrict, or supersede the licenses applicable to third-party components. See THIRD-PARTY-LICENSES for details.
+SARDU-Block includes, incorporates, modifies and/or uses third-party software components. Such components remain subject to the copyright notices and license terms of their respective copyright holders. Nothing in the SARDU-Block license is intended to replace, restrict, or supersede the licenses applicable to third-party components. See THIRD-PARTY-LICENSES for details.
 
 This document identifies the principal components included in the source tree and desktop distribution. Original LICENSE, NOTICE and source-file notices remain authoritative and must be distributed unchanged.
 
@@ -64,4 +64,4 @@ The exact name, resolved version, source and SPDX license declaration of npm dep
 
 NO WARRANTY
 
-SARDU Edu and the third-party components are provided subject to the warranty disclaimers and limitations of liability contained in their respective licenses.
+SARDU-Block and the third-party components are provided subject to the warranty disclaimers and limitations of liability contained in their respective licenses.

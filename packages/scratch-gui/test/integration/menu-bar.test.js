@@ -56,17 +56,17 @@ describe('Menu bar settings', () => {
 
     test('Logo should be clickable', async () => {
         await loadUri(uri);
-        await clickXpath('//img[@alt="SARDU Edu"]');
+        await clickXpath('//img[@alt="SARDU-Block"]');
         const currentUrl = await driver.getCurrentUrl();
         await expect(currentUrl).toEqual('https://github.com/DavideCosta-SARDU/SARDU-Edu');
     });
 
     test('(GH#4064) Project name should be editable', async () => {
         await loadUri(uri);
-        const el = await findByXpath('//input[@value="SARDU Edu Project"]');
+        const el = await findByXpath('//input[@value="SARDU-Block Project"]');
         await el.sendKeys(' - Personalized');
         await clickText('Costumes'); // just to blur the input
-        await clickXpath('//input[@value="SARDU Edu Project - Personalized"]');
+        await clickXpath('//input[@value="SARDU-Block Project - Personalized"]');
     });
 
     test('User is not warned before uploading project file over a fresh project', async () => {

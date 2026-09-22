@@ -308,23 +308,35 @@ class Runtime extends EventEmitter {
          */
         this.compatibilityMode = false;
 
-        /**
-         * Project-level SARDU Edu configuration serialized separately from Scratch targets.
-         * @type {?object}
-         */
-        this.sarduEdu = null;
+        /** Project and connection state owned by SARDU-Block. */
+        this.sarduBlock = null;
+        this.sarduBlockLiveTransport = null;
+        this.sarduBlockHardwarePort = null;
+        this.sarduBlockSelectedPort = null;
 
-        /**
-         * Runtime-only transport used by SARDU Edu blocks in realtime mode.
-         * @type {?object}
-         */
-        this.sarduEduLiveTransport = null;
-
-        /**
-         * Runtime-only serial port currently detected for SARDU Edu hardware.
-         * @type {?string}
-         */
-        this.sarduEduHardwarePort = null;
+        // Historical runtime names remain as aliases for extensions built for SARDU Edu.
+        Object.defineProperties(this, {
+            sarduEdu: {
+                configurable: true,
+                get: () => this.sarduBlock,
+                set: value => { this.sarduBlock = value; }
+            },
+            sarduEduLiveTransport: {
+                configurable: true,
+                get: () => this.sarduBlockLiveTransport,
+                set: value => { this.sarduBlockLiveTransport = value; }
+            },
+            sarduEduHardwarePort: {
+                configurable: true,
+                get: () => this.sarduBlockHardwarePort,
+                set: value => { this.sarduBlockHardwarePort = value; }
+            },
+            sarduEduSelectedPort: {
+                configurable: true,
+                get: () => this.sarduBlockSelectedPort,
+                set: value => { this.sarduBlockSelectedPort = value; }
+            }
+        });
 
         /**
          * A reference to the current runtime stepping interval, set

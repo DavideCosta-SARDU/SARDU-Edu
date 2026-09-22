@@ -1,8 +1,8 @@
 {
-  "name": "sardu-edu",
+  "name": "sardu-block",
   "version": "15.1.1",
   "private": "true",
-  "description": "SARDU Edu block-based educational programming environment",
+  "description": "SARDU-Block educational block-programming environment, part of SARDU Edu",
   "keywords": [
     "education",
     "block-programming",
@@ -37,7 +37,7 @@
     "prepare": "husky install",
     "refresh-gh-workflow": "ts-node scripts/update-gha-workflows.ts",
     "start": "npm --workspace @scratch/scratch-gui start",
-    "start:desktop": "npm --workspace @sardu-edu/desktop start",
+    "start:desktop": "npm --workspace @sardu-block/desktop start",
     "test": "npm test --workspaces",
     "update-legal": "scripts/update-legal.sh",
     "version": "cross-env-shell ./scripts/npm-version.sh"

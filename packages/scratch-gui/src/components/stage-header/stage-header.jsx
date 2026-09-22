@@ -15,7 +15,7 @@ import largeStageIcon from './icon--large-stage.svg';
 import smallStageIcon from './icon--small-stage.svg';
 import unFullScreenIcon from './icon--unfullscreen.svg';
 
-import {config as sarduEduConfig, logo as sarduEduLogo} from '../../branding';
+import {config as sarduBlockConfig, logo as sarduBlockLogo} from '../../branding';
 import styles from './stage-header.css';
 import {storeProjectThumbnail} from '../../lib/store-project-thumbnail.js';
 import dataURItoBlob from '../../lib/data-uri-to-blob.js';
@@ -214,14 +214,14 @@ const StageHeaderComponent = function (props) {
         const stageButton = showBranding ? (
             <div className={styles.embedScratchLogo}>
                 <a
-                    href={sarduEduConfig.repository}
+                    href={sarduBlockConfig.repository}
                     rel="noopener noreferrer"
                     target="_blank"
                     data-focusable
                 >
                     <img
-                        alt={sarduEduConfig.productName}
-                        src={sarduEduLogo}
+                        alt={sarduBlockConfig.productName}
+                        src={sarduBlockLogo}
                     />
                 </a>
             </div>

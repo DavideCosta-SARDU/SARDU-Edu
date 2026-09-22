@@ -128,7 +128,7 @@ class Blocks extends React.Component {
         resizeHandle.setAttribute('role', 'separator');
         resizeHandle.setAttribute('aria-orientation', 'vertical');
         resizeHandle.title = this.ScratchBlocks.ScratchMsgs.translate(
-            'SARDU_RESIZE_BLOCKS',
+            'SARDU_BLOCK_RESIZE_BLOCKS',
             'Resize blocks palette'
         );
         resizeHandle.setAttribute('aria-label', resizeHandle.title);
@@ -462,7 +462,7 @@ class Blocks extends React.Component {
         this.props.vm.addListener('MONITORS_UPDATE', this.handleMonitorsUpdate);
         this.props.vm.addListener('EXTENSION_ADDED', this.handleExtensionAdded);
         this.props.vm.addListener('BLOCKSINFO_UPDATE', this.handleBlocksInfoUpdate);
-        this.props.vm.addListener('SARDU_HARDWARE_CHANGED', this.handleSarduHardwareChanged);
+        this.props.vm.addListener('SARDU_BLOCK_HARDWARE_CHANGED', this.handleSarduHardwareChanged);
         this.props.vm.addListener('PERIPHERAL_CONNECTED', this.handleStatusButtonUpdate);
         this.props.vm.addListener('PERIPHERAL_DISCONNECTED', this.handleStatusButtonUpdate);
     }
@@ -477,7 +477,7 @@ class Blocks extends React.Component {
         this.props.vm.removeListener('MONITORS_UPDATE', this.handleMonitorsUpdate);
         this.props.vm.removeListener('EXTENSION_ADDED', this.handleExtensionAdded);
         this.props.vm.removeListener('BLOCKSINFO_UPDATE', this.handleBlocksInfoUpdate);
-        this.props.vm.removeListener('SARDU_HARDWARE_CHANGED', this.handleSarduHardwareChanged);
+        this.props.vm.removeListener('SARDU_BLOCK_HARDWARE_CHANGED', this.handleSarduHardwareChanged);
         this.props.vm.removeListener('PERIPHERAL_CONNECTED', this.handleStatusButtonUpdate);
         this.props.vm.removeListener('PERIPHERAL_DISCONNECTED', this.handleStatusButtonUpdate);
     }
@@ -828,7 +828,7 @@ class Blocks extends React.Component {
     }
     handleConnectionModalStart (extensionId) {
         if (extensionId === 'sarduBoard') {
-            this.props.vm.emit('SARDU_CONNECT_REQUESTED');
+            this.props.vm.emit('SARDU_BLOCK_CONNECT_REQUESTED');
             return;
         }
         this.props.onOpenConnectionModal(extensionId);

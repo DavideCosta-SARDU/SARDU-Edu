@@ -12,9 +12,9 @@ import {setProjectTitle} from '../reducers/project-title';
 
 const messages = defineMessages({
     defaultProjectTitle: {
-        id: 'sarduEdu.gui.defaultProjectTitle',
+        id: 'sarduBlock.gui.defaultProjectTitle',
         description: 'Default title for project',
-        defaultMessage: 'SARDU Edu Project'
+        defaultMessage: 'SARDU-Block Project'
     }
 });
 

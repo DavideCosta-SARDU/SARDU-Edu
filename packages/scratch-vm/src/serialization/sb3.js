@@ -653,8 +653,10 @@ const serialize = function (runtime, targetId) {
     // Assemble extension list
     obj.extensions = Array.from(extensions);
 
-    if (runtime.sarduEdu) {
-        obj.sarduEdu = JSON.parse(JSON.stringify(runtime.sarduEdu));
+    if (runtime.sarduBlock) {
+        obj.sarduBlock = JSON.parse(JSON.stringify(runtime.sarduBlock));
+        // Historical key retained so projects remain usable by the previous SARDU Edu release.
+        obj.sarduEdu = JSON.parse(JSON.stringify(runtime.sarduBlock));
     }
 
     // Assemble metadata
@@ -1451,7 +1453,8 @@ const deserialize = function (json, runtime, zip, isSingleSprite) {
     };
 
     if (!isSingleSprite) {
-        runtime.sarduEdu = json.sarduEdu ? JSON.parse(JSON.stringify(json.sarduEdu)) : null;
+        const sarduBlockProjectData = json.sarduBlock || json.sarduEdu;
+        runtime.sarduBlock = sarduBlockProjectData ? JSON.parse(JSON.stringify(sarduBlockProjectData)) : null;
     }
 
     // Store the origin field (e.g. project originated at CSFirst) so that we can save it again.

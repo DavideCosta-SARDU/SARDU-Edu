@@ -2,7 +2,7 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import {FormattedMessage, useIntl} from 'react-intl';
 import VM from '@scratch/scratch-vm';
-import {ARDUINO_BOARDS} from '@sardu-edu/hardware';
+import {ARDUINO_BOARDS} from '@sardu-block/hardware';
 
 import LibraryComponent from '../library/library.jsx';
 import ottoIcon from '../../../../../docs/SVG/otto.svg';
@@ -19,7 +19,7 @@ const busPins = Object.fromEntries((ARDUINO_BOARDS.find(board => board.id === 'a
 
 const RobotLibrary = ({onRequestClose, vm}) => {
     const intl = useIntl();
-    const selection = vm.getSarduEduProjectData()?.hardwareSelection;
+    const selection = vm.getSarduBlockProjectData()?.hardwareSelection;
     return (
         <LibraryComponent
             data={ROBOT_ITEMS}
@@ -27,7 +27,7 @@ const RobotLibrary = ({onRequestClose, vm}) => {
                 <FormattedMessage
                     id="gui.sardu.noRobots"
                     defaultMessage="No robot profiles are available yet."
-                    description="Message shown while the SARDU Edu robot library is empty"
+                    description="Message shown while the SARDU-Block robot library is empty"
                 />
             )}
             filterable={false}
@@ -35,10 +35,10 @@ const RobotLibrary = ({onRequestClose, vm}) => {
             title={intl.formatMessage({
                 id: 'gui.sardu.robotLibraryTitle',
                 defaultMessage: 'Choose a robot',
-                description: 'Title of the SARDU Edu robot library'
+                description: 'Title of the SARDU-Block robot library'
             })}
             onItemSelected={item => {
-                vm.setSarduEduHardwareSelection({
+                vm.setSarduBlockHardwareSelection({
                     boardId: item.boardId, boardName: 'Arduino Nano', robotId: item.robotId, hardwareKind: 'robot',
                     componentIds: ['servo', 'hc-sr04', 'touch', 'sound-sensor', 'photoresistor', 'buzzer'],
                     analogInputPins: pinsByCapability('analog-input'),
@@ -47,9 +47,9 @@ const RobotLibrary = ({onRequestClose, vm}) => {
                     pwmPins: pinsByCapability('pwm'), boardVersion: '1', backendId: 'arduino-cpp',
                     backendVersion: '1', mode: 'standalone'
                 });
-                vm.setSarduEduHardwarePort(null);
+                vm.setSarduBlockHardwarePort(null);
                 const close = () => {
-                    vm.emit('SARDU_CONNECT_REQUESTED', {afterSelection: true});
+                    vm.emit('SARDU_BLOCK_CONNECT_REQUESTED', {afterSelection: true});
                     onRequestClose();
                 };
                 if (vm.extensionManager.isExtensionLoaded('sarduBoard')) {
@@ -63,7 +63,7 @@ const RobotLibrary = ({onRequestClose, vm}) => {
             removeItemLabel={intl.formatMessage({
                 id: 'gui.sardu.removeRobot',
                 defaultMessage: 'Remove selected robot',
-                description: 'Tooltip for removing the selected SARDU Edu robot'
+                description: 'Tooltip for removing the selected SARDU-Block robot'
             })}
             selectedItemId={selection?.hardwareKind === 'robot' ?
                 ROBOT_ITEMS.find(item => item.robotId === selection.robotId)?.name : null}

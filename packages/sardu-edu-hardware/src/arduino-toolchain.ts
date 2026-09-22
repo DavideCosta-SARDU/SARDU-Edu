@@ -26,7 +26,7 @@ export interface ArduinoCliInvocationOptions {
 export const ARDUINO_PORT_DISCOVERY_TIMEOUTS = [100, 250, 500, 1000] as const
 export const DEFAULT_ARDUINO_PORT_DISCOVERY_TIMEOUT = 250
 
-export const SARDU_ARDUINO_TOOLCHAIN_LAYOUT: ArduinoToolchainLayout = {
+export const SARDU_BLOCK_ARDUINO_TOOLCHAIN_LAYOUT: ArduinoToolchainLayout = {
   executable: 'resources/toolchains/arduino/arduino-cli.exe',
   configuration: 'resources/toolchains/arduino/arduino-cli.yaml',
   dataDirectory: 'resources/toolchains/arduino/data',
@@ -51,7 +51,7 @@ const getBoardFqbn = (boardId: string, nanoProcessor: ArduinoCliRequest['nanoPro
 
 export const createArduinoCliInvocation = (
   { action, boardId, nanoProcessor, port, sketchPath }: ArduinoCliRequest,
-  { layout = SARDU_ARDUINO_TOOLCHAIN_LAYOUT }: ArduinoCliInvocationOptions = {},
+  { layout = SARDU_BLOCK_ARDUINO_TOOLCHAIN_LAYOUT }: ArduinoCliInvocationOptions = {},
 ): ArduinoCliInvocation => {
   const fqbn = getBoardFqbn(boardId, nanoProcessor)
   if (!fqbn) throw new Error(`No Arduino CLI target is defined for board: ${boardId}`)
@@ -66,3 +66,6 @@ export const createArduinoCliInvocation = (
     args,
   }
 }
+
+/** Historical export retained for consumers compiled against SARDU Edu. */
+export const SARDU_ARDUINO_TOOLCHAIN_LAYOUT = SARDU_BLOCK_ARDUINO_TOOLCHAIN_LAYOUT

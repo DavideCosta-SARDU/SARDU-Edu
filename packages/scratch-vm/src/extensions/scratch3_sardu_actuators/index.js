@@ -62,7 +62,7 @@ class Scratch3SarduActuators {
             name: formatMessage({
                 id: 'sarduActuators.name',
                 default: 'Actuators',
-                description: 'SARDU Edu actuators block category'
+                description: 'SARDU-Block actuators block category'
             }),
             color1: '#7B1FA2',
             color2: '#62177F',
@@ -166,7 +166,7 @@ class Scratch3SarduActuators {
                 BACKGROUND: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'BLACK'}
             }),
             oledBlock('printOled', 'OLED print [TEXT] [ENDING]', {
-                TEXT: {type: ArgumentType.STRING, defaultValue: 'Hello SARDU Edu'},
+                TEXT: {type: ArgumentType.STRING, defaultValue: 'Hello SARDU-Block'},
                 ENDING: {type: ArgumentType.STRING, menu: 'OLED_PRINT_ENDING', defaultValue: 'NEWLINE'}
             }),
             oledBlock('clearOled', 'clear OLED'),
@@ -203,7 +203,7 @@ class Scratch3SarduActuators {
                 BACKGROUND: {type: ArgumentType.STRING, menu: 'OLED_COLOR', defaultValue: 'BLACK'}
             }),
             sh1106Block('printSh1106', 'SH1106 print [TEXT] [ENDING]', {
-                TEXT: {type: ArgumentType.STRING, defaultValue: 'Hello SARDU Edu'},
+                TEXT: {type: ArgumentType.STRING, defaultValue: 'Hello SARDU-Block'},
                 ENDING: {type: ArgumentType.STRING, menu: 'OLED_PRINT_ENDING', defaultValue: 'NEWLINE'}
             }),
             sh1106Block('clearSh1106', 'clear SH1106 OLED'),
@@ -345,7 +345,7 @@ class Scratch3SarduActuators {
     setLed (args) {
         if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return;
         const transport = this.runtime.sarduEduLiveTransport;
-        if (!transport?.connected) return Promise.reject(new Error('SARDU Edu live transport is not connected in setLed'));
+        if (!transport?.connected) return Promise.reject(new Error('SARDU-Block live transport is not connected in setLed'));
         return transport.writeDigital(String(args.PIN), String(args.STATE));
     }
 
@@ -353,7 +353,7 @@ class Scratch3SarduActuators {
         if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return;
         const transport = this.runtime.sarduEduLiveTransport;
         if (!transport?.connected || typeof transport.writePwm !== 'function') {
-            return Promise.reject(new Error('SARDU Edu live transport does not support PWM in setLedBrightness'));
+            return Promise.reject(new Error('SARDU-Block live transport does not support PWM in setLedBrightness'));
         }
         return transport.writePwm(String(args.PIN), Math.max(0, Math.min(100, Number(args.BRIGHTNESS))));
     }
@@ -361,7 +361,7 @@ class Scratch3SarduActuators {
     setServoAngle (args) {
         if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return;
         const transport = this.runtime.sarduEduLiveTransport;
-        if (!transport?.connected) return Promise.reject(new Error('SARDU Edu live transport is not connected in setServoAngle'));
+        if (!transport?.connected) return Promise.reject(new Error('SARDU-Block live transport is not connected in setServoAngle'));
         return transport.writeServo(String(args.PIN), Math.max(0, Math.min(180, Number(args.ANGLE))));
     }
 
@@ -375,21 +375,21 @@ class Scratch3SarduActuators {
     servoAngle (args) {
         if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return 0;
         const transport = this.runtime.sarduEduLiveTransport;
-        if (!transport?.connected) return Promise.reject(new Error('SARDU Edu live transport is not connected in servoAngle'));
+        if (!transport?.connected) return Promise.reject(new Error('SARDU-Block live transport is not connected in servoAngle'));
         return transport.readServo(String(args.PIN)).then(value => Math.trunc(value));
     }
 
     playTone (args) {
         if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return;
         const transport = this.runtime.sarduEduLiveTransport;
-        if (!transport?.connected) return Promise.reject(new Error('SARDU Edu live transport is not connected in playTone'));
+        if (!transport?.connected) return Promise.reject(new Error('SARDU-Block live transport is not connected in playTone'));
         return transport.playTone(String(args.PIN), Number(args.FREQUENCY), Number(args.MILLIS));
     }
 
     _neoPixel (action, args, ...names) {
         if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return;
         const transport = this.runtime.sarduEduLiveTransport;
-        if (!transport?.connected) return Promise.reject(new Error(`SARDU Edu live transport is not connected in ${action}`));
+        if (!transport?.connected) return Promise.reject(new Error(`SARDU-Block live transport is not connected in ${action}`));
         return transport.runNeoPixel(action, String(args.PIN), ...names.map(name => Number(args[name])));
     }
 
@@ -408,7 +408,7 @@ class Scratch3SarduActuators {
     _oled (action, args, ...names) {
         if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return;
         const transport = this.runtime.sarduEduLiveTransport;
-        if (!transport?.connected) return Promise.reject(new Error(`SARDU Edu live transport is not connected in OLED ${action}`));
+        if (!transport?.connected) return Promise.reject(new Error(`SARDU-Block live transport is not connected in OLED ${action}`));
         return transport.runOled(action, ...names.map(name => {
             if (name === 'COLOR' || name === 'BACKGROUND') return String(args[name]) === 'WHITE' ? 1 : 0;
             if (name === 'ENDING') return String(args[name]) === 'NEWLINE' ? 1 : 0;
@@ -450,7 +450,7 @@ class Scratch3SarduActuators {
     _sh1106 (action, args, ...names) {
         if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return;
         const transport = this.runtime.sarduEduLiveTransport;
-        if (!transport?.connected) return Promise.reject(new Error(`SARDU Edu live transport is not connected in SH1106 ${action}`));
+        if (!transport?.connected) return Promise.reject(new Error(`SARDU-Block live transport is not connected in SH1106 ${action}`));
         return transport.runSh1106(action, ...names.map(name => {
             if (name === 'COLOR') return String(args[name]) === 'WHITE' ? 1 : 0;
             if (name === 'ENDING') return String(args[name]) === 'NEWLINE' ? 1 : 0;
@@ -479,7 +479,7 @@ class Scratch3SarduActuators {
         if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return;
         const transport = this.runtime.sarduEduLiveTransport;
         if (!transport?.connected) {
-            return Promise.reject(new Error(`SARDU Edu live transport is not connected in display ${action}`));
+            return Promise.reject(new Error(`SARDU-Block live transport is not connected in display ${action}`));
         }
         return transport.runDisplay(action, ...values);
     }

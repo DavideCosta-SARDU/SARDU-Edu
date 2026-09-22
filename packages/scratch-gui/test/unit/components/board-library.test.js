@@ -1,8 +1,8 @@
 import {canSelectBoard, removeSelectedBoard} from '../../../src/components/board-library/board-library.jsx';
 import {HARDWARE_REMOVE_LABEL} from '../../../src/components/library/library.jsx';
-import sarduEduMessages from '../../../src/lib/sardu-edu-messages';
+import sarduBlockMessages from '../../../src/lib/sardu-edu-messages';
 
-describe('SARDU Edu board library', () => {
+describe('SARDU-Block board library', () => {
     test('requires removing the selected board before choosing another one', () => {
         expect(canSelectBoard(null, 'arduino-uno')).toBe(true);
         expect(canSelectBoard('arduino-uno', 'arduino-uno')).toBe(true);
@@ -10,12 +10,12 @@ describe('SARDU Edu board library', () => {
     });
 
     test('does not remove the board or its code when confirmation is cancelled', () => {
-        const vm = {clearSarduEduHardwareSelection: jest.fn(() => false)};
+        const vm = {clearSarduBlockHardwareSelection: jest.fn(() => false)};
         const confirmRemoval = jest.fn(() => false);
 
         expect(removeSelectedBoard(vm, confirmRemoval)).toBe(false);
-        expect(vm.clearSarduEduHardwareSelection).toHaveBeenCalledTimes(1);
-        expect(vm.clearSarduEduHardwareSelection).not.toHaveBeenCalledWith(true);
+        expect(vm.clearSarduBlockHardwareSelection).toHaveBeenCalledTimes(1);
+        expect(vm.clearSarduBlockHardwareSelection).not.toHaveBeenCalledWith(true);
     });
 
     test('uses a readable removal marker for selected hardware', () => {
@@ -24,10 +24,10 @@ describe('SARDU Edu board library', () => {
 
     test('provides Italian translations for every hardware block message', () => {
         const hardwarePrefixes = ['sarduBoard.', 'sarduSensors.', 'sarduActuators.'];
-        const hardwareKeys = Object.keys(sarduEduMessages.en)
+        const hardwareKeys = Object.keys(sarduBlockMessages.en)
             .filter(key => hardwarePrefixes.some(prefix => key.startsWith(prefix)));
 
-        hardwareKeys.forEach(key => expect(sarduEduMessages.it[key]).toBeDefined());
-        expect(sarduEduMessages.it['sarduWifi.category']).toBe('ESP32 - Wi-Fi');
+        hardwareKeys.forEach(key => expect(sarduBlockMessages.it[key]).toBeDefined());
+        expect(sarduBlockMessages.it['sarduWifi.category']).toBe('ESP32 - Wi-Fi');
     });
 });

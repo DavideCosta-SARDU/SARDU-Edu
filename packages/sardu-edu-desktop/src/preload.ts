@@ -1,19 +1,19 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
-import type { HardwareOutputEvent, SarduDesktopApi } from './contracts'
+import type { HardwareOutputEvent, SarduBlockDesktopApi } from './contracts'
 
 // A sandboxed Electron preload must not depend on generated local CommonJS chunks.
 const HARDWARE_IPC = {
-  compile: 'sardu-hardware:compile',
-  getStatus: 'sardu-hardware:get-status',
-  listPorts: 'sardu-hardware:list-ports',
-  logLiveDiagnostic: 'sardu-hardware:log-live-diagnostic',
-  output: 'sardu-hardware:output',
-  selectLivePort: 'sardu-hardware:select-live-port',
-  upload: 'sardu-hardware:upload',
+  compile: 'sardu-block-hardware:compile',
+  getStatus: 'sardu-block-hardware:get-status',
+  listPorts: 'sardu-block-hardware:list-ports',
+  logLiveDiagnostic: 'sardu-block-hardware:log-live-diagnostic',
+  output: 'sardu-block-hardware:output',
+  selectLivePort: 'sardu-block-hardware:select-live-port',
+  upload: 'sardu-block-hardware:upload',
 } as const
 
-const api: SarduDesktopApi = {
+const api: SarduBlockDesktopApi = {
   hardware: {
     compile: (request) => ipcRenderer.invoke(HARDWARE_IPC.compile, request),
     getStatus: () => ipcRenderer.invoke(HARDWARE_IPC.getStatus),
@@ -29,4 +29,6 @@ const api: SarduDesktopApi = {
   },
 }
 
+contextBridge.exposeInMainWorld('sarduBlockDesktop', api)
+// Historical bridge retained while installed SARDU Edu frontends are still supported.
 contextBridge.exposeInMainWorld('sarduEduDesktop', api)

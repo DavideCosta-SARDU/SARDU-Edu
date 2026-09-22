@@ -1,7 +1,7 @@
 /* eslint-env jest */
 import makeToolboxXML from '../../../src/lib/make-toolbox-xml';
 
-describe('SARDU Edu toolbox modes', () => {
+describe('SARDU-Block toolbox modes', () => {
     const originalScratchBlocks = global.ScratchBlocks;
 
     beforeAll(() => {
@@ -109,7 +109,7 @@ describe('SARDU Edu toolbox modes', () => {
             undefined,
             {mode: 'standalone'},
             false,
-            {'gui.sarduEdu.rfidAdvanced': 'Avanzate'}
+            {'gui.sarduBlock.rfidAdvanced': 'Avanzate'}
         );
 
         expect(toolbox).toContain('<label text="Avanzate"/>');
@@ -132,6 +132,15 @@ describe('SARDU Edu toolbox modes', () => {
         );
 
         expect(toolbox).toContain('<label text="OLED SSD1306 I2C"/>');
+    });
+
+    test('labels the selected push button blocks', () => {
+        const toolbox = makeToolboxXML(false, true, 'stage', [{
+            id: 'sarduSensors',
+            xml: '<category name="Sensori"><block type="sarduSensors_configureButton"/></category>'
+        }], '', '', '', undefined, {mode: 'standalone', componentIds: ['button']});
+
+        expect(toolbox).toContain('<label text="Pulsante"/>');
     });
 
     test('labels the selected SH1106 actuator blocks', () => {

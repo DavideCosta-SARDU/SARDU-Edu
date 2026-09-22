@@ -1,7 +1,7 @@
 import {
   ARDUINO_PORT_DISCOVERY_TIMEOUTS,
   DEFAULT_ARDUINO_PORT_DISCOVERY_TIMEOUT,
-} from '@sardu-edu/hardware'
+} from '@sardu-block/hardware'
 import type { ArduinoCompileRequest, ArduinoPortListRequest, ArduinoUploadRequest, LiveDiagnostic } from './contracts'
 
 const MAX_SOURCE_LENGTH = 2_000_000

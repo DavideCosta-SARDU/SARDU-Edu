@@ -1,4 +1,4 @@
-// Core block categories retain their familiar colors. These overrides apply the SARDU Edu identity to neutral
+// Core block categories retain their familiar colors. These overrides apply the SARDU-Block identity to neutral
 // workspace controls without reducing the visual distinction between block categories.
 const blockColors = {
     workspace: '#FCFCF5',

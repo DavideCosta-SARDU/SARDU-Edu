@@ -72,7 +72,7 @@ const AboutMenu = ({
         [handleOnClose]
     );
     const menuItems = Array.isArray(onClick) ? onClick : [{
-        title: intl.formatMessage({id: 'gui.about.sarduEdu', defaultMessage: 'About SARDU Edu'}),
+        title: intl.formatMessage({id: 'gui.about.sarduBlock', defaultMessage: 'About SARDU-Block'}),
         onClick: () => setLegalPage('sardu')
     }, {
         title: intl.formatMessage({id: 'gui.about.thirdParty', defaultMessage: 'Third-party licenses'}),
@@ -120,20 +120,28 @@ const AboutMenu = ({
             overlayClassName={stylesAboutMenu.legalOverlay}
             onRequestClose={() => setLegalPage(null)}
         >
-            <button className={stylesAboutMenu.closeButton} type="button" onClick={() => setLegalPage(null)}>×</button>
+            <button
+                aria-label={intl.formatMessage({id: 'gui.about.close', defaultMessage: 'Close'})}
+                className={stylesAboutMenu.closeButton}
+                type="button"
+                onClick={() => setLegalPage(null)}
+            >×</button>
             {legalPage === 'sardu' ? <div className={stylesAboutMenu.legalContent}>
-                <h2>SARDU Edu</h2>
-                <p>Copyright (C) 2026 Davide Costa — SARDU</p>
+                <h2>SARDU-Block</h2>
+                <p>Copyright (C) 2026 Davide Costa — SARDU-Block</p>
                 <p><a href="mailto:davide@sardu.pro">davide@sardu.pro</a></p>
-                <p><FormattedMessage id="gui.about.agplExplanation" defaultMessage="The original SARDU Edu code is free software under GNU AGPL v3. You may use, study, modify and redistribute it under that license. If you distribute a modified version, or make it available to users over a network, you must provide the corresponding source code under the same license." /></p>
+                <p><FormattedMessage id="gui.about.agplExplanation" defaultMessage="The original SARDU-Block code is free software under GNU AGPL v3. You may use, study, modify and redistribute it under that license. If you distribute a modified version, or make it available to users over a network, you must provide the corresponding source code under the same license." /></p>
                 <p><FormattedMessage id="gui.about.noWarranty" defaultMessage="The software is provided without warranty. Third-party components retain their own licenses." /></p>
                 <p><a href="legal/LICENSE" target="_blank" rel="noreferrer"><FormattedMessage id="gui.about.fullLicense" defaultMessage="Open the complete AGPL-3.0 license" /></a></p>
-                <p><FormattedMessage id="gui.about.evSignature" defaultMessage="Official executables are intended to be digitally signed with an EV code-signing certificate so users can verify their origin and integrity." /></p>
             </div> : null}
             {legalPage === 'third-party' ? <div className={stylesAboutMenu.legalContent}>
                 <h2><FormattedMessage id="gui.about.thirdParty" defaultMessage="Third-party licenses" /></h2>
-                <p><FormattedMessage id="gui.about.thirdPartyExplanation" defaultMessage="SARDU Edu uses third-party software whose original copyright notices and licenses remain applicable and are not replaced by the SARDU Edu license." /></p>
-                <iframe className={stylesAboutMenu.licenseFrame} title="Third-party licenses" src="legal/THIRD-PARTY-LICENSES" />
+                <p><FormattedMessage id="gui.about.thirdPartyExplanation" defaultMessage="SARDU-Block uses third-party software whose original copyright notices and licenses remain applicable and are not replaced by the SARDU-Block license." /></p>
+                <iframe
+                    className={stylesAboutMenu.licenseFrame}
+                    title={intl.formatMessage({id: 'gui.about.thirdParty', defaultMessage: 'Third-party licenses'})}
+                    src="legal/THIRD-PARTY-LICENSES"
+                />
             </div> : null}
         </ReactModal></React.Fragment>
     );

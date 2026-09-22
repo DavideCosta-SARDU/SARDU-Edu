@@ -6,7 +6,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 const ScratchWebpackConfigBuilder = require('scratch-webpack-configuration');
-const sarduEduConfig = require('../../sardu-edu.config.json');
+const sarduBlockConfig = require('../../sardu-block.config.json');
 
 // const STATIC_PATH = process.env.STATIC_PATH || '/static';
 
@@ -188,35 +188,35 @@ const buildConfig = baseConfig.clone()
         ...commonHtmlWebpackPluginOptions,
         chunks: ['gui'],
         template: 'src/playground/index.ejs',
-        title: sarduEduConfig.productName
+        title: sarduBlockConfig.productName
     }))
     .addPlugin(new HtmlWebpackPlugin({
         ...commonHtmlWebpackPluginOptions,
         chunks: ['guistandalone'],
         filename: 'standalone.html',
         template: 'src/playground/index.ejs',
-        title: `${sarduEduConfig.productName}: Standalone Mode`
+        title: `${sarduBlockConfig.productName}: Standalone Mode`
     }))
     .addPlugin(new HtmlWebpackPlugin({
         ...commonHtmlWebpackPluginOptions,
         chunks: ['blocksonly'],
         filename: 'blocks-only.html',
         template: 'src/playground/index.ejs',
-        title: `${sarduEduConfig.productName}: Blocks Only Example`
+        title: `${sarduBlockConfig.productName}: Blocks Only Example`
     }))
     .addPlugin(new HtmlWebpackPlugin({
         ...commonHtmlWebpackPluginOptions,
         chunks: ['compatibilitytesting'],
         filename: 'compatibility-testing.html',
         template: 'src/playground/index.ejs',
-        title: `${sarduEduConfig.productName}: Compatibility Testing`
+        title: `${sarduBlockConfig.productName}: Compatibility Testing`
     }))
     .addPlugin(new HtmlWebpackPlugin({
         ...commonHtmlWebpackPluginOptions,
         chunks: ['player'],
         filename: 'player.html',
         template: 'src/playground/index.ejs',
-        title: `${sarduEduConfig.productName}: Player Example`
+        title: `${sarduBlockConfig.productName}: Player Example`
     }))
     .addPlugin(new CopyWebpackPlugin({
         patterns: [

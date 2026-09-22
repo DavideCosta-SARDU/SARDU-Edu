@@ -1,11 +1,11 @@
 export const HARDWARE_IPC = {
-  compile: 'sardu-hardware:compile',
-  getStatus: 'sardu-hardware:get-status',
-  listPorts: 'sardu-hardware:list-ports',
-  logLiveDiagnostic: 'sardu-hardware:log-live-diagnostic',
-  output: 'sardu-hardware:output',
-  selectLivePort: 'sardu-hardware:select-live-port',
-  upload: 'sardu-hardware:upload',
+  compile: 'sardu-block-hardware:compile',
+  getStatus: 'sardu-block-hardware:get-status',
+  listPorts: 'sardu-block-hardware:list-ports',
+  logLiveDiagnostic: 'sardu-block-hardware:log-live-diagnostic',
+  output: 'sardu-block-hardware:output',
+  selectLivePort: 'sardu-block-hardware:select-live-port',
+  upload: 'sardu-block-hardware:upload',
 } as const
 
 export interface ArduinoCompileRequest {
@@ -52,7 +52,7 @@ export interface LiveDiagnostic {
   readonly stage: string
 }
 
-export interface SarduDesktopHardwareApi {
+export interface SarduBlockDesktopHardwareApi {
   compile(request: ArduinoCompileRequest): Promise<HardwareOperationResult>
   getStatus(): Promise<HardwareStatus>
   listPorts(request?: ArduinoPortListRequest): Promise<readonly ArduinoPort[]>
@@ -62,6 +62,10 @@ export interface SarduDesktopHardwareApi {
   upload(request: ArduinoUploadRequest): Promise<HardwareOperationResult>
 }
 
-export interface SarduDesktopApi {
-  readonly hardware: SarduDesktopHardwareApi
+export interface SarduBlockDesktopApi {
+  readonly hardware: SarduBlockDesktopHardwareApi
 }
+
+/** Historical type alias retained for integrations compiled against SARDU Edu. */
+export type SarduDesktopHardwareApi = SarduBlockDesktopHardwareApi
+export type SarduDesktopApi = SarduBlockDesktopApi

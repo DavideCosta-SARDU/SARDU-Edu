@@ -2,7 +2,7 @@ import PropTypes from 'prop-types';
 import React, {useState} from 'react';
 import {FormattedMessage, useIntl} from 'react-intl';
 import VM from '@scratch/scratch-vm';
-import {ARDUINO_BOARDS} from '@sardu-edu/hardware';
+import {ARDUINO_BOARDS} from '@sardu-block/hardware';
 
 import LibraryComponent from '../library/library.jsx';
 import unoIcon from '../../../../../docs/SVG/Schede/arduino_uno.svg';
@@ -135,14 +135,14 @@ export const canSelectBoard = (selectedBoardId, nextBoardId) =>
     !selectedBoardId || selectedBoardId === nextBoardId;
 
 export const removeSelectedBoard = (vm, confirmRemoval) => {
-    if (vm.clearSarduEduHardwareSelection()) return true;
+    if (vm.clearSarduBlockHardwareSelection()) return true;
     if (!confirmRemoval()) return false;
-    return vm.clearSarduEduHardwareSelection(true);
+    return vm.clearSarduBlockHardwareSelection(true);
 };
 
 const BoardLibrary = ({onRequestClose, vm}) => {
     const intl = useIntl();
-    const selection = vm.getSarduEduProjectData()?.hardwareSelection;
+    const selection = vm.getSarduBlockProjectData()?.hardwareSelection;
     const [selectedBoardName, setSelectedBoardName] = useState(selection?.boardName ||
         BOARD_ITEMS.find(item => item.boardId === selection?.boardId)?.name);
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -157,7 +157,7 @@ const BoardLibrary = ({onRequestClose, vm}) => {
     };
     const handleSelect = (item, wifiEnabled = selection?.boardId === item.boardId && selection?.wifiEnabled) => {
         if (!canSelectBoard(selection?.boardId, item.boardId)) return;
-        vm.setSarduEduHardwareSelection({
+        vm.setSarduBlockHardwareSelection({
             boardId: item.boardId,
             boardName: item.name,
             componentIds: selection?.componentIds || [],
@@ -172,10 +172,10 @@ const BoardLibrary = ({onRequestClose, vm}) => {
             mode: 'standalone',
             wifiEnabled: Boolean(wifiEnabled)
         });
-        vm.setSarduEduHardwarePort(null);
+        vm.setSarduBlockHardwarePort(null);
         const finishSelection = () => {
-            vm.emit('SARDU_HARDWARE_CHANGED', vm.getSarduEduProjectData());
-            vm.emit('SARDU_CONNECT_REQUESTED', {afterSelection: true});
+            vm.emit('SARDU_BLOCK_HARDWARE_CHANGED', vm.getSarduBlockProjectData());
+            vm.emit('SARDU_BLOCK_CONNECT_REQUESTED', {afterSelection: true});
             setSelectedBoardName(item.name);
             onRequestClose();
         };
@@ -285,7 +285,7 @@ const BoardLibrary = ({onRequestClose, vm}) => {
             title={intl.formatMessage({
                 id: 'gui.sardu.boardLibraryTitle',
                 defaultMessage: 'Choose a board',
-                description: 'Title of the SARDU Edu board library'
+                description: 'Title of the SARDU-Block board library'
             })}
             onItemSelected={handleSelect}
             onItemRemove={handleRemove}
@@ -293,7 +293,7 @@ const BoardLibrary = ({onRequestClose, vm}) => {
             removeItemLabel={intl.formatMessage({
                 id: 'gui.sardu.removeBoard',
                 defaultMessage: 'Remove selected board',
-                description: 'Tooltip for removing the selected SARDU Edu board'
+                description: 'Tooltip for removing the selected SARDU-Block board'
             })}
             selectedItemId={selectedBoardName}
         />

@@ -1,3 +1,4 @@
+import { cpSync, existsSync } from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { app, BrowserWindow, ipcMain, Menu, net, protocol } from 'electron'
@@ -13,20 +14,27 @@ import {
   validateUploadRequest,
 } from './request-validation'
 
-const APP_ORIGIN = 'sardu://app'
+const APP_ORIGIN = 'sardu-block://app'
 let preferredLivePort: string | null = null
 let quitting = false
 const configuredSessions = new WeakSet<Session>()
 
-app.setName('SARDU Edu')
-process.title = 'SARDU Edu'
+app.setName('SARDU-Block')
+process.title = 'SARDU-Block'
 
 protocol.registerSchemesAsPrivileged([
   {
-    scheme: 'sardu',
+    scheme: 'sardu-block',
     privileges: { secure: true, standard: true, supportFetchAPI: true },
   },
 ])
+
+const migrateLegacyUserData = (): void => {
+  const currentUserData = app.getPath('userData')
+  const legacyUserData = path.join(path.dirname(currentUserData), 'SARDU Edu')
+  if (!existsSync(legacyUserData) || path.resolve(legacyUserData) === path.resolve(currentUserData)) return
+  cpSync(legacyUserData, currentUserData, { recursive: true, force: false, errorOnExist: false })
+}
 
 const guiRoot = (): string =>
   app.isPackaged
@@ -38,13 +46,13 @@ const hardwareRoot = (): string =>
 
 const validateSender = (event: IpcMainInvokeEvent): void => {
   if (!event.senderFrame?.url.startsWith(`${APP_ORIGIN}/`)) {
-    throw new Error(`Rejected SARDU desktop request from ${event.senderFrame?.url || 'unknown frame'}`)
+    throw new Error(`Rejected SARDU-Block desktop request from ${event.senderFrame?.url || 'unknown frame'}`)
   }
 }
 
 const registerAppProtocol = (): void => {
   const root = path.resolve(guiRoot())
-  protocol.handle('sardu', (request) => {
+  protocol.handle('sardu-block', (request) => {
     const requestUrl = new URL(request.url)
     if (requestUrl.host !== 'app') return new Response('Not found', { status: 404 })
     const relativePath = decodeURIComponent(requestUrl.pathname).replace(/^\/+/, '') || 'index.html'
@@ -129,7 +137,7 @@ const configureApplicationMenu = (): void => {
 const createWindow = (): void => {
   let closing = false
   const mainWindow = new BrowserWindow({
-    title: 'SARDU Edu',
+    title: 'SARDU-Block',
     width: 1440,
     height: 900,
     minWidth: 1024,
@@ -144,7 +152,7 @@ const createWindow = (): void => {
   })
   configureSerialAccess(mainWindow.webContents.session)
   mainWindow.webContents.on('preload-error', (_event, preloadPath, error) => {
-    console.error(`SARDU Edu preload failed: path=${preloadPath}, error=${error.message}`)
+    console.error(`SARDU-Block preload failed: path=${preloadPath}, error=${error.message}`)
   })
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   mainWindow.webContents.on('will-navigate', (event) => event.preventDefault())
@@ -163,7 +171,8 @@ const createWindow = (): void => {
 }
 
 void app.whenReady().then(() => {
-  app.setAppUserModelId('pro.sardu.edu')
+  app.setAppUserModelId('pro.sardu.block')
+  migrateLegacyUserData()
   configureApplicationMenu()
   registerAppProtocol()
   registerHardwareIpc()

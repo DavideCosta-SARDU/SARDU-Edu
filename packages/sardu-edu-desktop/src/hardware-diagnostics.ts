@@ -7,7 +7,8 @@ export class HardwareDiagnostics {
 
   constructor(userDataRoot: string) {
     this.liveDiagnosticsPath = path.join(
-      process.env.SARDU_LOG_DIR || path.join(userDataRoot, 'logs'),
+      process.env.SARDU_BLOCK_LOG_DIR || process.env.SARDU_EDU_LOG_DIR || process.env.SARDU_LOG_DIR ||
+        path.join(userDataRoot, 'logs'),
       'hardware-live.txt',
     )
   }

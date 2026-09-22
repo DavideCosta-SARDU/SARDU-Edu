@@ -10,6 +10,7 @@ import servoIcon from '../../../../../docs/SVG/ServoMotore.svg';
 import laserIcon from '../../../../../docs/SVG/vl53l0x.svg';
 import neoPixelIcon from '../../../../../docs/SVG/neopixel-stick-8.svg';
 import touchIcon from '../../../../../docs/SVG/touch.svg';
+import buttonIcon from '../../../../../docs/SVG/press-button.svg';
 import soundIcon from '../../../../../docs/SVG/SensoreSuono.svg';
 import photoresistorIcon from '../../../../../docs/SVG/photoresistore.svg';
 import buzzerIcon from '../../../../../docs/SVG/buzzer.svg';
@@ -59,6 +60,13 @@ const COMPONENT_ITEMS = [{
 }, {
     category: 'sensors', componentId: 'touch', featured: true, name: 'Touch', rawURL: touchIcon,
     tags: ['touch', 'tocco', 'digital', 'digitale'], description: summary(<FormattedMessage id="gui.sardu.touchDescription" defaultMessage="Digital touch sensor. It detects HIGH or LOW on a selectable input pin." description="Touch sensor description" />, 'Touch', 'Digital', 'Davide Costa', 'No external library', 'https://docs.arduino.cc/built-in-examples/digital/Button/')
+}, {
+    category: 'sensors', componentId: 'button', featured: true, name: 'Pulsante', rawURL: buttonIcon,
+    tags: ['button', 'pulsante', 'digital', 'digitale'], description: summary(<FormattedMessage
+        id="gui.sardu.buttonDescription"
+        defaultMessage="Digital push button with selectable active-low or active-high wiring."
+        description="Push button description"
+    />, 'Button', 'Digital', 'Davide Costa', 'No external library', 'https://docs.arduino.cc/built-in-examples/digital/Button/')
 }, {
     category: 'sensors', componentId: 'sound-sensor', featured: true, name: 'Sound sensor', rawURL: soundIcon,
     tags: ['sound', 'rumore', 'microphone', 'microfono', 'analog', 'analogico'], description: summary(<FormattedMessage id="gui.sardu.soundSensorDescription" defaultMessage="Analog microphone module. It reports the sound level as a raw value or percentage." description="Sound sensor description" />, 'Sound; microphone', 'Analog', 'Davide Costa', 'No external library', 'https://docs.arduino.cc/built-in-examples/basics/AnalogReadSerial/')
@@ -144,11 +152,11 @@ const CATEGORY_MESSAGES = {
 
 const ComponentLibrary = ({onRequestClose, vm}) => {
     const intl = useIntl();
-    const selection = vm.getSarduEduProjectData()?.hardwareSelection;
+    const selection = vm.getSarduBlockProjectData()?.hardwareSelection;
     const selectedIds = selection?.componentIds || [];
     const updateSelection = componentIds => {
         if (!selection) return;
-        vm.setSarduEduHardwareSelection({...selection, componentIds});
+        vm.setSarduBlockHardwareSelection({...selection, componentIds});
     };
     return (
         <LibraryComponent
@@ -162,7 +170,7 @@ const ComponentLibrary = ({onRequestClose, vm}) => {
             title={intl.formatMessage({
                 id: 'gui.sardu.componentLibraryTitle',
                 defaultMessage: 'Choose sensors and actuators',
-                description: 'Title of the SARDU Edu component library'
+                description: 'Title of the SARDU-Block component library'
             })}
             onItemSelected={item => {
                 updateSelection(Array.from(new Set([...selectedIds, item.componentId])));
@@ -173,7 +181,7 @@ const ComponentLibrary = ({onRequestClose, vm}) => {
             removeItemLabel={intl.formatMessage({
                 id: 'gui.sardu.removeComponent',
                 defaultMessage: 'Remove selected sensor or actuator',
-                description: 'Tooltip for removing a selected SARDU Edu component'
+                description: 'Tooltip for removing a selected SARDU-Block component'
             })}
             selectedItemIds={COMPONENT_ITEMS.filter(item => selectedIds.includes(item.componentId))
                 .map(item => item.name)}

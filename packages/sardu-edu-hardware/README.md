@@ -1,6 +1,6 @@
-# SARDU Edu Hardware
+# SARDU-Block Hardware
 
-This package defines the hardware model used by SARDU Edu. It contains versioned definitions for boards, programming
+This package defines the hardware model used by SARDU-Block. It contains versioned definitions for boards, programming
 backends, components and robots, together with a catalog and compatibility checks. The initial implementation includes
 Arduino Uno and Arduino Nano definitions and generates Arduino C/C++ sketches from the corresponding editor blocks.
 The generated operation model is shared with realtime transports, while toolchain invocation contracts remain

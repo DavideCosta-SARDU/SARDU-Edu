@@ -3,6 +3,7 @@ export { checkCompatibility } from './compatibility'
 export {
   ARDUINO_PORT_DISCOVERY_TIMEOUTS,
   DEFAULT_ARDUINO_PORT_DISCOVERY_TIMEOUT,
+  SARDU_BLOCK_ARDUINO_TOOLCHAIN_LAYOUT,
   SARDU_ARDUINO_TOOLCHAIN_LAYOUT,
   createArduinoCliInvocation,
 } from './arduino-toolchain'
@@ -18,6 +19,7 @@ export {
   ARDUINO_HARDWARE_DEFINITIONS,
   compileArduinoProgram,
   generateArduinoSketch,
+  generateSarduBlockLiveFirmware,
   generateSarduLiveFirmware,
 } from './arduino'
 export type {

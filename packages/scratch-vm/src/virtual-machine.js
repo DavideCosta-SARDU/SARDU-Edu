@@ -223,7 +223,7 @@ class VirtualMachine extends EventEmitter {
     }
 
     /**
-     * Select the board and programming backend stored with this SARDU Edu project.
+     * Select the board and programming backend stored with this SARDU-Block project.
      * @param {object} selection Hardware selection.
      */
     setSarduEduHardwareSelection (selection) {
@@ -255,7 +255,7 @@ class VirtualMachine extends EventEmitter {
                 wifiEnabled: Boolean(selection.wifiEnabled)
             }
         });
-        this.emit('SARDU_HARDWARE_CHANGED', this.getSarduEduProjectData());
+        this.emit('SARDU_BLOCK_HARDWARE_CHANGED', this.getSarduEduProjectData());
         if (['sarduBoard', 'sarduSensors', 'sarduActuators', 'sarduOtto', 'sarduWifi']
             .some(id => this.extensionManager.isExtensionLoaded(id))) {
             this.extensionManager.refreshBlocks();
@@ -264,7 +264,7 @@ class VirtualMachine extends EventEmitter {
     }
 
     /**
-     * Remove the selected SARDU Edu board or robot from the project.
+     * Remove the selected SARDU-Block board or robot from the project.
      */
     clearSarduEduHardwareSelection (force = false) {
         const boardPrograms = this.runtime.targets.flatMap(target => Object.values(target.blocks?._blocks || {})
@@ -278,33 +278,33 @@ class VirtualMachine extends EventEmitter {
         this.runtime.sarduEduSelectedPort = null;
         this.runtime.sarduEduHardwarePort = null;
         this.setSarduEduLiveTransport(null);
-        this.emit('SARDU_HARDWARE_CHANGED', null);
+        this.emit('SARDU_BLOCK_HARDWARE_CHANGED', null);
         this.runtime.emit(Runtime.PROJECT_CHANGED);
         this.refreshWorkspace();
         return true;
     }
 
     /**
-     * @returns {?object} A copy of the current SARDU Edu project configuration.
+     * @returns {?object} A copy of the current SARDU-Block project configuration.
      */
     getSarduEduProjectData () {
         return this.runtime.sarduEdu ? JSON.parse(JSON.stringify(this.runtime.sarduEdu)) : null;
     }
 
     /**
-     * Attach the runtime-only transport used by SARDU Edu realtime blocks.
+     * Attach the runtime-only transport used by SARDU-Block realtime blocks.
      * @param {?object} transport Live hardware transport, or null when disconnected.
      */
     setSarduEduLiveTransport (transport) {
         if (transport !== null && (typeof transport.writeDigital !== 'function' ||
             typeof transport.readMillis !== 'function' || typeof transport.readMicros !== 'function')) {
-            throw new Error('setSarduEduLiveTransport requires the complete SARDU live transport or null');
+            throw new Error('setSarduEduLiveTransport requires the complete SARDU-Block live transport or null');
         }
         this.runtime.sarduEduLiveTransport = transport;
     }
 
     /**
-     * Set the serial port physically detected for the selected SARDU Edu hardware.
+     * Set the serial port physically detected for the selected SARDU-Block hardware.
      * This connection state is intentionally not stored in the project.
      * @param {?string} port Detected serial port, or null when disconnected.
      */
@@ -314,7 +314,7 @@ class VirtualMachine extends EventEmitter {
         }
         if (this.runtime.sarduEduHardwarePort === port) return;
         this.runtime.sarduEduHardwarePort = port;
-        this.emit('SARDU_HARDWARE_CHANGED', this.getSarduEduProjectData());
+        this.emit('SARDU_BLOCK_HARDWARE_CHANGED', this.getSarduEduProjectData());
     }
 
     /**
@@ -327,7 +327,31 @@ class VirtualMachine extends EventEmitter {
         }
         if (this.runtime.sarduEduSelectedPort === port) return;
         this.runtime.sarduEduSelectedPort = port;
-        this.emit('SARDU_HARDWARE_CHANGED', this.getSarduEduProjectData());
+        this.emit('SARDU_BLOCK_HARDWARE_CHANGED', this.getSarduEduProjectData());
+    }
+
+    setSarduBlockHardwareSelection (selection) {
+        return this.setSarduEduHardwareSelection(selection);
+    }
+
+    clearSarduBlockHardwareSelection (force = false) {
+        return this.clearSarduEduHardwareSelection(force);
+    }
+
+    getSarduBlockProjectData () {
+        return this.getSarduEduProjectData();
+    }
+
+    setSarduBlockLiveTransport (transport) {
+        return this.setSarduEduLiveTransport(transport);
+    }
+
+    setSarduBlockHardwarePort (port) {
+        return this.setSarduEduHardwarePort(port);
+    }
+
+    setSarduBlockSelectedPort (port) {
+        return this.setSarduEduSelectedPort(port);
     }
 
     /**

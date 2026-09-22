@@ -1,6 +1,6 @@
-# SARDU Edu Desktop
+# SARDU-Block Desktop
 
-This package contains the Electron application shell and the native hardware boundary for SARDU Edu. The Scratch GUI
+This package contains the Electron application shell and the native hardware boundary for SARDU-Block. The Scratch GUI
 runs in a sandboxed renderer. A context-isolated preload exposes only named operations for hardware resource status,
 port discovery, compilation, upload and selection of the Live serial port.
 

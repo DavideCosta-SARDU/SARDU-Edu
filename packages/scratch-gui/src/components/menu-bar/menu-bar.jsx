@@ -66,7 +66,7 @@ import debugIcon from '../debug-modal/icons/icon--debug.svg';
 import connectHardwareIcon from './icon--hardware-connect.svg';
 import disconnectHardwareIcon from './icon--hardware-disconnect.svg';
 
-import {config as sarduEduConfig, logo as sarduEduLogo} from '../../branding';
+import {config as sarduBlockConfig, logo as sarduBlockLogo} from '../../branding';
 
 import sharedMessages from '../../lib/shared-messages';
 
@@ -172,11 +172,11 @@ class MenuBar extends React.Component {
     }
     componentDidMount () {
         document.addEventListener('keydown', this.handleKeyPress);
-        this.props.vm.on('SARDU_HARDWARE_CHANGED', this.handleSarduHardwareChanged);
+        this.props.vm.on('SARDU_BLOCK_HARDWARE_CHANGED', this.handleSarduHardwareChanged);
     }
     componentWillUnmount () {
         document.removeEventListener('keydown', this.handleKeyPress);
-        this.props.vm.removeListener('SARDU_HARDWARE_CHANGED', this.handleSarduHardwareChanged);
+        this.props.vm.removeListener('SARDU_BLOCK_HARDWARE_CHANGED', this.handleSarduHardwareChanged);
     }
     handleSarduHardwareChanged () {
         this.setState({
@@ -185,11 +185,11 @@ class MenuBar extends React.Component {
         });
     }
     handleSarduConnect () {
-        if (this.state.sarduSelectedPort) this.props.vm.emit('SARDU_CONNECT_REQUESTED');
+        if (this.state.sarduSelectedPort) this.props.vm.emit('SARDU_BLOCK_CONNECT_REQUESTED');
     }
     handleSarduDisconnect () {
-        this.props.vm.setSarduEduLiveTransport(null);
-        this.props.vm.setSarduEduHardwarePort(null);
+        this.props.vm.setSarduBlockLiveTransport(null);
+        this.props.vm.setSarduBlockHardwarePort(null);
     }
     handleClickNew () {
         // if the project is dirty, and user owns the project, we will autosave.
@@ -242,7 +242,7 @@ class MenuBar extends React.Component {
                 document.documentElement.style.height = '';
             }
 
-            // Time-travel modes may change the editor theme, but not the SARDU Edu product identity.
+            // Time-travel modes may change the editor theme, but not the SARDU-Block product identity.
             document.getElementById('logo_img').src = this.props.logo;
 
             this.props.onSetTimeTravelMode(mode);
@@ -341,7 +341,7 @@ class MenuBar extends React.Component {
                         >
                             <img
                                 id="logo_img"
-                                alt={sarduEduConfig.productName}
+                                alt={sarduBlockConfig.productName}
                                 className={classNames(styles.scratchLogo, {
                                     [styles.clickable]: typeof this.props.onClickLogo !== 'undefined'
                                 })}
@@ -386,7 +386,7 @@ class MenuBar extends React.Component {
                             depth={1}
                         />)}
                     </div>
-                    {this.props.vm.getSarduEduProjectData()?.hardwareSelection ? (
+                    {this.props.vm.getSarduBlockProjectData()?.hardwareSelection ? (
                         <button
                             aria-label={this.props.intl.formatMessage({
                                 id: this.state.sarduConnectedPort ?
@@ -748,7 +748,7 @@ MenuBar.propTypes = {
 };
 
 MenuBar.defaultProps = {
-    logo: sarduEduLogo,
+    logo: sarduBlockLogo,
     onShare: () => {}
 };
 

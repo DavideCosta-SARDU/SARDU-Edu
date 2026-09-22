@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest'
 import { SARDU_ARDUINO_TOOLCHAIN_LAYOUT, createArduinoCliInvocation } from '../src/arduino-toolchain'
 
 describe('Arduino CLI resource layout', () => {
-  test('keeps the toolchain isolated in SARDU Edu resources', () => {
+  test('keeps the toolchain isolated in SARDU-Block resources', () => {
     expect(SARDU_ARDUINO_TOOLCHAIN_LAYOUT.executable).toBe('resources/toolchains/arduino/arduino-cli.exe')
     expect(SARDU_ARDUINO_TOOLCHAIN_LAYOUT.librariesDirectory).toBe('resources/toolchains/arduino/user/libraries')
   })

@@ -1,14 +1,14 @@
-# Milestone 1 — Base SARDU Edu
+# Milestone 1 — Base SARDU-Block
 
 ## Obiettivo
 
-Creare una base SARDU Edu riconoscibile e distribuibile, mantenendo il più possibile invariati interfaccia,
+Creare una base SARDU-Block riconoscibile e distribuibile, mantenendo il più possibile invariati interfaccia,
 comportamento e architettura dell'editor Scratch ufficiale.
 
 ## Perimetro
 
 - Conservare il monorepo e i package upstream.
-- Applicare soltanto il branding essenziale SARDU Edu.
+- Applicare soltanto il branding essenziale SARDU-Block.
 - Documentare installazione, avvio, build statica, offline e provenienza upstream.
 - Preparare un workflow GitHub Pages separato dai workflow di anteprima upstream.
 - Conservare licenza, attribuzioni e avvisi sui marchi.
@@ -24,7 +24,7 @@ Questa milestone non implementa:
 - nuovi blocchi;
 - installazione di estensioni di terze parti;
 - gestione delle librerie Arduino;
-- un nuovo personaggio SARDU Edu;
+- un nuovo personaggio SARDU-Block;
 - refactoring generale dell'editor.
 
 Queste esclusioni delimitano soltanto la Milestone 1. L'integrazione hardware modulare, il codice compatibile con
@@ -36,7 +36,7 @@ del progetto.
 - [x] Installazione riproducibile con la versione Node indicata da `.nvmrc`.
 - [x] Avvio locale dell'editor.
 - [x] Build statica completata.
-- [x] Nome, logo, favicon, titolo pagina e titolo progetto identificano SARDU Edu.
+- [x] Nome, logo, favicon, titolo pagina e titolo progetto identificano SARDU-Block.
 - [x] Nessun nuovo supporto hardware o refactoring non richiesto.
 - [x] GitHub Pages pubblica `packages/scratch-gui/build/` tramite GitHub Actions.
 - [x] I limiti dell'utilizzo offline sono dichiarati senza promesse non verificate.

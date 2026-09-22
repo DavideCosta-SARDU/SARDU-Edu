@@ -343,7 +343,7 @@ class Scratch3SarduBoard {
         if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return;
         const transport = this.runtime.sarduEduLiveTransport;
         if (!transport?.connected) {
-            return Promise.reject(new Error('SARDU Edu live transport is not connected in setDigitalPin'));
+            return Promise.reject(new Error('SARDU-Block live transport is not connected in setDigitalPin'));
         }
         return transport.writeDigital(String(args.PIN), String(args.LEVEL));
     }
@@ -403,14 +403,14 @@ class Scratch3SarduBoard {
     millis () {
         if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return 0;
         const transport = this.runtime.sarduEduLiveTransport;
-        if (!transport?.connected) return Promise.reject(new Error('SARDU Edu live transport is not connected in millis'));
+        if (!transport?.connected) return Promise.reject(new Error('SARDU-Block live transport is not connected in millis'));
         return transport.readMillis();
     }
 
     micros () {
         if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return 0;
         const transport = this.runtime.sarduEduLiveTransport;
-        if (!transport?.connected) return Promise.reject(new Error('SARDU Edu live transport is not connected in micros'));
+        if (!transport?.connected) return Promise.reject(new Error('SARDU-Block live transport is not connected in micros'));
         return transport.readMicros();
     }
 }

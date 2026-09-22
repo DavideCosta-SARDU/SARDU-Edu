@@ -2,9 +2,9 @@ const test = require('tap').test;
 const VirtualMachine = require('../../src/virtual-machine');
 const sb3 = require('../../src/serialization/sb3');
 
-test('SARDU hardware selection is serialized with the project', t => {
+test('SARDU-Block hardware selection is serialized with new and compatibility keys', t => {
     const vm = new VirtualMachine();
-    vm.setSarduEduHardwareSelection({
+    vm.setSarduBlockHardwareSelection({
         boardId: 'arduino-uno',
         boardVersion: '1',
         backendId: 'arduino-cpp',
@@ -14,7 +14,7 @@ test('SARDU hardware selection is serialized with the project', t => {
 
     const serialized = sb3.serialize(vm.runtime);
 
-    t.same(serialized.sarduEdu.hardwareSelection, {
+    t.same(serialized.sarduBlock.hardwareSelection, {
         boardId: 'arduino-uno',
         boardVersion: '1',
         backendId: 'arduino-cpp',
@@ -23,10 +23,11 @@ test('SARDU hardware selection is serialized with the project', t => {
         hardwareKind: 'board',
         mode: 'standalone'
     });
+    t.same(serialized.sarduEdu, serialized.sarduBlock);
     t.end();
 });
 
-test('SARDU hardware selection is deserialized with the project', async t => {
+test('historical SARDU Edu hardware selection is deserialized with the project', async t => {
     const vm = new VirtualMachine();
     await sb3.deserialize({
         targets: [],
@@ -42,13 +43,30 @@ test('SARDU hardware selection is deserialized with the project', async t => {
         }
     }, vm.runtime, null, false);
 
-    t.same(vm.getSarduEduProjectData().hardwareSelection, {
+    t.same(vm.getSarduBlockProjectData().hardwareSelection, {
         boardId: 'arduino-nano',
         boardVersion: '1',
         backendId: 'arduino-cpp',
         backendVersion: '1',
         mode: 'realtime'
     });
+});
+
+test('SARDU-Block hardware selection is deserialized with the project', async t => {
+    const vm = new VirtualMachine();
+    await sb3.deserialize({
+        targets: [],
+        monitors: [],
+        sarduBlock: {
+            hardwareSelection: {
+                boardId: 'arduino-uno',
+                backendId: 'arduino-cpp',
+                mode: 'standalone'
+            }
+        }
+    }, vm.runtime, null, false);
+
+    t.equal(vm.getSarduBlockProjectData().hardwareSelection.boardId, 'arduino-uno');
 });
 
 test('SARDU project data getter does not expose mutable runtime state', t => {

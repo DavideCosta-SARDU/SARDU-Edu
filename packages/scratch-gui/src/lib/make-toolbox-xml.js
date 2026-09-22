@@ -792,9 +792,9 @@ const xmlClose = '</xml>';
  * @param {?string} backdropName - The name of the default selected backdrop dropdown.
  * @param {?string} soundName -  The name of the default selected sound dropdown.
  * @param {?object} colors - The colors for the color mode.
- * @param {?object} hardwareSelection - The selected SARDU Edu hardware configuration.
+ * @param {?object} hardwareSelection - The selected SARDU-Block hardware configuration.
  * @param {?boolean} hasBoardProgram - Whether the workspace already contains an Arduino program block.
- * @param {?object} messages - Localized SARDU Edu interface messages.
+ * @param {?object} messages - Localized SARDU-Block interface messages.
  * @returns {string} - a ScratchBlocks-style XML document for the contents of the toolbox.
  */
 const makeToolboxXML = function (isInitialSetup, isStage = true, targetId, categoriesXML = [],
@@ -831,8 +831,8 @@ const makeToolboxXML = function (isInitialSetup, isStage = true, targetId, categ
     const boardCategory = categoriesXML.find(categoryInfo => categoryInfo.id === 'sarduBoard');
     const sensorCategory = categoriesXML.find(categoryInfo => categoryInfo.id === 'sarduSensors');
     const actuatorCategory = categoriesXML.find(categoryInfo => categoryInfo.id === 'sarduActuators');
-    const rfidLabel = ScratchBlocks.ScratchMsgs.translate('SARDU_RFID_NFC', 'RFID/NFC');
-    const advancedLabel = messages['gui.sarduEdu.rfidAdvanced'] || 'Advanced';
+    const rfidLabel = ScratchBlocks.ScratchMsgs.translate('SARDU_BLOCK_RFID_NFC', 'RFID/NFC');
+    const advancedLabel = messages['gui.sarduBlock.rfidAdvanced'] || 'Advanced';
     if (sensorCategory) {
         sensorCategory.xml = sensorCategory.xml.replace(/(<category\b[^>]*>)/,
             '$1\n<label text="DHT11/DHT22"/>').replace(
@@ -841,6 +841,9 @@ const makeToolboxXML = function (isInitialSetup, isStage = true, targetId, categ
         ).replace(
             '<block type="sarduSensors_touch"',
             '<label text="Touch"/>\n<block type="sarduSensors_touch"'
+        ).replace(
+            '<block type="sarduSensors_configureButton"',
+            '<label text="Pulsante"/>\n<block type="sarduSensors_configureButton"'
         ).replace(
             '<block type="sarduSensors_soundLevel"',
             '<label text="Sensore di suono"/>\n<block type="sarduSensors_soundLevel"'

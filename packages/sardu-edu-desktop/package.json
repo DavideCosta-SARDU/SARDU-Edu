@@ -1,7 +1,7 @@
 {
-  "name": "@sardu-edu/desktop",
+  "name": "@sardu-block/desktop",
   "version": "0.1.0",
-  "description": "Secure Electron desktop shell and hardware service for SARDU Edu",
+  "description": "Secure Electron desktop shell and hardware service for SARDU-Block",
   "license": "AGPL-3.0-only",
   "author": "Davide Costa <davide@sardu.pro>",
   "private": true,
@@ -15,7 +15,7 @@
     "test": "npm run lint && vitest run"
   },
   "devDependencies": {
-    "@sardu-edu/hardware": "0.1.0",
+    "@sardu-block/hardware": "0.1.0",
     "@types/node": "24.9.0",
     "electron": "43.4.1",
     "electron-builder": "26.15.3",
@@ -28,8 +28,8 @@
     "vitest": "4.1.11"
   },
   "build": {
-    "appId": "pro.sardu.edu",
-    "productName": "SARDU Edu",
+    "appId": "pro.sardu.block",
+    "productName": "SARDU-Block",
     "asar": true,
     "directories": {
       "output": "release"

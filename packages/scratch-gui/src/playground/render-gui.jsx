@@ -7,10 +7,10 @@ import GUI from '../containers/gui.jsx';
 import HashParserHOC from '../lib/hash-parser-hoc.jsx';
 import log from '../lib/log.js';
 import {PLATFORM} from '../lib/platform.js';
-import {config as sarduEduConfig} from '../branding';
+import {config as sarduBlockConfig} from '../branding';
 
 const onClickLogo = () => {
-    window.location = sarduEduConfig.repository;
+    window.location = sarduBlockConfig.repository;
 };
 
 const handleTelemetryModalCancel = () => {

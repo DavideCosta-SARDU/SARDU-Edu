@@ -15,6 +15,7 @@ class Scratch3SarduSensors {
         const dhtUnavailable = !selection?.componentIds?.includes('dht11-dht22');
         const ultrasonicUnavailable = !selection?.componentIds?.includes('hc-sr04');
         const touchUnavailable = !selection?.componentIds?.includes('touch');
+        const buttonUnavailable = !selection?.componentIds?.includes('button');
         const soundUnavailable = !selection?.componentIds?.includes('sound-sensor');
         const lightUnavailable = !selection?.componentIds?.includes('photoresistor');
         const laserUnavailable = !selection?.componentIds?.includes('vl53l0x');
@@ -35,7 +36,7 @@ class Scratch3SarduSensors {
             name: formatMessage({
                 id: 'sarduSensors.name',
                 default: 'Sensors',
-                description: 'SARDU Edu sensors block category'
+                description: 'SARDU-Block sensors block category'
             }),
             color1: '#2E7D32',
             color2: '#256428',
@@ -113,6 +114,24 @@ class Scratch3SarduSensors {
                     tooltip: formatMessage({id: 'sarduSensors.touch.tooltip', default: 'Returns true when the digital touch sensor is active.', description: 'Touch Boolean reporter tooltip'}),
                     arguments: {PIN: {type: ArgumentType.STRING, menu: 'TOUCH_PIN', defaultValue: 'A0'}}
                 }, {
+                    opcode: 'configureButton',
+                    text: formatMessage({id: 'sarduSensors.configureButton', default: 'configure button on pin [PIN]', description: 'Configure push button block'}),
+                    blockType: BlockType.COMMAND, hideFromPalette: buttonUnavailable,
+                    tooltip: formatMessage({id: 'sarduSensors.configureButton.tooltip', default: 'Configures the selected pin for the button mode used by its Boolean block.', description: 'Configure push button tooltip'}),
+                    arguments: {PIN: {type: ArgumentType.STRING, menu: 'DIGITAL_PIN', defaultValue: '2'}}
+                }, {
+                    opcode: 'buttonPressedLow',
+                    text: formatMessage({id: 'sarduSensors.buttonPressedLow', default: 'button on pin [PIN] pressed = LOW', description: 'Active-low push button Boolean reporter'}),
+                    blockType: BlockType.BOOLEAN, disableMonitor: true, hideFromPalette: buttonUnavailable,
+                    tooltip: formatMessage({id: 'sarduSensors.buttonPressedLow.tooltip', default: 'Uses INPUT_PULLUP and returns true when the pin reads LOW.', description: 'Active-low push button tooltip'}),
+                    arguments: {PIN: {type: ArgumentType.STRING, menu: 'DIGITAL_PIN', defaultValue: '2'}}
+                }, {
+                    opcode: 'buttonPressedHigh',
+                    text: formatMessage({id: 'sarduSensors.buttonPressedHigh', default: 'button on pin [PIN] pressed = HIGH', description: 'Active-high push button Boolean reporter'}),
+                    blockType: BlockType.BOOLEAN, disableMonitor: true, hideFromPalette: buttonUnavailable,
+                    tooltip: formatMessage({id: 'sarduSensors.buttonPressedHigh.tooltip', default: 'Uses INPUT and returns true when the pin reads HIGH.', description: 'Active-high push button tooltip'}),
+                    arguments: {PIN: {type: ArgumentType.STRING, menu: 'DIGITAL_PIN', defaultValue: '2'}}
+                }, {
                     opcode: 'soundLevel', text: formatMessage({id: 'sarduSensors.soundLevel', default: 'sound level on [PIN] as [FORMAT]', description: 'Sound level reporter'}),
                     blockType: BlockType.REPORTER, disableMonitor: true, hideFromPalette: soundUnavailable,
                     tooltip: formatMessage({id: 'sarduSensors.soundLevel.tooltip', default: 'Reads the microphone input as 0-1023 or 0-100 percent.', description: 'Sound level tooltip'}),
@@ -163,28 +182,28 @@ class Scratch3SarduSensors {
     dhtTemperature (args) {
         if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return 0;
         const transport = this.runtime.sarduEduLiveTransport;
-        if (!transport?.connected) return Promise.reject(new Error('SARDU Edu live transport is not connected in dhtTemperature'));
+        if (!transport?.connected) return Promise.reject(new Error('SARDU-Block live transport is not connected in dhtTemperature'));
         return transport.readDht(String(args.MODEL), String(args.PIN), 'temperature').then(value => Math.trunc(value));
     }
 
     dhtHumidity (args) {
         if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return 0;
         const transport = this.runtime.sarduEduLiveTransport;
-        if (!transport?.connected) return Promise.reject(new Error('SARDU Edu live transport is not connected in dhtHumidity'));
+        if (!transport?.connected) return Promise.reject(new Error('SARDU-Block live transport is not connected in dhtHumidity'));
         return transport.readDht(String(args.MODEL), String(args.PIN), 'humidity').then(value => Math.trunc(value));
     }
 
     ultrasonicDistance (args) {
         if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return 0;
         const transport = this.runtime.sarduEduLiveTransport;
-        if (!transport?.connected) return Promise.reject(new Error('SARDU Edu live transport is not connected in ultrasonicDistance'));
+        if (!transport?.connected) return Promise.reject(new Error('SARDU-Block live transport is not connected in ultrasonicDistance'));
         return transport.readUltrasonic(String(args.TRIGGER), String(args.ECHO), String(args.UNIT));
     }
 
     laserDistance (args) {
         if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return 0;
         const transport = this.runtime.sarduEduLiveTransport;
-        if (!transport?.connected) return Promise.reject(new Error('SARDU Edu live transport is not connected in laserDistance'));
+        if (!transport?.connected) return Promise.reject(new Error('SARDU-Block live transport is not connected in laserDistance'));
         return transport.readLaserDistance(String(args.UNIT));
     }
 
@@ -193,6 +212,23 @@ class Scratch3SarduSensors {
         const transport = this.runtime.sarduEduLiveTransport;
         if (!transport?.connected) return false;
         return transport.readDigital(String(args.PIN)).then(value => value === 1);
+    }
+
+    configureButton () { return undefined; }
+
+    buttonPressedLow (args) {
+        return this._buttonPressed(args, true, 0);
+    }
+
+    buttonPressedHigh (args) {
+        return this._buttonPressed(args, false, 1);
+    }
+
+    _buttonPressed (args, pullup, pressedLevel) {
+        if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return false;
+        const transport = this.runtime.sarduEduLiveTransport;
+        if (!transport?.connected) return false;
+        return transport.readButton(String(args.PIN), pullup).then(value => value === pressedLevel);
     }
 
     soundLevel (args) {
@@ -236,7 +272,7 @@ class Scratch3SarduSensors {
         const bus = String(configuration.BUS).toUpperCase();
         if (reader === 'RC522' && bus !== 'SPI') return Promise.reject(new Error('RC522 supports SPI only'));
         const transport = this.runtime.sarduEduLiveTransport;
-        if (!transport?.connected) return Promise.reject(new Error('SARDU Edu live transport is not connected in RFID operation'));
+        if (!transport?.connected) return Promise.reject(new Error('SARDU-Block live transport is not connected in RFID operation'));
         return transport.runRfid(reader, bus, configuration.SDA, configuration.SCL, configuration.MOSI,
             configuration.MISO, configuration.SCK, configuration.SS, configuration.IRQ, configuration.RESET,
             action, ...values);
@@ -300,7 +336,7 @@ class Scratch3SarduSensors {
     _analogLevel (args, invert) {
         if (this.runtime?.sarduEdu?.hardwareSelection?.mode !== 'realtime') return 0;
         const transport = this.runtime.sarduEduLiveTransport;
-        if (!transport?.connected) return Promise.reject(new Error('SARDU Edu live transport is not connected'));
+        if (!transport?.connected) return Promise.reject(new Error('SARDU-Block live transport is not connected'));
         return transport.readAnalog(String(args.PIN)).then(raw => args.FORMAT === 'percent' ?
             Math.round((invert ? 1023 - raw : raw) * 100 / 1023) : raw);
     }
