@@ -682,13 +682,26 @@ const GUIComponent = props => {
                                                 />
                                             </button>
                                             {sarduStatusDetailsVisible ? (
-                                                <div className={styles.sarduStatusDetails} role="log">
-                                                    {sarduStatusHistory.map((status, index) => (
-                                                        <div key={`${status.time}-${index}`}>
-                                                            <time>{new Date(status.time).toLocaleTimeString(intl.locale)}</time>
-                                                            {' - '}{status.message}
-                                                        </div>
-                                                    ))}
+                                                <div className={styles.sarduStatusDetails}>
+                                                    <div className={styles.sarduStatusDetailsLog} role="log">
+                                                        {sarduStatusHistory.map((status, index) => (
+                                                            <div key={`${status.time}-${index}`}>
+                                                                <time>{new Date(status.time).toLocaleTimeString(intl.locale)}</time>
+                                                                {' - '}{status.message}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <button
+                                                        className={styles.sarduStatusDetailsClear}
+                                                        type="button"
+                                                        onClick={() => setSarduStatusHistory([])}
+                                                    >
+                                                        <FormattedMessage
+                                                            id="gui.sardu.status.clearDetails"
+                                                            defaultMessage="Clear"
+                                                            description="Button that clears the hardware status details"
+                                                        />
+                                                    </button>
                                                 </div>
                                             ) : null}
                                         </div>

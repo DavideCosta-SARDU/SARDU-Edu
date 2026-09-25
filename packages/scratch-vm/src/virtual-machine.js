@@ -620,6 +620,12 @@ class VirtualMachine extends EventEmitter {
      * @returns {Promise} Promise that resolves after the project has loaded
      */
     deserializeProject (projectJSON, zip) {
+        const previousSarduBlockData = this.getSarduBlockProjectData();
+        const previousSarduBlockHardwarePort = this.runtime.sarduEduHardwarePort;
+        const previousSarduBlockSelectedPort = this.runtime.sarduEduSelectedPort;
+        const projectContainsSarduBlockData = Object.prototype.hasOwnProperty.call(projectJSON, 'sarduBlock') ||
+            Object.prototype.hasOwnProperty.call(projectJSON, 'sarduEdu');
+
         // Clear the current runtime
         this.clear();
 
@@ -649,6 +655,14 @@ class VirtualMachine extends EventEmitter {
                         'scratch-vm-deserialize-start', 'scratch-vm-deserialize-end');
                 }
                 return this.installTargets(targets, extensions, true);
+            })
+            .then(() => {
+                if (projectJSON.projectVersion === 3 && !projectContainsSarduBlockData && previousSarduBlockData) {
+                    this.runtime.sarduEdu = previousSarduBlockData;
+                    this.runtime.sarduEduHardwarePort = previousSarduBlockHardwarePort;
+                    this.runtime.sarduEduSelectedPort = previousSarduBlockSelectedPort;
+                    this.emit('SARDU_BLOCK_HARDWARE_CHANGED', this.getSarduEduProjectData());
+                }
             });
     }
 

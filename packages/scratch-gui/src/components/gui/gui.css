@@ -105,18 +105,40 @@
 
 .sardu-status-details {
     position: absolute;
+    left: 0;
     right: 0;
     bottom: calc(100% + 0.35rem);
     z-index: $z-index-extension-button;
-    width: min(34rem, 80vw);
-    max-height: 12rem;
-    overflow: auto;
-    padding: 0.55rem;
+    width: auto;
+    max-height: min(5rem, 30vh);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0.35rem;
     color: $text-primary;
     background: $ui-white;
     border: 1px solid $ui-black-transparent;
     border-radius: 0.35rem;
     box-shadow: 0 0.2rem 0.8rem rgba(0, 0, 0, 0.18);
+    font-size: 0.75rem;
+}
+
+.sardu-status-details-log {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.sardu-status-details-clear {
+    align-self: flex-end;
+    flex: none;
+    margin-top: 0.4rem;
+    padding: 0.15rem 0.4rem;
+    color: #003366;
+    background: transparent;
+    border: 1px solid #003366;
+    border-radius: 0.25rem;
+    cursor: pointer;
     font-size: 0.75rem;
 }
 
