@@ -42,3 +42,22 @@ Blockly.Blocks.matrix = {
     })
   },
 }
+
+Blockly.Blocks.matrix_12x8 = {
+  init: function (this: Blockly.Block) {
+    this.jsonInit({
+      message0: '%1',
+      args0: [
+        {
+          type: 'field_matrix',
+          name: 'MATRIX',
+          rows: 8,
+          columns: 12,
+        },
+      ],
+      outputShape: Constants.OUTPUT_SHAPE_ROUND,
+      output: 'String',
+      extensions: ['colours_pen'],
+    })
+  },
+}

@@ -882,6 +882,13 @@ const makeToolboxXML = function (isInitialSetup, isStage = true, targetId, categ
             '<label text="Display 1602/1604 I2C"/>\n<block type="sarduActuators_initializeDisplay"'
         );
     }
+    if (boardCategory && hardwareSelection?.boardId === 'arduino-uno-r4-wifi') {
+        const matrixLabel = messages['gui.sarduBlock.matrix'] || 'Built-in 12 x 8 LED matrix';
+        boardCategory.xml = boardCategory.xml.replace(
+            '<block type="sarduBoard_showMatrixFrame"',
+            `<sep gap="36"/>\n<label text="${matrixLabel}"/>\n<block type="sarduBoard_showMatrixFrame"`
+        );
+    }
     if (offline && hasBoardProgram && boardCategory) {
         boardCategory.xml = boardCategory.xml.replace(
             '<block type="sarduBoard_program"',

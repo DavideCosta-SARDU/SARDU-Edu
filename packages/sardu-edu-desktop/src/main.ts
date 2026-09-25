@@ -1,8 +1,8 @@
 import { cpSync, existsSync } from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { app, BrowserWindow, ipcMain, Menu, net, protocol } from 'electron'
-import type { IpcMainInvokeEvent, Session } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, net, protocol } from 'electron'
+import type { IpcMainInvokeEvent, MessageBoxOptions, Session } from 'electron'
 import { ArduinoService } from './arduino-service'
 import { HardwareDiagnostics } from './hardware-diagnostics'
 import { HARDWARE_IPC } from './contracts'
@@ -97,6 +97,27 @@ const registerHardwareIpc = (): void => {
   ipcMain.handle(HARDWARE_IPC.logLiveDiagnostic, (event, diagnostic) => {
     validateSender(event)
     return diagnostics.writeLive(validateLiveDiagnostic(diagnostic))
+  })
+  ipcMain.handle(HARDWARE_IPC.prepareR4Resources, async (event) => {
+    validateSender(event)
+    if (await service.areR4ResourcesReady()) return true
+    const italian = app.getLocale().toLowerCase().startsWith('it')
+    const options: MessageBoxOptions = {
+      type: 'warning',
+      title: 'Arduino UNO R4 WiFi',
+      message: italian ?
+        'Arduino UNO R4 WiFi richiede circa 545 MB aggiuntivi nella cartella temporanea dell’utente per consentire la compilazione.' :
+        'Arduino UNO R4 WiFi requires about 545 MB of additional space in the user’s temporary folder to enable compilation.',
+      buttons: italian ? ['Accetta e prepara', 'Annulla'] : ['Accept and prepare', 'Cancel'],
+      cancelId: 1,
+      defaultId: 0,
+      noLink: true,
+    }
+    const owner = BrowserWindow.fromWebContents(event.sender)
+    const result = owner ? await dialog.showMessageBox(owner, options) : await dialog.showMessageBox(options)
+    if (result.response !== 0) return false
+    await service.prepareR4Resources()
+    return true
   })
   ipcMain.handle(HARDWARE_IPC.compile, (event, request) => {
     validateSender(event)

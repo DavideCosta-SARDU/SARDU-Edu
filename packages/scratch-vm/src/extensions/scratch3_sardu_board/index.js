@@ -20,6 +20,10 @@ class Scratch3SarduBoard {
             ['A0', 'A1', 'A2', 'A3', 'A4', 'A5'];
         const pwmPins = selection?.pwmPins?.length ? selection.pwmPins : ['3', '5', '6', '9', '10', '11'];
         const offlineOnly = selection?.mode !== 'standalone';
+        const matrixUnavailable = offlineOnly || selection?.boardId !== 'arduino-uno-r4-wifi';
+        const matrixOpcodes = new Set([
+            'showMatrixFrame', 'showMatrixFrameFor', 'showMatrixPreset', 'scrollMatrixText', 'clearMatrix'
+        ]);
         return {
             id: 'sarduBoard',
             name: boardName,
@@ -31,7 +35,7 @@ class Scratch3SarduBoard {
                 {
                     opcode: 'program',
                     text: [
-                        message('sarduBoard.program.start', 'when {board} starts',
+                        message('sarduBoard.program.start', 'when the {board} starts',
                             'First label of the standalone board program'),
                         message('sarduBoard.program.loop', 'forever',
                             'Second label of the standalone board program')
@@ -59,6 +63,85 @@ class Scratch3SarduBoard {
                         PIN: {type: ArgumentType.STRING, menu: 'DIGITAL_PIN', defaultValue: '13'},
                         LEVEL: {type: ArgumentType.STRING, menu: 'DIGITAL_LEVEL', defaultValue: 'HIGH'}
                     }
+                },
+                {
+                    opcode: 'showMatrixFrame',
+                    text: formatMessage({
+                        id: 'sarduBoard.showMatrixFrame',
+                        default: 'show matrix frame [FRAME]',
+                        description: 'Show a user-drawn frame on the Arduino UNO R4 WiFi matrix'
+                    }),
+                    blockType: BlockType.COMMAND,
+                    hideFromPalette: matrixUnavailable,
+                    tooltip: message('sarduBoard.showMatrixFrame.tooltip',
+                        'Shows the 12 x 8 drawing on the built-in LED matrix.',
+                        'Tooltip for the Arduino UNO R4 WiFi matrix frame block'),
+                    arguments: {
+                        FRAME: {type: ArgumentType.MATRIX_12X8, defaultValue: '0'.repeat(96)}
+                    }
+                },
+                {
+                    opcode: 'showMatrixFrameFor',
+                    text: formatMessage({
+                        id: 'sarduBoard.showMatrixFrameFor',
+                        default: 'show matrix frame [FRAME] for [DURATION] ms',
+                        description: 'Show one animation frame for a duration on the Arduino UNO R4 WiFi matrix'
+                    }),
+                    blockType: BlockType.COMMAND,
+                    hideFromPalette: matrixUnavailable,
+                    tooltip: message('sarduBoard.showMatrixFrameFor.tooltip',
+                        'Shows one 12 x 8 animation frame for the selected duration.',
+                        'Tooltip for the timed Arduino UNO R4 WiFi matrix frame block'),
+                    arguments: {
+                        FRAME: {type: ArgumentType.MATRIX_12X8, defaultValue: '0'.repeat(96)},
+                        DURATION: {type: ArgumentType.NUMBER, defaultValue: 100}
+                    }
+                },
+                {
+                    opcode: 'showMatrixPreset',
+                    text: formatMessage({
+                        id: 'sarduBoard.showMatrixPreset',
+                        default: 'show matrix image [IMAGE]',
+                        description: 'Show a precompiled image on the Arduino UNO R4 WiFi matrix'
+                    }),
+                    blockType: BlockType.COMMAND,
+                    hideFromPalette: matrixUnavailable,
+                    tooltip: message('sarduBoard.showMatrixPreset.tooltip',
+                        'Shows the selected precompiled image on the built-in LED matrix.',
+                        'Tooltip for the Arduino UNO R4 WiFi matrix preset block'),
+                    arguments: {
+                        IMAGE: {type: ArgumentType.STRING, menu: 'MATRIX_IMAGE', defaultValue: 'ARDUINO_LOGO'}
+                    }
+                },
+                {
+                    opcode: 'scrollMatrixText',
+                    text: formatMessage({
+                        id: 'sarduBoard.scrollMatrixText',
+                        default: 'scroll matrix text [TEXT] every [SPEED] ms',
+                        description: 'Scroll text on the Arduino UNO R4 WiFi matrix'
+                    }),
+                    blockType: BlockType.COMMAND,
+                    hideFromPalette: matrixUnavailable,
+                    tooltip: message('sarduBoard.scrollMatrixText.tooltip',
+                        'Scrolls the text from right to left at the selected speed.',
+                        'Tooltip for the Arduino UNO R4 WiFi scrolling text block'),
+                    arguments: {
+                        TEXT: {type: ArgumentType.STRING, defaultValue: 'SARDU-Block'},
+                        SPEED: {type: ArgumentType.NUMBER, defaultValue: 100}
+                    }
+                },
+                {
+                    opcode: 'clearMatrix',
+                    text: formatMessage({
+                        id: 'sarduBoard.clearMatrix',
+                        default: 'clear matrix',
+                        description: 'Turn off every LED on the Arduino UNO R4 WiFi matrix'
+                    }),
+                    blockType: BlockType.COMMAND,
+                    hideFromPalette: matrixUnavailable,
+                    tooltip: message('sarduBoard.clearMatrix.tooltip',
+                        'Turns off every LED on the built-in matrix.',
+                        'Tooltip for the Arduino UNO R4 WiFi clear matrix block')
                 },
                 {
                     opcode: 'readAnalogPin',
@@ -310,7 +393,7 @@ class Scratch3SarduBoard {
                     blockType: BlockType.REPORTER,
                     disableMonitor: true
                 }
-            ],
+            ].sort((left, right) => Number(matrixOpcodes.has(left.opcode)) - Number(matrixOpcodes.has(right.opcode))),
             customFieldTypes: {
                 multiline: {
                     output: 'String',
@@ -327,6 +410,12 @@ class Scratch3SarduBoard {
                 DIGITAL_LEVEL: {acceptReporters: false, items: ['HIGH', 'LOW']},
                 INTERRUPT_MODE: {acceptReporters: false, items: ['RISING', 'FALLING', 'CHANGE', 'LOW']},
                 INTERRUPT_PIN: {acceptReporters: false, items: ['2', '3']},
+                MATRIX_IMAGE: {acceptReporters: false, items: [
+                    {text: message('sarduBoard.matrixImage.arduinoLogo', 'Arduino logo',
+                        'Arduino logo matrix image'), value: 'ARDUINO_LOGO'},
+                    {text: message('sarduBoard.matrixImage.heart', 'Heart', 'Heart matrix image'), value: 'HEART'},
+                    {text: message('sarduBoard.matrixImage.smile', 'Smile', 'Smile matrix image'), value: 'SMILE'}
+                ]},
                 PWM_PIN: {acceptReporters: false, items: pwmPins},
                 VARIABLE_TYPE: {acceptReporters: false, items: [
                     'bool', 'byte', 'int', 'unsigned int', 'long', 'unsigned long', 'float', 'double', 'char', 'String'
@@ -363,6 +452,16 @@ class Scratch3SarduBoard {
     }
 
     setPwmPin () {}
+
+    showMatrixFrame () {}
+
+    showMatrixFrameFor () {}
+
+    showMatrixPreset () {}
+
+    scrollMatrixText () {}
+
+    clearMatrix () {}
 
     interrupt () {
         return false;

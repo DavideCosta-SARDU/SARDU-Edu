@@ -13,6 +13,7 @@ import SarduBlockSerialTransport from '../../lib/sardu-serial-transport';
 import {getBoardDiscoveryTimeout} from '../../lib/sardu-board-discovery-settings';
 import arduinoUnoImage from '../../../../../docs/SVG/Schede/ArduinoUIno.svg';
 import arduinoNanoImage from '../../../../../docs/SVG/Schede/Arduino_Nano.svg';
+import arduinoUnoR4WifiImage from '../../../../../docs/SVG/ArduinoUnoR4.svg';
 import styles from './arduino-code-panel.css';
 
 export const getArduinoGenerationErrorMessage = (error, intl) => {
@@ -28,7 +29,8 @@ export const getArduinoGenerationErrorMessage = (error, intl) => {
 
 const boardImages = {
     'arduino-nano': arduinoNanoImage,
-    'arduino-uno': arduinoUnoImage
+    'arduino-uno': arduinoUnoImage,
+    'arduino-uno-r4-wifi': arduinoUnoR4WifiImage
 };
 
 const KNOWN_INCOMPATIBLE_USB_DEVICES = new Set(['0D28:0204']);
@@ -541,9 +543,7 @@ const ArduinoCodePanel = ({
         onStatusChange({kind, message});
     }, [desktopState, intl, liveState, onStatusChange, snapshot.selection, sourceError]);
 
-    if (!visible || viewMode === 'stage' || !snapshot.selection) return null;
-
-    const board = ARDUINO_BOARDS.find(candidate => candidate.id === snapshot.selection.boardId);
+    const board = ARDUINO_BOARDS.find(candidate => candidate.id === snapshot.selection?.boardId);
     const selectedPortDetails = desktopState.ports.find(port => port.address === desktopState.selectedPort);
     const multiplePorts = desktopState.ports.length > 1;
     const operationRunning = desktopState.status === 'compiling' || desktopState.status === 'uploading';
@@ -554,12 +554,31 @@ const ArduinoCodePanel = ({
     const canOpenMonitor = desktopState.available && desktopState.resourcesReady &&
         Boolean(connectedPort && connectedPort === desktopState.selectedPort) && Boolean(serialBaudRate) && !operationRunning &&
         monitorState.status === 'disconnected' && monitorRef.current.supported;
+    useEffect(() => {
+        if (!visible || viewMode === 'stage' || snapshot.selection?.mode !== 'standalone' ||
+            bottomPanel !== 'serial' || !sourceSerialBaudRate || !canOpenMonitor || monitorActive) return;
+        const connectMonitor = async () => {
+            setMonitorState({error: null, status: 'connecting'});
+            try {
+                await getSarduDesktopHardware().selectLivePort(desktopState.selectedPort);
+                await monitorRef.current.connect(serialBaudRate);
+                setMonitorState({error: null, status: 'connected'});
+            } catch (error) {
+                setMonitorState({error: error.message, status: 'disconnected'});
+            }
+        };
+        void connectMonitor();
+    }, [bottomPanel, canOpenMonitor, desktopState.selectedPort, monitorActive, serialBaudRate,
+        snapshot.selection?.mode, sourceSerialBaudRate, viewMode, visible]);
+    if (!visible || viewMode === 'stage' || !snapshot.selection) return null;
+
     const handleExport = () => downloadBlob(
         getFilename(projectTitle),
         new Blob([displayedSource], {type: 'text/x-arduino;charset=utf-8'})
     );
     const handleModeChange = async event => {
         const mode = event.target.value;
+        if (!board?.modes.includes(mode)) return;
         if (mode === 'realtime' && monitorRef.current.connected) {
             try {
                 await monitorRef.current.disconnect();
@@ -601,29 +620,40 @@ const ArduinoCodePanel = ({
             operationRunningRef.current = false;
         }
     };
-    const handleCompile = () => handleDesktopOperation('compiling', () => getSarduDesktopHardware().compile({
-        boardId: snapshot.selection.boardId,
-        ...(snapshot.selection.boardId === 'arduino-nano' ? {nanoProcessor} : {}),
-        source: displayedSource
-    }));
-    const handleUpload = () => handleDesktopOperation('uploading', async () => {
-        if (monitorRef.current.connected) {
-            await monitorRef.current.disconnect();
-            setMonitorState({error: null, status: 'disconnected'});
-        }
-        return getSarduDesktopHardware().upload({
+    const prepareR4Resources = async () => snapshot.selection.boardId !== 'arduino-uno-r4-wifi' ||
+        await getSarduDesktopHardware().prepareR4Resources();
+    const handleCompile = async () => {
+        if (!await prepareR4Resources()) return;
+        return handleDesktopOperation('compiling', () => getSarduDesktopHardware().compile({
+            boardId: snapshot.selection.boardId,
+            ...(snapshot.selection.boardId === 'arduino-nano' ? {nanoProcessor} : {}),
+            source: displayedSource
+        }));
+    };
+    const handleUpload = async () => {
+        if (!await prepareR4Resources()) return;
+        return handleDesktopOperation('uploading', async () => {
+            if (monitorRef.current.connected) {
+                await monitorRef.current.disconnect();
+                setMonitorState({error: null, status: 'disconnected'});
+            }
+            return getSarduDesktopHardware().upload({
+                boardId: snapshot.selection.boardId,
+                ...(snapshot.selection.boardId === 'arduino-nano' ? {nanoProcessor} : {}),
+                port: desktopState.selectedPort,
+                source: displayedSource
+            });
+        });
+    };
+    const handleInstallLive = async () => {
+        if (!await prepareR4Resources()) return;
+        return handleDesktopOperation('uploading', () => getSarduDesktopHardware().upload({
             boardId: snapshot.selection.boardId,
             ...(snapshot.selection.boardId === 'arduino-nano' ? {nanoProcessor} : {}),
             port: desktopState.selectedPort,
-            source: displayedSource
-        });
-    });
-    const handleInstallLive = () => handleDesktopOperation('uploading', () => getSarduDesktopHardware().upload({
-        boardId: snapshot.selection.boardId,
-        ...(snapshot.selection.boardId === 'arduino-nano' ? {nanoProcessor} : {}),
-        port: desktopState.selectedPort,
-        source: generateSarduBlockLiveFirmware()
-    }));
+            source: generateSarduBlockLiveFirmware()
+        }));
+    };
     const handleMonitorConnect = async () => {
         if (!serialBaudRate) {
             setMonitorState({
@@ -1069,7 +1099,7 @@ const ArduinoCodePanel = ({
                             description: 'Arduino standalone programming mode'
                         })}
                     </option>
-                    <option value="realtime">
+                    <option disabled={!board?.modes.includes('realtime')} value="realtime">
                         {intl.formatMessage({
                             id: 'gui.sardu.liveMode',
                             defaultMessage: 'Live',

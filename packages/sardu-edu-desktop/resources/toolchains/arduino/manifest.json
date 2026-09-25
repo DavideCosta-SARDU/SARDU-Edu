@@ -16,6 +16,12 @@
       "source": "https://github.com/arduino/ArduinoCore-avr"
     },
     {
+      "id": "arduino:renesas_uno",
+      "version": "1.6.0",
+      "license": "file-level open-source licenses",
+      "source": "https://github.com/arduino/ArduinoCore-renesas"
+    },
+    {
       "id": "esp32:esp32",
       "version": "3.3.11",
       "license": "file-level open-source licenses",
@@ -60,6 +66,12 @@
     }
   ],
   "libraries": [
+    {
+      "id": "ArduinoGraphics",
+      "version": "1.1.5",
+      "license": "MPL-2.0",
+      "source": "https://github.com/arduino-libraries/ArduinoGraphics"
+    },
     {
       "id": "DHT sensor library",
       "version": "1.4.7",

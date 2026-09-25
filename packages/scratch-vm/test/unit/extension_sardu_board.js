@@ -54,6 +54,43 @@ test('SARDU custom code remains available while Offline-only serial blocks are h
     t.end();
 });
 
+test('Arduino UNO R4 WiFi exposes its Offline matrix blocks and 12 x 8 editor', t => {
+    const extension = new SarduBoard({sarduEdu: {hardwareSelection: {
+        boardId: 'arduino-uno-r4-wifi',
+        boardName: 'Arduino UNO R4 WiFi',
+        mode: 'standalone'
+    }}});
+    const info = extension.getInfo();
+    const blocks = Object.fromEntries(info.blocks.map(block => [block.opcode, block]));
+
+    t.equal(blocks.showMatrixFrame.hideFromPalette, false);
+    t.equal(blocks.showMatrixFrame.arguments.FRAME.type, 'matrix12x8');
+    t.equal(blocks.showMatrixFrameFor.hideFromPalette, false);
+    t.equal(blocks.showMatrixPreset.hideFromPalette, false);
+    t.equal(blocks.scrollMatrixText.hideFromPalette, false);
+    t.equal(blocks.clearMatrix.hideFromPalette, false);
+    t.same(info.blocks.slice(-5).map(block => block.opcode), [
+        'showMatrixFrame', 'showMatrixFrameFor', 'showMatrixPreset', 'scrollMatrixText', 'clearMatrix'
+    ]);
+    t.ok(info.menus.MATRIX_IMAGE.items.some(item => item.value === 'ARDUINO_LOGO'));
+    t.end();
+});
+
+test('UNO R4 matrix blocks stay hidden for other boards and in Live mode', t => {
+    const uno = new SarduBoard({sarduEdu: {hardwareSelection: {
+        boardId: 'arduino-uno', boardName: 'Arduino Uno', mode: 'standalone'
+    }}}).getInfo();
+    const liveR4 = new SarduBoard({sarduEdu: {hardwareSelection: {
+        boardId: 'arduino-uno-r4-wifi', boardName: 'Arduino UNO R4 WiFi', mode: 'realtime'
+    }}}).getInfo();
+    const unoBlocks = Object.fromEntries(uno.blocks.map(block => [block.opcode, block]));
+    const liveBlocks = Object.fromEntries(liveR4.blocks.map(block => [block.opcode, block]));
+
+    t.equal(unoBlocks.showMatrixFrame.hideFromPalette, true);
+    t.equal(liveBlocks.showMatrixFrame.hideFromPalette, true);
+    t.end();
+});
+
 test('SARDU board program is not executed by the Scratch runtime', t => {
     const extension = new SarduBoard();
 

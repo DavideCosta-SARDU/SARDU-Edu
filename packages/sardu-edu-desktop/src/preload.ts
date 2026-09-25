@@ -9,6 +9,7 @@ const HARDWARE_IPC = {
   listPorts: 'sardu-block-hardware:list-ports',
   logLiveDiagnostic: 'sardu-block-hardware:log-live-diagnostic',
   output: 'sardu-block-hardware:output',
+  prepareR4Resources: 'sardu-block-hardware:prepare-r4-resources',
   selectLivePort: 'sardu-block-hardware:select-live-port',
   upload: 'sardu-block-hardware:upload',
 } as const
@@ -24,6 +25,7 @@ const api: SarduBlockDesktopApi = {
       ipcRenderer.on(HARDWARE_IPC.output, handleOutput)
       return () => ipcRenderer.removeListener(HARDWARE_IPC.output, handleOutput)
     },
+    prepareR4Resources: () => ipcRenderer.invoke(HARDWARE_IPC.prepareR4Resources),
     selectLivePort: (port) => ipcRenderer.invoke(HARDWARE_IPC.selectLivePort, port),
     upload: (request) => ipcRenderer.invoke(HARDWARE_IPC.upload, request),
   },

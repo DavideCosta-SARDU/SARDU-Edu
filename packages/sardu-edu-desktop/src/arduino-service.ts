@@ -1,6 +1,7 @@
 import { execFile, spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { access, appendFile, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { access, appendFile, cp, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { promisify } from 'node:util'
 import {
@@ -22,6 +23,13 @@ import type {
 type HardwareOutputListener = (event: HardwareOutputEvent) => void
 
 const execFileAsync = promisify(execFile)
+const R4_COMPILER_VERSION = '7-2017q4'
+const R4_PLATFORM_VERSION = '1.6.0'
+const R4_CACHE_MARKER = 'sardu-block-r4-cache-v1.json'
+const R4_CACHE_CONTENTS = JSON.stringify({
+  compiler: R4_COMPILER_VERSION,
+  platform: R4_PLATFORM_VERSION,
+})
 
 export const createBoardListArguments = (
   configuration: string,
@@ -40,6 +48,7 @@ export class ArduinoService {
   readonly layout: ArduinoToolchainLayout
   readonly userDataRoot: string
   readonly portDiagnosticsPath: string
+  private r4PreparationPromise: Promise<void> | null = null
   private lastPortError: string | null = null
   private lastPortSummary: string | null = null
 
@@ -112,6 +121,18 @@ export class ArduinoService {
     return this.runSketch('upload', request, onOutput)
   }
 
+  async areR4ResourcesReady(): Promise<boolean> {
+    return process.platform !== 'win32' || this.isValidR4Cache(this.getR4CacheRoot())
+  }
+
+  async prepareR4Resources(): Promise<void> {
+    if (process.platform !== 'win32' || await this.areR4ResourcesReady()) return
+    this.r4PreparationPromise ??= this.createR4Cache().finally(() => {
+      this.r4PreparationPromise = null
+    })
+    await this.r4PreparationPromise
+  }
+
   private async runSketch(
     action: 'compile' | 'upload',
     request: ArduinoCompileRequest | ArduinoUploadRequest,
@@ -123,12 +144,15 @@ export class ArduinoService {
     await writeFile(sketchPath, request.source, 'utf8')
 
     try {
+      const r4ResourcePaths = request.boardId === 'arduino-uno-r4-wifi' ?
+        await this.getR4ResourcePaths() : undefined
       const invocation = createArduinoCliInvocation(
         {
           action,
           boardId: request.boardId,
           nanoProcessor: request.nanoProcessor,
           port: action === 'upload' ? (request as ArduinoUploadRequest).port : undefined,
+          r4ResourcePaths,
           sketchPath: sketchRoot,
         },
         { layout: this.layout },
@@ -225,6 +249,77 @@ export class ArduinoService {
   private async exists(filePath: string): Promise<boolean> {
     try {
       await access(filePath)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  private getR4CacheRoot(): string {
+    return path.join(tmpdir(), 'SARDU-Edu', 'r4')
+  }
+
+  private async getR4ResourcePaths(): Promise<{
+    compiler: string
+    core: string
+    platform: string
+    variant: string
+  } | undefined> {
+    if (process.platform !== 'win32') return undefined
+    const cacheRoot = this.getR4CacheRoot()
+    if (!await this.isValidR4Cache(cacheRoot)) {
+      throw new Error('Arduino UNO R4 WiFi resources are not prepared')
+    }
+    return {
+      compiler: `${path.join(cacheRoot, `arm-none-eabi-gcc-${R4_COMPILER_VERSION}`, 'bin')}${path.sep}`,
+      core: path.join(cacheRoot, `renesas_uno-${R4_PLATFORM_VERSION}`, 'cores', 'arduino'),
+      platform: path.join(cacheRoot, `renesas_uno-${R4_PLATFORM_VERSION}`),
+      variant: path.join(cacheRoot, `renesas_uno-${R4_PLATFORM_VERSION}`, 'variants', 'UNOWIFIR4'),
+    }
+  }
+
+  private async createR4Cache(): Promise<void> {
+    const cacheRoot = this.getR4CacheRoot()
+    const cacheParent = path.dirname(cacheRoot)
+    const stagingRoot = path.join(cacheParent, `.r4-${randomUUID()}`)
+    const compilerSource = path.join(this.layout.dataDirectory, 'packages', 'arduino', 'tools',
+      'arm-none-eabi-gcc', R4_COMPILER_VERSION)
+    const platformSource = path.join(this.layout.dataDirectory, 'packages', 'arduino', 'hardware',
+      'renesas_uno', R4_PLATFORM_VERSION)
+    await mkdir(cacheParent, { recursive: true })
+    try {
+      await cp(compilerSource, path.join(stagingRoot, `arm-none-eabi-gcc-${R4_COMPILER_VERSION}`), {
+        recursive: true,
+      })
+      await cp(platformSource, path.join(stagingRoot, `renesas_uno-${R4_PLATFORM_VERSION}`), { recursive: true })
+      await writeFile(path.join(stagingRoot, R4_CACHE_MARKER), R4_CACHE_CONTENTS, 'utf8')
+      if (!await this.isValidR4Cache(stagingRoot)) {
+        throw new Error('ArduinoService.createR4Cache: copied UNO R4 resources are incomplete')
+      }
+      await rm(cacheRoot, { recursive: true, force: true })
+      await rename(stagingRoot, cacheRoot)
+    } finally {
+      await rm(stagingRoot, { recursive: true, force: true })
+    }
+  }
+
+  private async isValidR4Cache(cacheRoot: string): Promise<boolean> {
+    try {
+      if (await readFile(path.join(cacheRoot, R4_CACHE_MARKER), 'utf8') !== R4_CACHE_CONTENTS) return false
+      await Promise.all([
+        access(path.join(cacheRoot, `arm-none-eabi-gcc-${R4_COMPILER_VERSION}`, 'bin',
+          'arm-none-eabi-g++.exe')),
+        access(path.join(cacheRoot, `arm-none-eabi-gcc-${R4_COMPILER_VERSION}`, 'arm-none-eabi', 'include',
+          'machine', 'ieeefp.h')),
+        access(path.join(cacheRoot, `arm-none-eabi-gcc-${R4_COMPILER_VERSION}`, 'arm-none-eabi', 'include', 'c++',
+          '7.2.1', 'arm-none-eabi', 'thumb', 'v7e-m', 'fpv4-sp', 'hard', 'bits', 'c++config.h')),
+        access(path.join(cacheRoot, `renesas_uno-${R4_PLATFORM_VERSION}`, 'platform.txt')),
+        access(path.join(cacheRoot, `renesas_uno-${R4_PLATFORM_VERSION}`, 'cores', 'arduino', 'Arduino.h')),
+        access(path.join(cacheRoot, `renesas_uno-${R4_PLATFORM_VERSION}`, 'variants', 'UNOWIFIR4', 'libs',
+          'libfsp.a')),
+        access(path.join(cacheRoot, `renesas_uno-${R4_PLATFORM_VERSION}`, 'variants', 'UNOWIFIR4', 'includes',
+          'ra', 'fsp', 'src', 'r_usb_basic', 'src', 'driver', 'inc', 'r_usb_basic_define.h')),
+      ])
       return true
     } catch {
       return false

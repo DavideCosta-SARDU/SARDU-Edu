@@ -97,6 +97,19 @@ export const ARDUINO_BOARDS: readonly ArduinoBoardDefinition[] = [
     modes: ['standalone', 'realtime'],
   },
   {
+    id: 'arduino-uno-r4-wifi',
+    name: 'Arduino UNO R4 WiFi',
+    version: '1',
+    fqbn: 'arduino:renesas_uno:unor4wifi',
+    processor: 'Renesas RA4M1',
+    operatingVoltage: 5,
+    backendIds: [ARDUINO_BACKEND.id],
+    capabilities: ['digital-io', 'analog-input', 'pwm', 'i2c', 'spi', 'uart', 'led-matrix-12x8'],
+    pins: commonPins,
+    buses: commonBuses,
+    modes: ['standalone'],
+  },
+  {
     id: 'esp32-dev-module', name: 'ESP32 Dev Module', version: '1', fqbn: 'esp32:esp32:esp32',
     processor: 'ESP32', operatingVoltage: 3.3, backendIds: [ARDUINO_BACKEND.id],
     capabilities: ['digital-io', 'analog-input', 'pwm', 'i2c', 'spi', 'uart'],
@@ -227,7 +240,13 @@ export type ArduinoOperation =
   | { readonly type: 'change-variable'; readonly variable: string; readonly value: string }
   | { readonly type: 'arduino-variable-set'; readonly variable: string; readonly value: string }
   | { readonly type: 'comment'; readonly source: string; readonly multiline: boolean }
+  | { readonly type: 'matrix-frame'; readonly frame: string; readonly duration?: string }
+  | { readonly type: 'matrix-text'; readonly text: string; readonly speed: string }
+  | { readonly type: 'matrix-clear' }
   | { readonly type: 'if'; readonly condition: string; readonly then: readonly ArduinoOperation[]; readonly otherwise: readonly ArduinoOperation[] }
+  | { readonly type: 'repeat'; readonly times: string; readonly body: readonly ArduinoOperation[] }
+  | { readonly type: 'wait-until'; readonly condition: string }
+  | { readonly type: 'repeat-until'; readonly condition: string; readonly body: readonly ArduinoOperation[] }
   | { readonly type: 'forever'; readonly body: readonly ArduinoOperation[] }
 
 export interface ArduinoProgram {
@@ -241,6 +260,9 @@ export interface ArduinoProgram {
   readonly usesDisplay: boolean
   readonly usesOled: boolean
   readonly usesSh1106: boolean
+  readonly usesMatrix: boolean
+  readonly usesMatrixText: boolean
+  readonly matrixFrames: ReadonlySet<string>
   readonly sh1106Images: ReadonlySet<string>
   readonly oledSize: null | { readonly width: string; readonly height: string }
   readonly oledImages: ReadonlySet<string>
@@ -298,6 +320,62 @@ const resolveOledImage = (image: string, selectedSize: string): {readonly name: 
   if (selectedSize === '32') return {name: `${image}_32`, scale: '1'}
   if (selectedSize === '64') return {name: `${image}_32`, scale: '2'}
   throw new Error(`Unsupported OLED image size: ${selectedSize}`)
+}
+
+const MATRIX_PRESETS: Readonly<Record<string, string>> = {
+  ARDUINO_LOGO: [
+    '000000000000',
+    '001110011100',
+    '010001100010',
+    '100100001001',
+    '101110010101',
+    '010001100010',
+    '001110011100',
+    '000000000000',
+  ].join(''),
+  HEART: [
+    '000000000000',
+    '001100011000',
+    '011110111100',
+    '111111111110',
+    '011111111100',
+    '001111111000',
+    '000111110000',
+    '000011100000',
+  ].join(''),
+  SMILE: [
+    '000000000000',
+    '001100001100',
+    '001100001100',
+    '000000000000',
+    '100000000010',
+    '010000000100',
+    '001111111000',
+    '000000000000',
+  ].join(''),
+}
+
+const validateMatrixFrame = (frame: string, blockId: string): string => {
+  if (!/^[01]{96}$/.test(frame)) throw new Error(`Invalid 12 x 8 matrix frame on block ${blockId}`)
+  return frame
+}
+
+const getMatrixFrame = (
+  blocks: Readonly<Record<string, ArduinoSourceBlock | undefined>>,
+  block: ArduinoSourceBlock,
+): string => {
+  const inputId = block.inputs.FRAME?.block
+  const inputBlock = inputId ? blocks[inputId] : undefined
+  if (!inputBlock || inputBlock.opcode !== 'matrix_12x8') {
+    throw new Error(`Missing 12 x 8 matrix frame on block ${block.id}`)
+  }
+  return validateMatrixFrame(getField(inputBlock, 'MATRIX'), block.id)
+}
+
+const matrixFrameName = (frame: string): string => {
+  let hash = 2166136261
+  for (const value of frame) hash = Math.imul(hash ^ value.charCodeAt(0), 16777619)
+  return `sardu_matrix_frame_${(hash >>> 0).toString(16)}`
 }
 
 const getBoard = (boardId: string): ArduinoBoardDefinition => {
@@ -616,6 +694,38 @@ const generateStack = (
         operations.push({ type: 'pwm-write', pin, value: getExpression(blocks, block, 'VALUE', variables) })
         break
       }
+      case 'sarduBoard_showMatrixFrame':
+        if (board.id !== 'arduino-uno-r4-wifi') throw new Error(`Matrix blocks require Arduino UNO R4 WiFi, not ${board.name}`)
+        operations.push({type: 'matrix-frame', frame: getMatrixFrame(blocks, block)})
+        break
+      case 'sarduBoard_showMatrixFrameFor':
+        if (board.id !== 'arduino-uno-r4-wifi') throw new Error(`Matrix blocks require Arduino UNO R4 WiFi, not ${board.name}`)
+        operations.push({
+          type: 'matrix-frame',
+          frame: getMatrixFrame(blocks, block),
+          duration: getExpression(blocks, block, 'DURATION', variables),
+        })
+        break
+      case 'sarduBoard_showMatrixPreset': {
+        if (board.id !== 'arduino-uno-r4-wifi') throw new Error(`Matrix blocks require Arduino UNO R4 WiFi, not ${board.name}`)
+        const preset = getField(block, 'IMAGE')
+        const frame = MATRIX_PRESETS[preset]
+        if (!frame) throw new Error(`Unsupported matrix image: ${preset}`)
+        operations.push({type: 'matrix-frame', frame})
+        break
+      }
+      case 'sarduBoard_scrollMatrixText':
+        if (board.id !== 'arduino-uno-r4-wifi') throw new Error(`Matrix blocks require Arduino UNO R4 WiFi, not ${board.name}`)
+        operations.push({
+          type: 'matrix-text',
+          text: getStringExpression(blocks, block, 'TEXT', variables),
+          speed: getExpression(blocks, block, 'SPEED', variables),
+        })
+        break
+      case 'sarduBoard_clearMatrix':
+        if (board.id !== 'arduino-uno-r4-wifi') throw new Error(`Matrix blocks require Arduino UNO R4 WiFi, not ${board.name}`)
+        operations.push({type: 'matrix-clear'})
+        break
       case 'sarduActuators_setLed': {
         const pin = getField(block, 'PIN')
         const level = getField(block, 'STATE')
@@ -973,6 +1083,26 @@ const generateStack = (
           otherwise: generateStack(blocks, block.inputs.SUBSTACK2?.block ?? null, board, outputPins, variables, typedVariables),
         })
         break
+      case 'control_repeat':
+        operations.push({
+          type: 'repeat',
+          times: getExpression(blocks, block, 'TIMES', variables),
+          body: generateStack(blocks, block.inputs.SUBSTACK?.block ?? null, board, outputPins, variables, typedVariables),
+        })
+        break
+      case 'control_wait_until':
+        operations.push({
+          type: 'wait-until',
+          condition: getExpression(blocks, block, 'CONDITION', variables),
+        })
+        break
+      case 'control_repeat_until':
+        operations.push({
+          type: 'repeat-until',
+          condition: getExpression(blocks, block, 'CONDITION', variables),
+          body: generateStack(blocks, block.inputs.SUBSTACK?.block ?? null, board, outputPins, variables, typedVariables),
+        })
+        break
       case 'control_forever':
         operations.push({
           type: 'forever',
@@ -1123,7 +1253,8 @@ export const compileArduinoProgram = ({ boardId, targets }: ArduinoSketchRequest
   }
   const pn532Blocks = reachableBlocks.filter(block =>
     block.opcode.startsWith('sarduSensors_pn532') || block.opcode.startsWith('sarduSensors_rfidConfigurePn532') ||
-    (getRfidOperation(block.opcode) && block.fields.READER?.value !== 'RC522'))
+    (block.opcode.startsWith('sarduSensors_rfid') && getRfidOperation(block.opcode) &&
+      block.fields.READER?.value !== 'RC522'))
   const rc522Blocks = reachableBlocks.filter(block =>
     block.opcode.startsWith('sarduSensors_rc522') || block.opcode === 'sarduSensors_rfidConfigureRc522Spi' ||
     (getRfidOperation(block.opcode) && block.fields.READER?.value === 'RC522'))
@@ -1158,6 +1289,22 @@ export const compileArduinoProgram = ({ boardId, targets }: ArduinoSketchRequest
   if (new Set(rc522Configs.map(config => JSON.stringify(config))).size > 1) throw new Error('RC522 has conflicting configurations')
   const pn532Config = pn532Configs[0] || null
   const rc522Config = rc522Configs[0] || null
+  const matrixFrames = new Set<string>()
+  const collectMatrixFrames = (operations: readonly ArduinoOperation[]): void => operations.forEach(operation => {
+    if (operation.type === 'matrix-frame') matrixFrames.add(operation.frame)
+    if (operation.type === 'if') {
+      collectMatrixFrames(operation.then)
+      collectMatrixFrames(operation.otherwise)
+    }
+    if (operation.type === 'repeat' || operation.type === 'repeat-until') collectMatrixFrames(operation.body)
+    if (operation.type === 'forever') collectMatrixFrames(operation.body)
+  })
+  collectMatrixFrames(setup)
+  collectMatrixFrames(loop)
+  const usesMatrixText = [...setup, ...loop].some(operation => operation.type === 'matrix-text') ||
+    reachableBlocks.some(block => block.opcode === 'sarduBoard_scrollMatrixText')
+  const usesMatrix = matrixFrames.size > 0 || usesMatrixText ||
+    reachableBlocks.some(block => block.opcode === 'sarduBoard_clearMatrix')
 
   return {
     boardId,
@@ -1172,6 +1319,9 @@ export const compileArduinoProgram = ({ boardId, targets }: ArduinoSketchRequest
     usesDisplay: displayBlocks.length > 0,
     usesOled: oledBlocks.length > 0,
     usesSh1106: sh1106Blocks.length > 0,
+    usesMatrix,
+    usesMatrixText,
+    matrixFrames,
     sh1106Images: new Set(sh1106Blocks.filter(block => block.opcode === 'sarduActuators_drawSh1106Image')
       .map(block => resolveOledImage(getField(block, 'IMAGE'), getField(block, 'SCALE')).name)),
     oledSize,
@@ -1540,9 +1690,39 @@ const operationLines = (operation: ArduinoOperation): string[] => {
     if (!operation.multiline) return [`// ${source.replace(/\n/g, ' ')}`]
     return ['/*', ...source.split('\n').map((line) => ` * ${line}`), ' */']
   }
+  if (operation.type === 'matrix-frame') return [
+    `matrix.loadPixels(${matrixFrameName(operation.frame)}, 96);`,
+    ...(operation.duration === undefined ? [] : [`delay(max(0L, (long)(${operation.duration})));`]),
+  ]
+  if (operation.type === 'matrix-text') return [
+    'matrix.beginDraw();',
+    'matrix.stroke(0xFFFFFFFF);',
+    `matrix.textScrollSpeed(max(1L, (long)(${operation.speed})));`,
+    'matrix.textFont(Font_5x7);',
+    'matrix.beginText(0, 1, 0xFFFFFF);',
+    `matrix.print(${operation.text});`,
+    'matrix.endText(SCROLL_LEFT);',
+    'matrix.endDraw();',
+  ]
+  if (operation.type === 'matrix-clear') return ['matrix.clear();']
   if (operation.type === 'pn532-config') return []
   if (operation.type === 'forever') {
     return ['while (true) {', ...operation.body.flatMap(operationLines).map((line) => `  ${line}`), '}']
+  }
+  if (operation.type === 'repeat') {
+    return [
+      `for (int sarduBlockRepeatCounter = 0; sarduBlockRepeatCounter < (${operation.times}); ++sarduBlockRepeatCounter) {`,
+      ...operation.body.flatMap(operationLines).map((line) => `  ${line}`),
+      '}',
+    ]
+  }
+  if (operation.type === 'wait-until') return [`while (!(${operation.condition})) {`, '  delay(1);', '}']
+  if (operation.type === 'repeat-until') {
+    return [
+      `while (!(${operation.condition})) {`,
+      ...operation.body.flatMap(operationLines).map((line) => `  ${line}`),
+      '}',
+    ]
   }
   return [
     `if (${operation.condition}) {`,
@@ -1595,6 +1775,8 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
   const ultrasonicDeclarations = program.ultrasonicSensors.map(({ trigger, echo }) =>
     `Ultrasonic ultrasonic_${trigger}_${echo}(${trigger}, ${echo});`)
   const neoPixelDeclarations = program.neoPixelPins.map(pin => `Adafruit_NeoPixel neopixel_${pin};`)
+  const matrixFrameDeclarations = Array.from(program.matrixFrames).sort().map(frame =>
+    `uint8_t ${matrixFrameName(frame)}[96] = {${Array.from(frame).join(', ')}};`)
   const interruptFunctions = program.interrupts.flatMap((interrupt, index) => [
     `void sardu_interrupt_${index}() {`,
     indent(interrupt.body.flatMap(operationLines)),
@@ -1682,6 +1864,25 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
       [`SPI.begin(${program.rc522Config.sck}, ${program.rc522Config.miso}, ${program.rc522Config.mosi}, ${program.rc522Config.ss});`] : ['SPI.begin();']),
     'rc522.PCD_Init();',
   ] : []
+  const setupLines = (operation: ArduinoOperation): string[] => {
+    const lines = operationLines(operation)
+    if (program.boardId !== 'arduino-uno-r4-wifi' || operation.type !== 'serial-begin') return lines
+    return [
+      ...lines,
+      '{',
+      '  while (!Serial) {',
+      '    delay(10);',
+      '  }',
+      '  unsigned long sarduBlockSerialWaitStart = millis();',
+      '  while (millis() - sarduBlockSerialWaitStart < 3000) {',
+      '    delay(10);',
+      '  }',
+      '  while (Serial.available() > 0) {',
+      '    Serial.read();',
+      '  }',
+      '}',
+    ]
+  }
   const hasTopLevelPn532Config = setupOperations.some(operation => operation.type === 'pn532-config')
   let pn532Initialized = false
   const setupOperationLines = setupOperations.flatMap(operation => {
@@ -1690,7 +1891,7 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
       pn532Initialized = true
       return pn532Initializers
     }
-    return operationLines(operation)
+    return setupLines(operation)
   })
   const offlinePn532Helper = (source: string): string => source
     .replace(/pn532->/g, 'pn532.')
@@ -1720,6 +1921,8 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
     ...(program.usesDisplay ? ['#include <Wire.h>', '#include <LiquidCrystal_PCF8574.h>', ''] : []),
     ...(program.usesOled ? ['#include <Arduino.h>', '#include <Wire.h>', '#include <Adafruit_GFX.h>', '#include <Adafruit_SSD1306.h>', ''] : []),
     ...(program.usesSh1106 ? ['#include <Arduino.h>', '#include <Wire.h>', '#include <Adafruit_GFX.h>', '#include <Adafruit_SH110X.h>', ''] : []),
+    ...(program.usesMatrixText ? ['#include <ArduinoGraphics.h>'] : []),
+    ...(program.usesMatrix ? ['#include <Arduino_LED_Matrix.h>', '', 'ArduinoLEDMatrix matrix;', ''] : []),
     ...(program.usesOtto ? ['#include <Otto.h>', '', 'Otto Otto;', ''] : []),
     ...(program.usesWifi ? ['#include <WiFi.h>', ''] : []),
     ...(program.usesPn532I2c ? ['#include <Wire.h>'] : []),
@@ -1760,6 +1963,8 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
     ...(ultrasonicDeclarations.length ? [''] : []),
     ...neoPixelDeclarations,
     ...(neoPixelDeclarations.length ? [''] : []),
+    ...matrixFrameDeclarations,
+    ...(matrixFrameDeclarations.length ? [''] : []),
     ...(program.usesDisplay ? ['LiquidCrystal_PCF8574 *sarduEduDisplay = nullptr;', 'uint8_t sarduEduDisplayRows = 2;', ''] : []),
     ...declarations,
     ...(declarations.length ? [''] : []),
@@ -1771,8 +1976,9 @@ export const generateArduinoSketch = (request: ArduinoSketchRequest): string => 
     'void setup() {',
     indent([...pinModes, ...buttonPinModes, ...dhtInitializers, ...servoInitializers,
       ...(program.usesVl53l0x ? ['Wire.begin();', 'vl53l0x.setTimeout(500);', 'vl53l0x.init();'] : []),
+      ...(program.usesMatrix ? ['matrix.begin();'] : []),
       ...interruptInitializers, ...touchInitializers,
-      ...setupSerialInitializers.flatMap(operationLines),
+      ...setupSerialInitializers.flatMap(setupLines),
       ...(!hasTopLevelPn532Config ? pn532Initializers : []),
       ...rc522Initializers,
       ...setupOperationLines]),

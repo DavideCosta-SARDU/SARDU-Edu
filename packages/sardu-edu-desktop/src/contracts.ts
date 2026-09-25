@@ -4,6 +4,7 @@ export const HARDWARE_IPC = {
   listPorts: 'sardu-block-hardware:list-ports',
   logLiveDiagnostic: 'sardu-block-hardware:log-live-diagnostic',
   output: 'sardu-block-hardware:output',
+  prepareR4Resources: 'sardu-block-hardware:prepare-r4-resources',
   selectLivePort: 'sardu-block-hardware:select-live-port',
   upload: 'sardu-block-hardware:upload',
 } as const
@@ -58,6 +59,7 @@ export interface SarduBlockDesktopHardwareApi {
   listPorts(request?: ArduinoPortListRequest): Promise<readonly ArduinoPort[]>
   logLiveDiagnostic(diagnostic: LiveDiagnostic): Promise<void>
   onOutput(listener: (event: HardwareOutputEvent) => void): () => void
+  prepareR4Resources(): Promise<boolean>
   selectLivePort(port: string): Promise<void>
   upload(request: ArduinoUploadRequest): Promise<HardwareOperationResult>
 }

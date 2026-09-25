@@ -34,7 +34,7 @@ describe('Arduino definitions', () => {
       modes: ['standalone', 'realtime'],
     })
     expect(ARDUINO_BOARDS.map((board) => board.id)).toEqual([
-      'arduino-uno', 'arduino-nano', 'esp32-dev-module', 'esp32-s2-dev-module',
+      'arduino-uno', 'arduino-nano', 'arduino-uno-r4-wifi', 'esp32-dev-module', 'esp32-s2-dev-module',
       'esp32-s3-dev-module', 'esp32-c3-dev-module', 'esp32-cam-ai-thinker',
     ])
     expect(ARDUINO_BOARDS.every((board) => board.backendIds.includes(ARDUINO_BACKEND.id))).toBe(true)
@@ -78,9 +78,74 @@ describe('Arduino definitions', () => {
     expect(uno?.buses.find((bus) => bus.type === 'i2c')?.signals).toEqual({ sda: 'A4', scl: 'A5' })
     expect(nano?.pins.find((pin) => pin.id === 'A7')?.capabilities).toEqual(['analog-input'])
   })
+
+  test('declares Arduino UNO R4 WiFi as an Offline board with its built-in matrix', () => {
+    expect(ARDUINO_HARDWARE_DEFINITIONS.boards.get('arduino-uno-r4-wifi')).toMatchObject({
+      fqbn: 'arduino:renesas_uno:unor4wifi',
+      processor: 'Renesas RA4M1',
+      operatingVoltage: 5,
+      capabilities: expect.arrayContaining(['digital-io', 'analog-input', 'pwm', 'led-matrix-12x8']),
+      modes: ['standalone'],
+    })
+  })
 })
 
 describe('generateArduinoSketch', () => {
+  test('generates Arduino UNO R4 WiFi frames, presets, animation timing and scrolling text', () => {
+    const frame = '1'.padEnd(96, '0')
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {
+        topLevel: true, inputs: {SUBSTACK: {block: 'frame'}, SUBSTACK2: {block: 'preset'}},
+      }),
+      frame: block('frame', 'sarduBoard_showMatrixFrame', {inputs: {FRAME: {block: 'frameValue'}}}),
+      frameValue: block('frameValue', 'matrix_12x8', {fields: {MATRIX: {value: frame}}}),
+      preset: block('preset', 'sarduBoard_showMatrixPreset', {
+        next: 'animationFrame', fields: {IMAGE: {value: 'ARDUINO_LOGO'}},
+      }),
+      animationFrame: block('animationFrame', 'sarduBoard_showMatrixFrameFor', {
+        next: 'text', inputs: {FRAME: {block: 'animationValue'}, DURATION: {block: 'duration'}},
+      }),
+      animationValue: block('animationValue', 'matrix_12x8', {fields: {MATRIX: {value: frame}}}),
+      duration: block('duration', 'math_number', {fields: {NUM: {value: '120'}}}),
+      text: block('text', 'sarduBoard_scrollMatrixText', {
+        next: 'clear', inputs: {TEXT: {block: 'message'}, SPEED: {block: 'speed'}},
+      }),
+      message: block('message', 'text', {fields: {TEXT: {value: 'Ciao'}}}),
+      speed: block('speed', 'math_number', {fields: {NUM: {value: '80'}}}),
+      clear: block('clear', 'sarduBoard_clearMatrix'),
+    }
+
+    const source = generateArduinoSketch({boardId: 'arduino-uno-r4-wifi', targets: [{blocks}]})
+
+    expect(source).toContain('#include <ArduinoGraphics.h>\n#include <Arduino_LED_Matrix.h>')
+    expect(source).toContain('ArduinoLEDMatrix matrix;')
+    expect(source).toContain('matrix.begin();')
+    expect(source).toContain('matrix.loadPixels(')
+    expect(source).toContain('delay(max(0L, (long)(120)));')
+    expect(source).toContain('matrix.textScrollSpeed(max(1L, (long)(80)));')
+    expect(source).toContain('matrix.print("Ciao");')
+    expect(source).toContain('matrix.endText(SCROLL_LEFT);')
+    expect(source).toContain('matrix.clear();')
+  })
+
+  test('does not emit matrix support without connected matrix blocks', () => {
+    const blocks = {program: block('program', 'sarduBoard_program', {topLevel: true})}
+    const source = generateArduinoSketch({boardId: 'arduino-uno-r4-wifi', targets: [{blocks}]})
+    expect(source).not.toContain('Arduino_LED_Matrix')
+    expect(source).not.toContain('ArduinoGraphics')
+    expect(source).not.toContain('ArduinoLEDMatrix')
+  })
+
+  test('rejects UNO R4 matrix blocks on another board', () => {
+    const blocks = {
+      program: block('program', 'sarduBoard_program', {topLevel: true, inputs: {SUBSTACK: {block: 'clear'}}}),
+      clear: block('clear', 'sarduBoard_clearMatrix'),
+    }
+    expect(() => generateArduinoSketch({boardId: 'arduino-uno', targets: [{blocks}]})).toThrow(
+      'Matrix blocks require Arduino UNO R4 WiFi, not Arduino Uno',
+    )
+  })
+
   test('generates independent servo and HC-SR04 support', () => {
     const blocks = {
       program: block('program', 'sarduBoard_program', {
@@ -723,10 +788,19 @@ describe('generateArduinoSketch', () => {
     }
 
     const source = generateArduinoSketch({ boardId: 'arduino-uno', targets: [{ blocks }] })
+    const r4Source = generateArduinoSketch({ boardId: 'arduino-uno-r4-wifi', targets: [{ blocks }] })
+    const esp32Source = generateArduinoSketch({ boardId: 'esp32-dev-module', targets: [{ blocks }] })
 
     expect(source).toContain('Serial.begin(9600);')
     expect(source).toContain('Serial.print("value=");')
     expect(source).toContain('Serial.println("ready");')
+    expect(source).not.toContain('sarduBlockSerialWaitStart')
+    expect(esp32Source).not.toContain('sarduBlockSerialWaitStart')
+    expect(r4Source).toContain(
+      'Serial.begin(9600);\n  {\n    unsigned long sarduBlockSerialWaitStart = millis();\n' +
+      '    while (!Serial && millis() - sarduBlockSerialWaitStart < 3000UL) {\n    }\n  }',
+    )
+    expect(r4Source.indexOf('sarduBlockSerialWaitStart')).toBeLessThan(r4Source.indexOf('Serial.print("value=");'))
   })
 
   test('generates ESP32 Wi-Fi setup, status and IP blocks', () => {

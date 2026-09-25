@@ -17,8 +17,8 @@
  * limitations under the License.
  */
 /**
- * @file 5x5 matrix input field.
- * Displays an editable 5x5 matrix for controlling LED arrays.
+ * @file Configurable matrix input field.
+ * Displays an editable matrix for controlling LED arrays.
  * @author khanning@gmail.com (Kreg Hanning)
  */
 import * as Blockly from 'blockly/core'
@@ -38,6 +38,15 @@ enum LEDState {
  */
 class FieldMatrix extends Blockly.Field<string> {
   private originalStyle = ''
+  private readonly rows_: number
+  private readonly columns_: number
+
+  constructor(value = '', rows = 5, columns = 5) {
+    super('')
+    this.rows_ = rows
+    this.columns_ = columns
+    if (value) this.setValue(value)
+  }
 
   /**
    * Array of SVGElement<rect> for matrix thumbnail image on block field.
@@ -108,7 +117,7 @@ class FieldMatrix extends Blockly.Field<string> {
    * @returns The new field instance.
    */
   static fromJson(options: FieldMatrixConfig): FieldMatrix {
-    return new FieldMatrix(options.matrix)
+    return new FieldMatrix(options.matrix, options.rows, options.columns)
   }
 
   /**
@@ -132,31 +141,26 @@ class FieldMatrix extends Blockly.Field<string> {
   static readonly ARROW_SIZE = 12
 
   /**
-   * Fixed size of each button inside the 5x5 matrix, in px.
+   * Fixed size of each button inside the matrix, in px.
    */
   static readonly MATRIX_NODE_SIZE = 18
 
   /**
-   * Fixed corner radius for 5x5 matrix buttons, in px.
+   * Fixed corner radius for matrix buttons, in px.
    */
   static readonly MATRIX_NODE_RADIUS = 4
 
   /**
-   * Fixed padding for 5x5 matrix buttons, in px.
+   * Fixed padding for matrix buttons, in px.
    */
   static readonly MATRIX_NODE_PAD = 5
 
   /**
-   * String with 25 '0' chars.
-   * Used for clearing a matrix or filling an LED node array.
+   * Build a value which applies the same state to every LED.
    */
-  static readonly ZEROS = '0000000000000000000000000'
-
-  /**
-   * String with 25 '1' chars.
-   * Used for filling a matrix.
-   */
-  static readonly ONES = '1111111111111111111111111'
+  private emptyValue_(state: LEDState): string {
+    return state.repeat(this.rows_ * this.columns_)
+  }
 
   /**
    * Called when the field is placed on a block.
@@ -167,6 +171,7 @@ class FieldMatrix extends Blockly.Field<string> {
     const dropdownArrowPadding = (this.getConstants() as Blockly.zelos.ConstantProvider).GRID_UNIT * 2
     const thumbX = dropdownArrowPadding / 2
     const thumbY = (this.size_.height - FieldMatrix.THUMBNAIL_SIZE) / 2
+    const thumbnailWidth = FieldMatrix.THUMBNAIL_SIZE * Math.max(1, this.columns_ / this.rows_)
     const thumbnail = Blockly.utils.dom.createSvgElement(
       'g',
       {
@@ -177,10 +182,13 @@ class FieldMatrix extends Blockly.Field<string> {
       this.fieldGroup_,
     )
     this.ledThumbNodes_ = []
-    const nodeSize = FieldMatrix.THUMBNAIL_NODE_SIZE
     const nodePad = FieldMatrix.THUMBNAIL_NODE_PAD
-    for (let i = 0; i < 5; i++) {
-      for (let n = 0; n < 5; n++) {
+    const nodeSize = Math.min(
+      (thumbnailWidth - nodePad * (this.columns_ + 1)) / this.columns_,
+      (FieldMatrix.THUMBNAIL_SIZE - nodePad * (this.rows_ + 1)) / this.rows_,
+    )
+    for (let i = 0; i < this.rows_; i++) {
+      for (let n = 0; n < this.columns_; n++) {
         const attr = {
           x: (nodeSize + nodePad) * n + nodePad,
           y: (nodeSize + nodePad) * i + nodePad,
@@ -196,7 +204,7 @@ class FieldMatrix extends Blockly.Field<string> {
     }
 
     if (!this.arrow_) {
-      const arrowX = FieldMatrix.THUMBNAIL_SIZE + dropdownArrowPadding * 1.5
+      const arrowX = thumbnailWidth + dropdownArrowPadding * 1.5
       const arrowY = (this.size_.height - FieldMatrix.ARROW_SIZE) / 2
       this.arrow_ = Blockly.utils.dom.createSvgElement(
         'image',
@@ -217,7 +225,9 @@ class FieldMatrix extends Blockly.Field<string> {
   }
 
   doClassValidation_(matrix: string) {
-    return matrix ? matrix + FieldMatrix.ZEROS.substr(0, 25 - matrix.length) : matrix
+    if (!matrix) return matrix
+    const size = this.rows_ * this.columns_
+    return matrix.replace(/[^01]/g, '').slice(0, size).padEnd(size, LEDState.OFF)
   }
 
   doValueUpdate_(newValue: string) {
@@ -247,7 +257,10 @@ class FieldMatrix extends Blockly.Field<string> {
 
     const div = Blockly.DropDownDiv.getContentDiv()
     // Build the SVG DOM.
-    const matrixSize = FieldMatrix.MATRIX_NODE_SIZE * 5 + FieldMatrix.MATRIX_NODE_PAD * 6
+    const matrixWidth = FieldMatrix.MATRIX_NODE_SIZE * this.columns_ +
+      FieldMatrix.MATRIX_NODE_PAD * (this.columns_ + 1)
+    const matrixHeight = FieldMatrix.MATRIX_NODE_SIZE * this.rows_ +
+      FieldMatrix.MATRIX_NODE_PAD * (this.rows_ + 1)
     this.matrixStage_ = Blockly.utils.dom.createSvgElement(
       'svg',
       {
@@ -255,15 +268,15 @@ class FieldMatrix extends Blockly.Field<string> {
         'xmlns:html': 'http://www.w3.org/1999/xhtml',
         'xmlns:xlink': 'http://www.w3.org/1999/xlink',
         version: '1.1',
-        height: matrixSize + 'px',
-        width: matrixSize + 'px',
+        height: matrixHeight + 'px',
+        width: matrixWidth + 'px',
       },
       div,
     )
-    // Create the 5x5 matrix
+    // Create the matrix.
     this.ledButtons_ = []
-    for (let i = 0; i < 5; i++) {
-      for (let n = 0; n < 5; n++) {
+    for (let i = 0; i < this.rows_; i++) {
+      for (let n = 0; n < this.columns_; n++) {
         const x = FieldMatrix.MATRIX_NODE_SIZE * n + FieldMatrix.MATRIX_NODE_PAD * (n + 1)
         const y = FieldMatrix.MATRIX_NODE_SIZE * i + FieldMatrix.MATRIX_NODE_PAD * (i + 1)
         const attr = {
@@ -381,7 +394,7 @@ class FieldMatrix extends Blockly.Field<string> {
    */
   clearMatrix_(e: PointerEvent) {
     if (e.button != 0) return
-    this.setValue(FieldMatrix.ZEROS)
+    this.setValue(this.emptyValue_(LEDState.OFF))
   }
 
   /**
@@ -390,7 +403,7 @@ class FieldMatrix extends Blockly.Field<string> {
    */
   fillMatrix_(e: PointerEvent) {
     if (e.button != 0) return
-    this.setValue(FieldMatrix.ONES)
+    this.setValue(this.emptyValue_(LEDState.ON))
   }
 
   /**
@@ -405,7 +418,7 @@ class FieldMatrix extends Blockly.Field<string> {
   }
 
   setLEDNode_(led: number, state: LEDState) {
-    if (led < 0 || led > 24) return
+    if (led < 0 || led >= this.rows_ * this.columns_) return
     const oldMatrix = this.getValue()
     if (!oldMatrix) return
     const newMatrix = oldMatrix.substr(0, led) + state + oldMatrix.substr(led + 1)
@@ -413,17 +426,17 @@ class FieldMatrix extends Blockly.Field<string> {
   }
 
   fillLEDNode_(led: number) {
-    if (led < 0 || led > 24) return
+    if (led < 0 || led >= this.rows_ * this.columns_) return
     this.setLEDNode_(led, LEDState.ON)
   }
 
   clearLEDNode_(led: number) {
-    if (led < 0 || led > 24) return
+    if (led < 0 || led >= this.rows_ * this.columns_) return
     this.setLEDNode_(led, LEDState.OFF)
   }
 
   toggleLEDNode_(led: number) {
-    if (led < 0 || led > 24) return
+    if (led < 0 || led >= this.rows_ * this.columns_) return
     const value = this.getValue()
     if (!value) return
     if ((value.charAt(led) as LEDState) === LEDState.OFF) {
@@ -511,7 +524,8 @@ class FieldMatrix extends Blockly.Field<string> {
     }
     const xDiv = Math.trunc((dx - nodePad / 2) / (nodeSize + nodePad))
     const yDiv = Math.trunc((dy - nodePad / 2) / (nodeSize + nodePad))
-    return xDiv + yDiv * nodePad
+    if (xDiv < 0 || xDiv >= this.columns_ || yDiv < 0 || yDiv >= this.rows_) return -1
+    return xDiv + yDiv * this.columns_
   }
 
   /**
@@ -520,22 +534,22 @@ class FieldMatrix extends Blockly.Field<string> {
   dispose() {
     super.dispose()
     this.matrixStage_ = null
-    if (this.mouseDownWrapper_) {
+    if (this.mouseDownWrapper_?.length) {
       Blockly.browserEvents.unbind(this.mouseDownWrapper_)
     }
-    if (this.matrixTouchWrapper_) {
+    if (this.matrixTouchWrapper_?.length) {
       Blockly.browserEvents.unbind(this.matrixTouchWrapper_)
     }
-    if (this.matrixReleaseWrapper_) {
+    if (this.matrixReleaseWrapper_?.length) {
       Blockly.browserEvents.unbind(this.matrixReleaseWrapper_)
     }
-    if (this.matrixMoveWrapper_) {
+    if (this.matrixMoveWrapper_?.length) {
       Blockly.browserEvents.unbind(this.matrixMoveWrapper_)
     }
-    if (this.clearButtonWrapper_) {
+    if (this.clearButtonWrapper_?.length) {
       Blockly.browserEvents.unbind(this.clearButtonWrapper_)
     }
-    if (this.fillButtonWrapper_) {
+    if (this.fillButtonWrapper_?.length) {
       Blockly.browserEvents.unbind(this.fillButtonWrapper_)
     }
   }
@@ -545,7 +559,8 @@ class FieldMatrix extends Blockly.Field<string> {
     const totalHeight = constants.FIELD_TEXT_HEIGHT
 
     this.size_.height = totalHeight
-    this.size_.width = FieldMatrix.THUMBNAIL_SIZE + FieldMatrix.ARROW_SIZE + constants.GRID_UNIT * 2 * 1.5
+    const thumbnailWidth = FieldMatrix.THUMBNAIL_SIZE * Math.max(1, this.columns_ / this.rows_)
+    this.size_.width = thumbnailWidth + FieldMatrix.ARROW_SIZE + constants.GRID_UNIT * 2 * 1.5
 
     this.positionBorderRect_()
   }
@@ -557,6 +572,8 @@ class FieldMatrix extends Blockly.Field<string> {
 
 interface FieldMatrixConfig extends Blockly.FieldConfig {
   matrix: string
+  rows?: number
+  columns?: number
 }
 
 /**

@@ -12,6 +12,12 @@ export interface ArduinoCliRequest {
   readonly sketchPath: string
   readonly port?: string
   readonly nanoProcessor?: 'auto' | 'new' | 'old'
+  readonly r4ResourcePaths?: {
+    readonly compiler: string
+    readonly core: string
+    readonly platform: string
+    readonly variant: string
+  }
 }
 
 export interface ArduinoCliInvocation {
@@ -37,6 +43,7 @@ export const SARDU_BLOCK_ARDUINO_TOOLCHAIN_LAYOUT: ArduinoToolchainLayout = {
 const boardFqbn: Readonly<Record<string, string>> = {
   'arduino-uno': 'arduino:avr:uno',
   'arduino-nano': 'arduino:avr:nano',
+  'arduino-uno-r4-wifi': 'arduino:renesas_uno:unor4wifi',
   'esp32-dev-module': 'esp32:esp32:esp32',
   'esp32-s2-dev-module': 'esp32:esp32:esp32s2',
   'esp32-s3-dev-module': 'esp32:esp32:esp32s3',
@@ -50,7 +57,7 @@ const getBoardFqbn = (boardId: string, nanoProcessor: ArduinoCliRequest['nanoPro
 }
 
 export const createArduinoCliInvocation = (
-  { action, boardId, nanoProcessor, port, sketchPath }: ArduinoCliRequest,
+  { action, boardId, nanoProcessor, port, r4ResourcePaths, sketchPath }: ArduinoCliRequest,
   { layout = SARDU_BLOCK_ARDUINO_TOOLCHAIN_LAYOUT }: ArduinoCliInvocationOptions = {},
 ): ArduinoCliInvocation => {
   const fqbn = getBoardFqbn(boardId, nanoProcessor)
@@ -58,6 +65,14 @@ export const createArduinoCliInvocation = (
   if (action === 'upload' && !port) throw new Error('Arduino upload requires a serial port')
 
   const args = ['--config-file', layout.configuration, 'compile', '--fqbn', fqbn]
+  if (boardId === 'arduino-uno-r4-wifi' && r4ResourcePaths) {
+    args.push(
+      '--build-property', `build.compiler_path=${r4ResourcePaths.compiler}`,
+      '--build-property', `runtime.platform.path=${r4ResourcePaths.platform}`,
+      '--build-property', `build.core.path=${r4ResourcePaths.core}`,
+      '--build-property', `build.variant.path=${r4ResourcePaths.variant}`,
+    )
+  }
   if (action === 'upload') args.push('--upload', '--port', port as string)
   args.push(sketchPath)
 

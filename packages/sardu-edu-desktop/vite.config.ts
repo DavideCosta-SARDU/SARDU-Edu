@@ -1,9 +1,15 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vitest/config'
+import { fileURLToPath } from 'node:url'
 
 export default defineConfig(({ mode }) => {
   const preload = mode === 'preload'
   return {
+    resolve: {
+      alias: {
+        '@sardu-block/hardware': fileURLToPath(new URL('../sardu-edu-hardware/src/index.ts', import.meta.url)),
+      },
+    },
     build: {
       emptyOutDir: !preload,
       lib: {

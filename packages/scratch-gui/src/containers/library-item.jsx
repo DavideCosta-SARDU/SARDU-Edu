@@ -145,6 +145,7 @@ class LibraryItem extends React.PureComponent {
                 internetConnectionRequired={this.props.internetConnectionRequired}
                 isPlaying={this.props.isPlaying}
                 name={this.props.name}
+                showDisabledLabel={this.props.showDisabledLabel}
                 showPlayButton={this.props.showPlayButton}
                 platform={this.props.platform}
                 onBlur={this.handleBlur}
@@ -193,6 +194,7 @@ LibraryItem.propTypes = {
     onMouseLeave: PropTypes.func.isRequired,
     onSelect: PropTypes.func.isRequired,
     platform: PropTypes.oneOf(Object.keys(PLATFORM)),
+    showDisabledLabel: PropTypes.bool,
     showPlayButton: PropTypes.bool,
     isMemberOnly: PropTypes.bool
 };

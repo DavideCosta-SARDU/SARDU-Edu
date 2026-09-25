@@ -7,12 +7,14 @@ import {ARDUINO_BOARDS} from '@sardu-block/hardware';
 import LibraryComponent from '../library/library.jsx';
 import unoIcon from '../../../../../docs/SVG/Schede/arduino_uno.svg';
 import nanoIcon from '../../../../../docs/SVG/Schede/Arduino_Nano.svg';
+import unoR4WifiIcon from '../../../../../docs/SVG/ArduinoUnoR4.svg';
 import esp32Icon from '../../../../../docs/SVG/ESP32.svg';
 import {
     BOARD_DISCOVERY_TIMEOUTS,
     getBoardDiscoveryTimeout,
     setBoardDiscoveryTimeout
 } from '../../lib/sardu-board-discovery-settings';
+import getSarduDesktopHardware from '../../lib/sardu-desktop-api';
 import styles from './board-library.css';
 
 const BOARD_ITEMS = [
@@ -36,6 +38,17 @@ const BOARD_ITEMS = [
             id="gui.sardu.nanoDescription"
             defaultMessage="Compact ATmega328P board with two additional analog inputs"
             description="Description of Arduino Nano in the board library"
+        />
+    },
+    {
+        boardId: 'arduino-uno-r4-wifi',
+        featured: true,
+        name: 'Arduino UNO R4 WiFi',
+        rawURL: unoR4WifiIcon,
+        description: <FormattedMessage
+            id="gui.sardu.unoR4WifiDescription"
+            defaultMessage="Renesas RA4M1 board with Wi-Fi and a built-in 12 x 8 LED matrix"
+            description="Description of Arduino UNO R4 WiFi in the board library"
         />
     },
     {
@@ -155,8 +168,17 @@ const BoardLibrary = ({onRequestClose, vm}) => {
         })))) return;
         setSelectedBoardName(null);
     };
-    const handleSelect = (item, wifiEnabled = selection?.boardId === item.boardId && selection?.wifiEnabled) => {
+    const handleSelect = async (item, wifiEnabled = selection?.boardId === item.boardId && selection?.wifiEnabled) => {
         if (!canSelectBoard(selection?.boardId, item.boardId)) return;
+        const desktopHardware = getSarduDesktopHardware();
+        if (item.boardId === 'arduino-uno-r4-wifi' && desktopHardware?.prepareR4Resources) {
+            try {
+                if (!await desktopHardware.prepareR4Resources()) return;
+            } catch (error) {
+                window.alert(error.message);
+                return;
+            }
+        }
         vm.setSarduBlockHardwareSelection({
             boardId: item.boardId,
             boardName: item.name,
@@ -203,7 +225,7 @@ const BoardLibrary = ({onRequestClose, vm}) => {
                     <input
                         checked={selection?.boardId === item.boardId && Boolean(selection?.wifiEnabled)}
                         type="checkbox"
-                        onChange={event => handleSelect(item, event.target.checked)}
+                        onChange={event => void handleSelect(item, event.target.checked)}
                     />
                     <FormattedMessage
                         id="gui.sardu.wifiOption"
@@ -287,7 +309,7 @@ const BoardLibrary = ({onRequestClose, vm}) => {
                 defaultMessage: 'Choose a board',
                 description: 'Title of the SARDU-Block board library'
             })}
-            onItemSelected={handleSelect}
+            onItemSelected={item => void handleSelect(item)}
             onItemRemove={handleRemove}
             onRequestClose={onRequestClose}
             removeItemLabel={intl.formatMessage({
